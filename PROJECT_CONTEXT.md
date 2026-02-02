@@ -55,11 +55,12 @@
 
 ## 5. Active Session Context
 **Active Session Context**
-**Current Focus**: Verifying Student Content Block Fix.
+**Current Focus**: Student Content Delivery Issue (Reverted/Analyzing).
 **Tasks**:
 1.  ✅ **Completed**: Refactored `useAlert` to Promise-based (Fixes Delete Bug).
-2.  ✅ **Completed**: Implemented `/api/proxy` Routing in `worker-v2.js` & `worker-fresh.js`.
-**Immediate Plan**: User to deploy and verify the fix on their device.
+2.  ✅ **Completed**: Added `/api/proxy` routing in backend workers (kept).
+3.  ❌ **Reverted**: Frontend proxy routing caused errors, rolled back to stable version.
+**Immediate Plan**: Investigate alternative approaches without breaking existing functionality.
 
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.

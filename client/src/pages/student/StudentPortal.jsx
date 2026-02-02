@@ -8,12 +8,12 @@ import { BookOpen, ClipboardList, Trophy, BarChart2, User, FileText } from 'luci
 const getEmbedUrl = (url) => {
     if (!url) return '';
 
-    // 1. Google Drive (Preview Mode)
+    // 1. Google Drive - Tidak bisa di-iframe, return null untuk trigger fallback UI
     if (url.includes('drive.google.com')) {
-        return url.replace('/view', '/preview');
+        return null; // Signal to show external link only
     }
 
-    // 2. YouTube (Embed Mode)
+    // 2. YouTube (Embed Mode) - Aman dari X-Frame blocks
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
         const videoId = url.split('v=')[1] || url.split('/').pop();
         const cleanId = videoId?.split('&')[0];
@@ -128,7 +128,25 @@ export default function StudentPortal() {
             </div>
         );
         if (activeTab === 'TUGAS') return <StudentTasks student={data.student} onBack={() => setActiveTab('MATERI')} />;
-        if (activeTab === 'QUIZ') return <StudentCBT user={data.student} onBack={() => setActiveTab('MATERI')} />;
+        if (activeTab === 'QUIZ') return (
+            <div className="space-y-3 pb-24">
+                <h2 className="text-xl font-bold mb-4 px-1">Quiz & Ujian</h2>
+                {(!data.quizzes || data.quizzes.length === 0) ? (
+                    <div className="text-center p-8 text-zinc-600 bg-zinc-900 rounded-2xl border border-zinc-800 border-dashed">
+                        Belum ada quiz untuk saat ini.
+                    </div>
+                ) : (
+                    data.quizzes.map(q => (
+                        <QuizCard
+                            key={q.id}
+                            quiz={q}
+                            onStart={(id) => setActiveQuizId(id)}
+                            onReview={(id) => setReviewQuizId(id)}
+                        />
+                    ))
+                )}
+            </div>
+        );
         if (activeTab === 'NILAI') return <div className="p-4 text-center text-zinc-500 mt-10">Fitur Nilai segera hadir! 🚧</div>;
         if (activeTab === 'PROFIL') return (
             <div className="flex flex-col items-center justify-center pt-10 px-6 animate-in fade-in cursor-default">
@@ -237,13 +255,31 @@ export default function StudentPortal() {
                         </button>
                     </div>
                     <div className="flex-1 bg-black relative flex items-center justify-center">
-                        <iframe
-                            src={getEmbedUrl(selectedMaterial.file_url)}
-                            className="w-full h-full border-0"
-                            allow="autoplay; encrypted-media; fullscreen"
-                            allowFullScreen
-                            onError={(e) => console.log("Iframe Error", e)}
-                        ></iframe>
+                        {getEmbedUrl(selectedMaterial.file_url) ? (
+                            <iframe
+                                src={getEmbedUrl(selectedMaterial.file_url)}
+                                className="w-full h-full border-0"
+                                allow="autoplay; encrypted-media; fullscreen"
+                                allowFullScreen
+                                onError={(e) => console.log("Iframe Error", e)}
+                            ></iframe>
+                        ) : (
+                            <div className="text-center p-8">
+                                <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <FileText size={40} className="text-zinc-400" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white mb-2">Materi Eksternal</h3>
+                                <p className="text-zinc-400 text-sm mb-6">File ini disimpan di Google Drive dan perlu dibuka di browser eksternal.</p>
+                                <a
+                                    href={selectedMaterial.file_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition"
+                                >
+                                    Buka di Browser ↗
+                                </a>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

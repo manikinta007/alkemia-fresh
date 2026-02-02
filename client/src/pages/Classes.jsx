@@ -73,10 +73,9 @@ export default function Classes() {
         setCreatingClass(false);
     };
 
-    const handleDeleteClass = (id) => {
-        showConfirm('Hapus kelas ini? PERINGATAN: Semua siswa, nilai, dan quiz di dalam kelas ini akan TERHAPUS PERMANEN.', async () => {
-            await deleteClass(id);
-        });
+    const handleDeleteClass = async (id) => {
+        const confirmed = await showConfirm('Hapus kelas ini? PERINGATAN: Semua siswa, nilai, dan quiz di dalam kelas ini akan TERHAPUS PERMANEN.');
+        if (confirmed) await deleteClass(id);
     };
 
     const handleUpdateClass = async (id, newName) => {
@@ -112,12 +111,13 @@ export default function Classes() {
     };
 
     // Bulk Delete
-    const handleBulkDelete = () => {
+    const handleBulkDelete = async () => {
         if (selectedStudentIds.size === 0) return;
-        showConfirm(`Hapus ${selectedStudentIds.size} siswa terpilih? DATA NILAI AKAN HILANG PERMANEN.`, async () => {
+        const confirmed = await showConfirm(`Hapus ${selectedStudentIds.size} siswa terpilih? DATA NILAI AKAN HILANG PERMANEN.`);
+        if (confirmed) {
             const success = await removeStudentsBulk(selectedStudentIds);
             if (success) setSelectedStudentIds(new Set());
-        });
+        }
     };
 
     // Inline Edit Logic
@@ -128,16 +128,14 @@ export default function Classes() {
         if (success) setEditingId(null);
     };
 
-    const handleDeleteStudent = (id) => {
-        showConfirm('Hapus siswa ini?', async () => {
-            await removeStudent(id);
-        });
+    const handleDeleteStudent = async (id) => {
+        const confirmed = await showConfirm('Hapus siswa ini?');
+        if (confirmed) await removeStudent(id);
     };
 
-    const handleUnlockStudent = (id, name) => {
-        showConfirm(`Reset akses (Logout paksa) untuk siswa "${name}"?`, async () => {
-            await resetStudentDevice(id);
-        });
+    const handleUnlockStudent = async (id, name) => {
+        const confirmed = await showConfirm(`Reset akses (Logout paksa) untuk siswa "${name}"?`);
+        if (confirmed) await resetStudentDevice(id);
     };
 
     // Import / CSV
