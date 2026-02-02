@@ -4,8 +4,8 @@ compatibility_date = "2024-09-23"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "alkemia-fresh-db"
-database_id = "5fc064f0-51e6-46d6-84df-3bf519a5465b"
+database_name = "alkemiafresh2"
+database_id = "cca65731-628b-4fe3-b1a1-5647347c483f"
 
 [[kv_namespaces]]
 binding = "KV"

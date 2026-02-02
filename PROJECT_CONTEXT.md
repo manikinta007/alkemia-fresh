@@ -18,9 +18,15 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **Production (Legacy)** | `app.alkemia.my.id` | `alkemia2` | `DB` | **Stable**. Reverted to legacy code. |
 | **Staging (V2)** | `v2.alkemia.my.id` | `alkemia-v2` | `DB` | **Active**. For testing React migration features. |
-| **Production (Fresh)** | `alkemia-fresh...workers.dev` | `alkemia-fresh` | `alkemia-fresh-db` | **Live**. Fresh DB & Resources. Needs DB Init. |
+| **Production (Fresh)** | `https://alkemia-fresh2.pages.dev` | `alkemia-fresh2` | `alkemiafresh2` | **Live**. Main Pages Deployment. |
 
 ## 4. Migration Progress Tracking
+
+### 🚀 CI/CD & Deployment
+- **Platform**: Cloudflare Pages.
+- **Repository**: `https://github.com/manikinta007/alkemia-fresh`
+- **Workflow**: Automated build & deploy on `git push main`.
+- **Status**: **Fully Migrated**. Backend logic now resides in `client/src_worker/` and routed via `client/functions/api`.
 
 ### ✅ Completed
 - [x] **Backend Modularization**: Refactored `worker.js` into modular controllers (`taskController`, `quizController`, etc.).
@@ -56,3 +62,13 @@
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
 > **Rule**: When changing features, update this document immediately.
+
+## 6. Future Roadmap
+### 🎨 Sidebar Restructure (Academic Flow)
+Plan to reorganize sidebar menu to reduce clutter and follow the teaching workflow:
+1.  **Dashboard**
+2.  **Akademik** (Data Master: Periode, Kelas, Siswa)
+3.  **KBM** (Jadwal, Absensi, Materi)
+4.  **Evaluasi** (Tugas, Bank Soal/Quizzes, Nilai)
+5.  **Tools** (QR Code, dll)
+6.  **Pengaturan**
