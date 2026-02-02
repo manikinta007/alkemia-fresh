@@ -14,12 +14,21 @@ const Icons = {
 
 const getEmbedUrl = (url) => {
     if (!url) return '';
-    if (url.includes('drive.google.com')) return url.replace('/view', '/preview');
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-        const v = url.split('v=')[1] || url.split('/').pop();
-        return 'https://www.youtube.com/embed/' + v;
+
+    // 1. Google Drive (Preview Mode)
+    if (url.includes('drive.google.com')) {
+        return url.replace('/view', '/preview');
     }
-    return url;
+
+    // 2. YouTube (Embed Mode)
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        const videoId = url.split('v=')[1] || url.split('/').pop();
+        const cleanId = videoId?.split('&')[0];
+        return `https://www.youtube.com/embed/${cleanId}?autoplay=0`;
+    }
+
+    // 3. General Files (R2/External) -> Use Proxy to bypass CORS/X-Frame
+    return `/api/proxy?url=${encodeURIComponent(url)}`;
 };
 
 export default function StudentPortal() {
