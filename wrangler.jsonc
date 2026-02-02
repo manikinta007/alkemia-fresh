@@ -1,0 +1,56 @@
+{
+  "name": "alkemia2",
+  "main": "src/worker.js",
+  "workers_dev": true,
+  "preview_urls": false,
+  "compatibility_date": "2026-01-30",
+  "routes": [
+    {
+      "pattern": "app.alkemia.my.id",
+      "zone_name": "alkemia.my.id",
+      "custom_domain": true
+    }
+  ],
+  "rules": [
+    {
+      "type": "ESModule",
+      "globs": [
+        "src/**/*.js"
+      ],
+      "fallthrough": true
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_id": "7efb1a91-de05-4e91-b227-43e28dd31b13"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "id": "1120ab54a9ad44f6bf57c2ddc8674d9e",
+      "binding": "KV"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "alkemia2-files"
+    }
+  ]
+}

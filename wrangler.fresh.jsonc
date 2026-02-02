@@ -1,0 +1,44 @@
+{
+    "name": "alkemia-fresh",
+    "main": "src/worker-fresh.js",
+    "workers_dev": true,
+    "preview_urls": false,
+    "compatibility_date": "2026-01-30",
+    "assets": {
+        "directory": "./client/dist",
+        "binding": "ASSETS"
+    },
+    "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "logs": {
+            "enabled": true,
+            "head_sampling_rate": 1,
+            "persist": true,
+            "invocation_logs": true
+        },
+        "traces": {
+            "enabled": false,
+            "persist": true,
+            "head_sampling_rate": 1
+        }
+    },
+    "d1_databases": [
+        {
+            "binding": "DB",
+            "database_id": "5fc064f0-51e6-46d6-84df-3bf519a5465b"
+        }
+    ],
+    "kv_namespaces": [
+        {
+            "binding": "KV",
+            "id": "32b71980aac0433d9ce10b3619f0b7bb"
+        }
+    ],
+    "r2_buckets": [
+        {
+            "binding": "R2",
+            "bucket_name": "alkemia-fresh-files"
+        }
+    ]
+}
