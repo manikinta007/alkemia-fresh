@@ -54,15 +54,16 @@
 - [x] **Materials**: Migrate `materials.js` -> `Materials.jsx`.
 
 ## 5. Active Session Context
-**Active Session Context**
-**Current Focus**: Verifying Multi-Fix Deployment (v2.5).
-**Tasks**:
-1.  ✅ **Completed**: Refactored `useAlert` to Promise-based (Fixes Delete Bug).
-2.  ✅ **Completed**: Added `/api/proxy` routing in backend workers.
-3.  ✅ **Completed**: Fixed Student Quiz white screen (QuizCard list rendering).
-4.  ✅ **Completed**: Fixed Teacher QR Reset not working (Promise-based showConfirm).
-5.  ✅ **Completed**: Google Drive materials now show external link fallback.
-**Immediate Plan**: User verification on all three fixes.
+**Current Focus**: Bug Fixing Session (Feb 3, 2026)
+**Tasks Completed**:
+1.  ✅ **Task Grading White Screen**: Added missing `Clock` import in `TaskGrading.jsx`.
+2.  ✅ **Mobile Sidebar Overlay**: Fixed overlay logic in `Layout.jsx` - now closes on outside click.
+3.  ✅ **Task Publish Button**: Fixed `handleToggleStatus` in `Tasks.jsx` (Promise-based showConfirm).
+4.  ✅ **Global QR Reset**: Fixed `handleReset` in `QRCodes.jsx` (Promise-based).
+5.  ✅ **Task Delete Button**: Fixed in `Tasks.jsx`.
+6.  ✅ **Google Drive Materials**: Simplified fallback UI in `StudentPortal.jsx`.
+7.  ✅ **Grade Visibility**: Fixed `/api/student/task-detail` to check `is_published` before exposing grades.
+**Immediate Plan**: User verification of grade visibility fix.
 
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
