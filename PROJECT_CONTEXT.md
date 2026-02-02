@@ -40,6 +40,8 @@
     - [x] D1, R2, KV integration.
     - [x] Static Assets serving (React build).
 - [x] **Student App**: Full Migration to React PWA (Landing, Portal, Tasks, CBT).
+    - [x] **UI Refinement (Legacy)**: Reverted to `bg-zinc-950`, Floating Header, Hidden Scrollbars.
+    - [x] **Features**: Material Presentation Modal, "Nilai" Tab Fix, Version Bump (2.1).
 - [x] **Dashboard Refactor**:
     - [x] Fixed Legacy Links (SPA Navigation).
     - [x] **Deep Linking**: implemented `class_id` auto-selection for Attendance & Materials.
@@ -53,11 +55,11 @@
 
 ## 5. Active Session Context
 **Active Session Context**
-**Current Focus**: Dashboard Stability & Student App Verification.
+**Current Focus**: Monitoring Post-Deployment Stability.
 **Tasks**:
-1.  ✅ **Completed**: Student App Migration (PWA), Dashboard Refactor (Fixed Links/Stats).
-2.  🚀 **Next**: **Final Deployment & Testing**. 
-**Immediate Plan**: Ensure all dashboard links work and Student App flows are smooth.
+1.  ✅ **Completed**: Student App UI Refinements (Floating Header, Modal, Fixs), Deployment Build Fixes.
+2.  🚀 **Next**: **User Verification** (waiting for PWA cache validation). 
+**Immediate Plan**: Ensure user can access the updated "Version 2.1" Student App.
 
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.

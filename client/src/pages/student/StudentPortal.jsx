@@ -180,13 +180,8 @@ export default function StudentPortal() {
                             </div>
                         </div>
 
-                        <div className="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800">
-                            <button onClick={handleLogout} className="w-full p-4 text-left flex items-center justify-between hover:bg-zinc-800 transition text-red-500 font-bold">
-                                <span>Logout / Ganti Akun</span>
-                                <span>🚪</span>
-                            </button>
-                        </div>
-                        <p className="text-center text-xs text-zinc-600">App Version 2.1 (Fixed)<br />Device ID: ...{localStorage.getItem('student_device_id')?.slice(-6)}</p>
+
+                        <p className="text-center text-xs text-zinc-600">App Version 2.2 (Fixed Layout)<br />Device ID: ...{localStorage.getItem('student_device_id')?.slice(-6)}</p>
                     </div>
                 );
             default:
@@ -195,11 +190,11 @@ export default function StudentPortal() {
     };
 
     return (
-        <div className="bg-zinc-950 min-h-screen text-white pb-24 md:pb-0 font-sans selection:bg-blue-500/30">
+        <div className="bg-zinc-950 h-screen text-white font-sans selection:bg-blue-500/30 overflow-hidden flex flex-col items-center">
             {/* MAIN CONTENT AREA */}
-            <div className="max-w-md mx-auto min-h-screen bg-zinc-950 relative shadow-2xl overflow-hidden flex flex-col">
+            <div className="w-full max-w-md h-full bg-zinc-950 relative shadow-2xl flex flex-col">
                 {/* FLOATING HEADER (Sticky Top) */}
-                <header className="px-5 pt-safe pt-6 pb-2 bg-zinc-950 z-10 sticky top-0 border-b border-transparent transition-all">
+                <header className="px-5 pt-safe pt-6 pb-2 bg-zinc-950 z-10 shrink-0 border-b border-transparent transition-all">
                     <div className="flex justify-between items-start mb-6">
                         <div>
                             <p className="text-xs text-zinc-500 font-medium mb-0.5">Selamat Datang,</p>
@@ -224,28 +219,13 @@ export default function StudentPortal() {
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-5 pt-2 scrollbar-hide">
+                <div className="flex-1 overflow-y-auto p-5 pt-2 scrollbar-hide pb-24">
                     {renderContent()}
                 </div>
 
-                {/* MODAL PRESENTASI MATERI */}
-                {selectedMaterial && (
-                    <div className="fixed inset-0 z-[100] bg-black flex flex-col animate-in slide-in-from-bottom duration-300">
-                        <div className="flex items-center justify-between px-4 py-4 bg-zinc-900 text-white shadow-md pt-safe border-b border-zinc-800">
-                            <h3 className="text-sm font-bold truncate pr-4 text-zinc-200">{selectedMaterial.title}</h3>
-                            <button onClick={() => setSelectedMaterial(null)} className="w-8 h-8 flex items-center justify-center bg-zinc-800 rounded-full hover:bg-zinc-700 text-zinc-400 hover:text-white transition">
-                                ✕
-                            </button>
-                        </div>
-                        <div className="flex-1 bg-black relative">
-                            <iframe src={getEmbedUrl(selectedMaterial.file_url)} className="w-full h-full border-0" allow="autoplay; encrypted-media; fullscreen" allowFullScreen></iframe>
-                        </div>
-                    </div>
-                )}
-
                 {/* BOTTOM NAVIGATION */}
-                <div className="fixed bottom-0 left-0 right-0 z-50 glass-nav pb-safe">
-                    <div className="max-w-md mx-auto flex justify-around items-center p-2">
+                <div className="fixed bottom-0 left-0 right-0 z-50 glass-nav pb-safe pointer-events-none">
+                    <div className="max-w-md mx-auto pointer-events-auto flex justify-around items-center p-2">
                         {['MATERI', 'TUGAS', 'QUIZ', 'NILAI', 'PROFIL'].map((tab) => {
                             const isActive = activeTab === tab;
                             const Icon = Icons[tab.charAt(0) + tab.slice(1).toLowerCase()];
@@ -264,6 +244,21 @@ export default function StudentPortal() {
                     </div>
                 </div>
             </div>
+
+            {/* MODAL PRESENTASI MATERI (MOVED TO ROOT) */}
+            {selectedMaterial && (
+                <div className="fixed inset-0 z-[9999] bg-black flex flex-col animate-in slide-in-from-bottom duration-300">
+                    <div className="flex items-center justify-between px-4 py-4 bg-zinc-900 text-white shadow-md pt-safe border-b border-zinc-800">
+                        <h3 className="text-sm font-bold truncate pr-4 text-zinc-200">{selectedMaterial.title}</h3>
+                        <button onClick={() => setSelectedMaterial(null)} className="w-8 h-8 flex items-center justify-center bg-zinc-800 rounded-full hover:bg-zinc-700 text-zinc-400 hover:text-white transition">
+                            ✕
+                        </button>
+                    </div>
+                    <div className="flex-1 bg-black relative">
+                        <iframe src={getEmbedUrl(selectedMaterial.file_url)} className="w-full h-full border-0" allow="autoplay; encrypted-media; fullscreen" allowFullScreen></iframe>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
