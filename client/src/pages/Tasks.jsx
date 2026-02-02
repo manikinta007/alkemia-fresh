@@ -231,28 +231,28 @@ export default function Tasks() {
         setSaving(false);
     };
 
-    const handleDeleteTask = (id) => {
-        showConfirm('Hapus tugas ini beserta semua data nilainya? Tindakan tidak bisa dibatalkan.', async () => {
-            try {
-                await fetchApi(`/api/tasks?id=${id}`, { method: 'DELETE' });
-                fetchTasks(selectedClass.id);
-                showAlert('Tugas berhasil dihapus', 'success');
-            } catch (e) { showAlert('Gagal menghapus', 'error'); }
-        });
+    const handleDeleteTask = async (id) => {
+        const confirmed = await showConfirm('Hapus tugas ini beserta semua data nilainya? Tindakan tidak bisa dibatalkan.');
+        if (!confirmed) return;
+        try {
+            await fetchApi(`/api/tasks?id=${id}`, { method: 'DELETE' });
+            fetchTasks(selectedClass.id);
+            showAlert('Tugas berhasil dihapus', 'success');
+        } catch (e) { showAlert('Gagal menghapus', 'error'); }
     };
 
-    const handleToggleStatus = (task) => {
+    const handleToggleStatus = async (task) => {
         const newStatus = task.is_active ? 0 : 1;
         const confirmMsg = newStatus ? "Tugas akan muncul di dashboard siswa. Lanjutkan?" : "Tugas akan disembunyikan (Draft). Lanjutkan?";
-        showConfirm(confirmMsg, async () => {
-            try {
-                const res = await fetchApi('/api/tasks/toggle', {
-                    method: 'POST',
-                    body: JSON.stringify({ id: task.id, isActive: newStatus })
-                });
-                if (res.ok) fetchTasks(selectedClass.id);
-            } catch (e) { showAlert('Gagal mengubah status.', 'error'); }
-        });
+        const confirmed = await showConfirm(confirmMsg);
+        if (!confirmed) return;
+        try {
+            const res = await fetchApi('/api/tasks/toggle', {
+                method: 'POST',
+                body: JSON.stringify({ id: task.id, isActive: newStatus })
+            });
+            if (res.ok) fetchTasks(selectedClass.id);
+        } catch (e) { showAlert('Gagal mengubah status.', 'error'); }
     };
 
     // Save Grade dengan Detail Poin Essay
