@@ -181,7 +181,7 @@ export default function StudentPortal() {
                         </div>
 
 
-                        <p className="text-center text-xs text-zinc-600">App Version 2.2 (Fixed Layout)<br />Device ID: ...{localStorage.getItem('student_device_id')?.slice(-6)}</p>
+                        <p className="text-center text-xs text-zinc-600">App Version 2.3 (Fallback & Debug)<br />Device ID: ...{localStorage.getItem('student_device_id')?.slice(-6)}</p>
                     </div>
                 );
             default:
@@ -249,13 +249,24 @@ export default function StudentPortal() {
             {selectedMaterial && (
                 <div className="fixed inset-0 z-[9999] bg-black flex flex-col animate-in slide-in-from-bottom duration-300">
                     <div className="flex items-center justify-between px-4 py-4 bg-zinc-900 text-white shadow-md pt-safe border-b border-zinc-800">
-                        <h3 className="text-sm font-bold truncate pr-4 text-zinc-200">{selectedMaterial.title}</h3>
+                        <div className="flex-1 min-w-0 pr-4">
+                            <h3 className="text-sm font-bold truncate text-zinc-200">{selectedMaterial.title}</h3>
+                            <a href={selectedMaterial.file_url} target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 underline flex items-center gap-1">
+                                Buka di Browser Luar ↗
+                            </a>
+                        </div>
                         <button onClick={() => setSelectedMaterial(null)} className="w-8 h-8 flex items-center justify-center bg-zinc-800 rounded-full hover:bg-zinc-700 text-zinc-400 hover:text-white transition">
                             ✕
                         </button>
                     </div>
-                    <div className="flex-1 bg-black relative">
-                        <iframe src={getEmbedUrl(selectedMaterial.file_url)} className="w-full h-full border-0" allow="autoplay; encrypted-media; fullscreen" allowFullScreen></iframe>
+                    <div className="flex-1 bg-black relative flex items-center justify-center">
+                        <iframe
+                            src={getEmbedUrl(selectedMaterial.file_url)}
+                            className="w-full h-full border-0"
+                            allow="autoplay; encrypted-media; fullscreen"
+                            allowFullScreen
+                            onError={(e) => console.log("Iframe Error", e)}
+                        ></iframe>
                     </div>
                 </div>
             )}

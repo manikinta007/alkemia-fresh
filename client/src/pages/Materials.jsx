@@ -346,9 +346,14 @@ export default function Materials() {
                 setMaterials(prev => prev.filter(m => m.id !== id));
                 showAlert("Materi dihapus", "success");
             } else {
-                showAlert("Gagal menghapus", "error");
+                const err = await res.json();
+                console.error("Delete Failed:", err);
+                showAlert(err.error || "Gagal menghapus", "error");
             }
-        } catch (e) { showAlert("Error server", "error"); }
+        } catch (e) {
+            console.error("Delete Network Error:", e);
+            showAlert("Error server", "error");
+        }
     };
 
     const handleToggleVisibility = async (id, currentStatus) => {
