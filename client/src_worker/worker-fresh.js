@@ -11,6 +11,7 @@ import { handlePageRequest } from './routes/pages.js';
 // --- SPECIFIC CONTROLLERS (New Features) ---
 import { handleTaskRequest } from './controllers/taskController.js';
 import { handleMigrationRequest } from './controllers/migrationController.js';
+import { handleProxyRequest } from './controllers/proxyController.js';
 
 // --- CONFIG & HEADERS ---
 // [PENTING] Ganti URL ini dengan domain Worker Anda sendiri jika sudah production!
@@ -54,6 +55,11 @@ export default {
           pathname === "/api/student/upload") {
 
           return await handleTaskRequest(request, env);
+        }
+
+        // [JALUR KHUSUS 3] Proxy (Bypass X-Frame-Options)
+        if (pathname === "/api/proxy") {
+          return await handleProxyRequest(request, env);
         }
 
         // [JALUR UMUM] Sisa request lainnya (Auth, Dashboard, Absensi, dll)

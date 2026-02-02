@@ -55,11 +55,11 @@
 
 ## 5. Active Session Context
 **Active Session Context**
-**Current Focus**: Solving Student Content Block & Teacher Delete Bug.
+**Current Focus**: Verifying Student Content Block Fix.
 **Tasks**:
 1.  ✅ **Completed**: Refactored `useAlert` to Promise-based (Fixes Delete Bug).
-2.  ✅ **Completed**: Implemented `/api/proxy` for Student Iframe (Fixes Dark Screen).
-**Immediate Plan**: User is verifying v2.4 fixes.
+2.  ✅ **Completed**: Implemented `/api/proxy` Routing in `worker-v2.js` & `worker-fresh.js`.
+**Immediate Plan**: User to deploy and verify the fix on their device.
 
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
