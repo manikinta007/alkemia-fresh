@@ -1,7 +1,7 @@
 // functions/api/[[route]].js
 // Adapter for Cloudflare Pages Functions to use existing Worker logic
 
-import worker from '../../src/worker-fresh.js';
+import worker from '../../src_worker/worker-fresh.js';
 
 export const onRequest = async (context) => {
     // Adapter: context.request is a standard Request object
