@@ -86,7 +86,7 @@ const SidebarGroup = ({ label, icon: Icon, children, initialOpen = false, curren
 };
 
 export default function Layout() {
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const location = useLocation();
 
     // Get user from localStorage (synced by api.js) or default
@@ -105,16 +105,16 @@ export default function Layout() {
     return (
         <div className="flex min-h-screen bg-zinc-50 font-sans">
             {/* Sidebar Overlay (Mobile) */}
-            {!sidebarOpen && (
+            {sidebarOpen && (
                 <div
                     className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                    onClick={() => setSidebarOpen(true)}
+                    onClick={() => setSidebarOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
             <aside
-                className={`fixed lg:sticky top-0 left-0 h-screen bg-black text-white w-72 z-50 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+                className={`fixed lg:sticky top-0 left-0 h-screen bg-black text-white w-72 z-50 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     } lg:translate-x-0 flex flex-col`}
             >
                 <div className="p-6 border-b border-zinc-900 flex justify-between items-center">
