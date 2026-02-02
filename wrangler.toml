@@ -1,0 +1,16 @@
+name = "alkemia-fresh2"
+pages_build_output_dir = "client/dist"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "alkemia-fresh-db"
+database_id = "5fc064f0-51e6-46d6-84df-3bf519a5465b"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "32b71980aac0433d9ce10b3619f0b7bb"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "alkemia-fresh-files"
