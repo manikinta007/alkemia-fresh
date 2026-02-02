@@ -99,94 +99,65 @@ export default function StudentPortal() {
     if (loading) return <div className="flex items-center justify-center min-h-screen bg-black text-white"><div className="animate-spin text-4xl">⚓</div></div>;
     if (!data) return <div className="flex items-center justify-center min-h-screen bg-black text-white p-6 text-center">Gagal memuat data. Periksa koneksi internet.<br /><button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-white text-black rounded font-bold">Refresh</button></div>;
 
-    // RENDER TAB CONTENT
     const renderContent = () => {
-        switch (activeTab) {
-            case 'MATERI':
-                return (
-                    <div className="space-y-4 animate-in fade-in">
-                        <h2 className="text-white font-bold text-lg mb-4 flex items-center gap-2"><span className="text-blue-500">📚</span> Materi Pelajaran</h2>
-                        {data.materials.length === 0 ? (
-                            <div className="text-zinc-500 text-center py-10 italic">Belum ada materi dibagikan.</div>
-                        ) : (
-                            data.materials.map(m => (
-                                <div key={m.id} className="bg-zinc-900 p-4 rounded-xl border border-zinc-800 flex gap-4 items-center hover:bg-zinc-800 transition active:scale-95 cursor-pointer" onClick={() => setSelectedMaterial(m)}>
-                                    <div className="w-12 h-12 bg-zinc-800 rounded-lg flex items-center justify-center text-2xl shadow-inner">
-                                        {m.type === 'video' ? '📺' : '📄'}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="text-white font-bold truncate">{m.title}</h3>
-                                        <p className="text-xs text-zinc-500 truncate">{m.description || 'Klik untuk membuka file'}</p>
-                                    </div>
-                                    <div className="text-zinc-500">↗</div>
-                                </div>
-                            ))
-                        )}
+        if (activeTab === 'MATERI') return (
+            <div className="space-y-3 pb-24">
+                <h2 className="text-xl font-bold mb-4 px-1">Materi Pelajaran</h2>
+                {data.materials.length === 0 ? (
+                    <div className="text-center p-8 text-zinc-600 bg-zinc-900 rounded-2xl border border-zinc-800 border-dashed">
+                        Belum ada materi untuk saat ini.
                     </div>
-                );
-            case 'TUGAS':
-                return <StudentTasks student={data.student} onBack={() => setActiveTab('MATERI')} />;
-            case 'QUIZ':
-                return (
-                    <div className="space-y-4 animate-in fade-in">
-                        <div className="flex items-center justify-between mb-2">
-                            <h2 className="text-white font-bold text-xl">Ujian & Kuis</h2>
-                            <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-1 rounded">{data.quizzes.length} Tersedia</span>
-                        </div>
-                        {data.quizzes.length === 0 && <div className="text-zinc-500 text-center py-10">Tidak ada jadwal ujian.</div>}
-                        {data.quizzes.map(q => (
-                            <QuizCard
-                                key={q.id}
-                                quiz={q}
-                                onStart={(id) => setActiveQuizId(id)}
-                                onReview={(id) => setReviewQuizId(id)}
-                            />
-                        ))}
-                    </div>
-                );
-            case 'NILAI':
-                return (
-                    <div className="space-y-4 animate-in fade-in">
-                        <h2 className="text-white font-bold text-xl mb-4">Rekap Nilai</h2>
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div className="bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
-                                <p className="text-zinc-500 text-xs uppercase mb-1">Rata-rata Tugas</p>
-                                <p className="text-3xl font-black text-orange-500">{data.grades?.avg_task || '-'}</p>
+                ) : (
+                    data.materials.map(m => (
+                        <div key={m.id}
+                            onClick={() => setSelectedMaterial(m)}
+                            className="bg-zinc-900 p-4 rounded-2xl border border-zinc-800 flex items-center gap-4 hover:bg-zinc-800 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shadow-sm group">
+                            <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 group-hover:text-white transition shadow-inner">
+                                <FileText size={24} />
                             </div>
-                            <div className="bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
-                                <p className="text-zinc-500 text-xs uppercase mb-1">Rata-rata Kuis</p>
-                                <p className="text-3xl font-black text-blue-500">{data.grades?.avg_quiz || '-'}</p>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-white truncate text-lg mb-0.5">{m.title}</h3>
+                                <p className="text-xs text-zinc-500 truncate font-medium">{m.description || 'Tidak ada deskripsi'}</p>
                             </div>
+                            <span className="text-zinc-600 group-hover:text-zinc-400">↗</span>
                         </div>
-                        {/* Detail List could go here if API provided detailed history */}
-                        <div className="bg-zinc-900/50 p-6 rounded-xl border border-dashed border-zinc-800 text-center">
-                            <p className="text-zinc-500 text-sm">Detail riwayat nilai dapat dilihat pada masing-masing menu Tugas dan Quiz.</p>
-                        </div>
-                    </div>
-                );
-            case 'PROFIL':
-                return (
-                    <div className="space-y-6 animate-in fade-in">
-                        <h2 className="text-white font-bold text-xl">Profil Saya</h2>
-                        <div className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 text-center">
-                            <div className="w-24 h-24 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl shadow-xl">
-                                🎓
-                            </div>
-                            <h3 className="text-2xl font-bold text-white mb-1">{data.student.name}</h3>
-                            <p className="text-zinc-400">{data.student.nis}</p>
-                            <div className="mt-4 pt-4 border-t border-zinc-800 grid grid-cols-2 gap-4 text-left">
-                                <div><p className="text-xs text-zinc-500 uppercase">Kelas</p><p className="font-bold text-white">{data.student.class}</p></div>
-                                <div><p className="text-xs text-zinc-500 uppercase">Status</p><p className="font-bold text-green-500">Aktif</p></div>
-                            </div>
-                        </div>
+                    ))
+                )}
+            </div>
+        );
+        if (activeTab === 'TUGAS') return <StudentTasks student={data.student} onBack={() => setActiveTab('MATERI')} />;
+        if (activeTab === 'QUIZ') return <StudentCBT user={data.student} onBack={() => setActiveTab('MATERI')} />;
+        if (activeTab === 'NILAI') return <div className="p-4 text-center text-zinc-500 mt-10">Fitur Nilai segera hadir! 🚧</div>;
+        if (activeTab === 'PROFIL') return (
+            <div className="flex flex-col items-center justify-center pt-10 px-6 animate-in fade-in cursor-default">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-2xl mb-6 ring-4 ring-black/50">
+                    {data.student.name.charAt(0)}
+                </div>
+                <h2 className="text-2xl font-bold text-white text-center mb-1">{data.student.name}</h2>
+                <p className="text-zinc-500 text-sm font-medium mb-8 bg-zinc-900 px-4 py-1.5 rounded-full border border-zinc-800">
+                    {data.student.nis} • {data.student.class_name}
+                </p>
 
-
-                        <p className="text-center text-xs text-zinc-600">App Version 2.3 (Fallback & Debug)<br />Device ID: ...{localStorage.getItem('student_device_id')?.slice(-6)}</p>
+                <div className="w-full bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden divide-y divide-zinc-800 shadow-lg">
+                    <div className="p-4 flex justify-between items-center hover:bg-zinc-800/50 transition">
+                        <span className="text-zinc-400 text-sm font-medium">Status</span>
+                        <span className="text-green-500 font-bold text-sm bg-green-500/10 px-3 py-1 rounded-lg">Aktif</span>
                     </div>
-                );
-            default:
-                return null;
-        }
+                </div>
+
+                <div className="mt-12 text-center space-y-2 opacity-50 hover:opacity-100 transition duration-500">
+                    <p className="text-[10px] text-zinc-600 font-mono tracking-widest uppercase">AlkeMia Learning System</p>
+                    <p className="text-[10px] text-zinc-700">Protected by Cloudflare Zero Trust</p>
+                </div>
+
+                <div className="fixed bottom-24 left-0 right-0 pointer-events-none flex justify-center pb-safe">
+                    <div className="bg-zinc-900/80 backdrop-blur-md px-4 py-2 rounded-full border border-zinc-800 pointer-events-auto shadow-xl">
+                        <p className="text-center text-xs text-zinc-600">App Version 2.4 (Proxy & Alert Logic Fix)<br />Device ID: ...{localStorage.getItem('student_device_id')?.slice(-6)}</p>
+                    </div>
+                </div>
+            </div>
+        );
+        return null;
     };
 
     return (
@@ -228,7 +199,11 @@ export default function StudentPortal() {
                     <div className="max-w-md mx-auto pointer-events-auto flex justify-around items-center p-2">
                         {['MATERI', 'TUGAS', 'QUIZ', 'NILAI', 'PROFIL'].map((tab) => {
                             const isActive = activeTab === tab;
-                            const Icon = Icons[tab.charAt(0) + tab.slice(1).toLowerCase()];
+                            const Icon =
+                                tab === 'MATERI' ? BookOpen :
+                                    tab === 'TUGAS' ? ClipboardList :
+                                        tab === 'QUIZ' ? Trophy :
+                                            tab === 'NILAI' ? BarChart2 : User;
                             return (
                                 <button
                                     key={tab}

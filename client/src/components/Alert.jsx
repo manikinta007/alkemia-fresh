@@ -42,18 +42,30 @@ export const CustomConfirm = ({ isOpen, message, onConfirm, onCancel }) => {
 // --- KOMPONEN HELPER: USE ALERT (HOOK) ---
 export const useAlert = () => {
     const [alertState, setAlertState] = useState({ isOpen: false, type: 'success', message: '' });
-    const [confirmState, setConfirmState] = useState({ isOpen: false, message: '', onConfirm: null });
+    const [confirmState, setConfirmState] = useState({ isOpen: false, message: '', resolve: null });
 
     const showAlert = (msg, type = 'success') => {
         setAlertState({ isOpen: true, type, message: msg });
     };
 
-    const showConfirm = (msg, onConfirmCallback) => {
-        setConfirmState({ isOpen: true, message: msg, onConfirm: onConfirmCallback });
+    const showConfirm = (msg) => {
+        return new Promise((resolve) => {
+            setConfirmState({ isOpen: true, message: msg, resolve });
+        });
     };
 
     const closeAlert = () => setAlertState(prev => ({ ...prev, isOpen: false }));
-    const closeConfirm = () => setConfirmState(prev => ({ ...prev, isOpen: false }));
+    const closeConfirm = () => setConfirmState(prev => ({ ...prev, isOpen: false, resolve: null }));
+
+    const handleConfirm = () => {
+        if (confirmState.resolve) confirmState.resolve(true);
+        closeConfirm();
+    };
+
+    const handleCancel = () => {
+        if (confirmState.resolve) confirmState.resolve(false);
+        closeConfirm();
+    };
 
     const AlertComponent = () => (
         <>
@@ -66,11 +78,8 @@ export const useAlert = () => {
             <CustomConfirm
                 isOpen={confirmState.isOpen}
                 message={confirmState.message}
-                onConfirm={() => {
-                    if (confirmState.onConfirm) confirmState.onConfirm();
-                    closeConfirm();
-                }}
-                onCancel={closeConfirm}
+                onConfirm={handleConfirm}
+                onCancel={handleCancel}
             />
         </>
     );

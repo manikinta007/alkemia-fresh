@@ -55,11 +55,11 @@
 
 ## 5. Active Session Context
 **Active Session Context**
-**Current Focus**: Debugging Material Deletion & Student App Content.
+**Current Focus**: Solving Student Content Block & Teacher Delete Bug.
 **Tasks**:
-1.  ✅ **Completed**: Student App UI (Layout, Modal Fallback), Logout Removal, V2.3 Bump.
-2.  🚀 **Next**: **Verify Custom Domain** & **Teacher Delete Logic** (via Debug Logs).
-**Immediate Plan**: User is testing Version 2.3. Waiting for feedback on Delete functionality.
+1.  ✅ **Completed**: Refactored `useAlert` to Promise-based (Fixes Delete Bug).
+2.  ✅ **Completed**: Implemented `/api/proxy` for Student Iframe (Fixes Dark Screen).
+**Immediate Plan**: User is verifying v2.4 fixes.
 
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.

@@ -199,7 +199,12 @@ export async function handleApiRequest(request, env) {
     // [NEW] Dashboard API
     if (!apiResponse) apiResponse = await handleDashboardRequest(request, env);
 
-    // [NEW] Migration Route
+    // [NEW] API Proxy for Iframe
+    if (!apiResponse && pathname === '/api/proxy') {
+      const { handleProxyRequest } = await import('../controllers/proxyController.js');
+      apiResponse = await handleProxyRequest(request, env);
+    }
+
     if (!apiResponse) apiResponse = await handleMigrationRequest(request, env);
 
     if (apiResponse) {
