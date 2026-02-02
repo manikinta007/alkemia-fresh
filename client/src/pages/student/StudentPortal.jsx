@@ -246,9 +246,6 @@ export default function StudentPortal() {
                     <div className="flex items-center justify-between px-4 py-4 bg-zinc-900 text-white shadow-md pt-safe border-b border-zinc-800">
                         <div className="flex-1 min-w-0 pr-4">
                             <h3 className="text-sm font-bold truncate text-zinc-200">{selectedMaterial.title}</h3>
-                            <a href={selectedMaterial.file_url} target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 underline flex items-center gap-1">
-                                Buka di Browser Luar ↗
-                            </a>
                         </div>
                         <button onClick={() => setSelectedMaterial(null)} className="w-8 h-8 flex items-center justify-center bg-zinc-800 rounded-full hover:bg-zinc-700 text-zinc-400 hover:text-white transition">
                             ✕
@@ -265,18 +262,14 @@ export default function StudentPortal() {
                             ></iframe>
                         ) : (
                             <div className="text-center p-8">
-                                <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                                    <FileText size={40} className="text-zinc-400" />
-                                </div>
-                                <h3 className="text-xl font-bold text-white mb-2">Materi Eksternal</h3>
-                                <p className="text-zinc-400 text-sm mb-6">File ini disimpan di Google Drive dan perlu dibuka di browser eksternal.</p>
+                                <h3 className="text-2xl font-bold text-white mb-8">{selectedMaterial.title}</h3>
                                 <a
                                     href={selectedMaterial.file_url}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="inline-block bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition"
+                                    className="inline-block bg-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg"
                                 >
-                                    Buka di Browser ↗
+                                    Buka Materi ↗
                                 </a>
                             </div>
                         )}

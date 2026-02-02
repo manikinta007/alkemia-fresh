@@ -55,12 +55,14 @@
 
 ## 5. Active Session Context
 **Active Session Context**
-**Current Focus**: Student Content Delivery Issue (Reverted/Analyzing).
+**Current Focus**: Verifying Multi-Fix Deployment (v2.5).
 **Tasks**:
 1.  ✅ **Completed**: Refactored `useAlert` to Promise-based (Fixes Delete Bug).
-2.  ✅ **Completed**: Added `/api/proxy` routing in backend workers (kept).
-3.  ❌ **Reverted**: Frontend proxy routing caused errors, rolled back to stable version.
-**Immediate Plan**: Investigate alternative approaches without breaking existing functionality.
+2.  ✅ **Completed**: Added `/api/proxy` routing in backend workers.
+3.  ✅ **Completed**: Fixed Student Quiz white screen (QuizCard list rendering).
+4.  ✅ **Completed**: Fixed Teacher QR Reset not working (Promise-based showConfirm).
+5.  ✅ **Completed**: Google Drive materials now show external link fallback.
+**Immediate Plan**: User verification on all three fixes.
 
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.

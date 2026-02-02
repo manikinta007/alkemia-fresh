@@ -82,31 +82,28 @@ const FullscreenQRModal = ({ cls, onClose }) => {
     }, [qrData, libLoaded]);
 
     const handleReset = async () => {
-        showConfirm(
-            'Reset Akses Kelas?',
-            async () => {
-                setIsResetting(true);
-                try {
-                    const res = await fetchApi('/api/student/reset-claims', {
-                        method: 'POST',
-                        body: JSON.stringify({ classId: cls.id })
-                    });
-                    if (res.ok) {
-                        showAlert('Reset Berhasil! Semua siswa logout.', 'success');
-                        // Refresh stats
-                        const statusRes = await fetchApi('/api/qr/info?class_id=' + cls.id);
-                        if (statusRes.ok) setClaimStatus(await statusRes.json());
-                    } else {
-                        showAlert('Gagal reset', 'error');
-                    }
-                } catch (e) {
-                    showAlert('Error reset', 'error');
-                } finally {
-                    setIsResetting(false);
-                }
-            },
-            'Perhatian: Semua siswa yang sedang login di kelas ini akan dikeluarkan (logout).'
-        );
+        const confirmed = await showConfirm('Reset Akses Kelas? Semua siswa yang sedang login akan dikeluarkan (logout).');
+        if (!confirmed) return;
+
+        setIsResetting(true);
+        try {
+            const res = await fetchApi('/api/student/reset-claims', {
+                method: 'POST',
+                body: JSON.stringify({ classId: cls.id })
+            });
+            if (res.ok) {
+                showAlert('Reset Berhasil! Semua siswa logout.', 'success');
+                // Refresh stats
+                const statusRes = await fetchApi('/api/qr/info?class_id=' + cls.id);
+                if (statusRes.ok) setClaimStatus(await statusRes.json());
+            } else {
+                showAlert('Gagal reset', 'error');
+            }
+        } catch (e) {
+            showAlert('Error reset', 'error');
+        } finally {
+            setIsResetting(false);
+        }
     };
 
     const handleDownload = () => {
