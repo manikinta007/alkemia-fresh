@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
@@ -13,16 +13,21 @@ import {
     LogOut,
     Menu,
     X,
-    ScrollText,
-    Award
+    Award,
+    ChevronDown,
+    ChevronRight,
+    School,
+    GraduationCap,
+    MoreHorizontal
 } from 'lucide-react';
 import { fetchApi } from '../utils/api';
 
-const SidebarItem = ({ to, icon: Icon, label }) => (
+const SidebarItem = ({ to, icon: Icon, label, nested = false }) => (
     <NavLink
         to={to}
         className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all duration-200 group ` +
+            `flex items-center gap-3 px-4 py-2.5 rounded text-sm font-medium transition-all duration-200 group ` +
+            (nested ? 'ml-4 ' : '') + // Indent for nested items
             (isActive
                 ? 'bg-orange-600 text-white font-bold shadow-lg shadow-orange-600/30'
                 : 'text-zinc-400 hover:text-white hover:bg-zinc-900')
@@ -30,12 +35,54 @@ const SidebarItem = ({ to, icon: Icon, label }) => (
     >
         {({ isActive }) => (
             <>
-                <Icon size={20} className={isActive ? 'opacity-100' : 'opacity-70'} />
+                <Icon size={18} className={isActive ? 'opacity-100' : 'opacity-70'} />
                 <span>{label}</span>
             </>
         )}
     </NavLink>
 );
+
+const SidebarGroup = ({ label, icon: Icon, children, initialOpen = false, currentPath }) => {
+    // Check if any child link is active to auto-expand
+    const isChildActive = React.Children.toArray(children).some(child => {
+        if (React.isValidElement(child) && child.props.to) {
+            return currentPath === child.props.to || currentPath.startsWith(child.props.to);
+        }
+        return false;
+    });
+
+    const [isOpen, setIsOpen] = useState(initialOpen || isChildActive);
+
+    // Effect to auto-expand if navigated to a child route from elsewhere
+    useEffect(() => {
+        if (isChildActive) setIsOpen(true);
+    }, [isChildActive]);
+
+    return (
+        <div className="mb-2">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full flex items-center justify-between px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-colors ${isChildActive || isOpen ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+            >
+                <div className="flex items-center gap-2">
+                    {Icon && <Icon size={16} />}
+                    <span>{label}</span>
+                </div>
+                {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+
+            <div
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
+                    }`}
+            >
+                <div className="space-y-1">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export default function Layout() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -92,34 +139,38 @@ export default function Layout() {
                     </div>
                 </div>
 
-                <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
-                    <SidebarItem to="/" icon={LayoutDashboard} label="Dashboard" />
-                    <SidebarItem to="/lab" icon={FlaskConical} label="Virtual Lab" />
-
-                    <div className="pt-4 pb-2">
-                        <p className="px-4 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">AKADEMIK</p>
+                <nav className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                    {/* DASHBOARD (Main) */}
+                    <div className="mb-4 space-y-1">
+                        <SidebarItem to="/" icon={LayoutDashboard} label="Dashboard" />
+                        <SidebarItem to="/lab" icon={FlaskConical} label="Virtual Lab" />
                     </div>
 
-                    <SidebarItem to="/periods" icon={Calendar} label="Periode Akademik" />
-                    <SidebarItem to="/classes" icon={Users} label="Kelas & Siswa" />
-                    <SidebarItem to="/attendance" icon={ClipboardList} label="Presensi" />
-                    <SidebarItem to="/schedule" icon={Calendar} label="Jadwal Pelajaran" />
-                    <SidebarItem to="/materials" icon={BookOpen} label="Bahan Ajar" />
-                    <SidebarItem to="/tasks" icon={ListTodo} label="Tugas" />
-                    <SidebarItem to="/quizzes" icon={Award} label="Kuis & Ujian" />
+                    {/* AKADEMIK */}
+                    <SidebarGroup label="Akademik" icon={School} currentPath={location.pathname}>
+                        <SidebarItem to="/periods" icon={Calendar} label="Periode" nested />
+                        <SidebarItem to="/classes" icon={Users} label="Kelas & Siswa" nested />
+                    </SidebarGroup>
 
-                    <div className="pt-4 pb-2">
-                        <p className="px-4 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">PEMBELAJARAN</p>
-                    </div>
+                    {/* KBM */}
+                    <SidebarGroup label="KBM" icon={BookOpen} currentPath={location.pathname}>
+                        <SidebarItem to="/schedule" icon={Calendar} label="Jadwal" nested />
+                        <SidebarItem to="/attendance" icon={ClipboardList} label="Presensi" nested />
+                        <SidebarItem to="/materials" icon={BookOpen} label="Bahan Ajar" nested />
+                    </SidebarGroup>
 
-                    <SidebarItem to="/grades" icon={Award} label="Nilai" />
+                    {/* EVALUASI */}
+                    <SidebarGroup label="Evaluasi" icon={Award} currentPath={location.pathname}>
+                        <SidebarItem to="/tasks" icon={ListTodo} label="Tugas" nested />
+                        <SidebarItem to="/quizzes" icon={Award} label="Kuis & Ujian" nested />
+                        <SidebarItem to="/grades" icon={Award} label="Nilai" nested />
+                    </SidebarGroup>
 
-                    <div className="pt-4 pb-2">
-                        <p className="px-4 text-[10px] font-bold text-zinc-600 uppercase tracking-widest">LAINNYA</p>
-                    </div>
-
-                    <SidebarItem to="/qrcodes" icon={QrCode} label="QR Codes" />
-                    <SidebarItem to="/settings" icon={Settings} label="Pengaturan" />
+                    {/* LAINNYA */}
+                    <SidebarGroup label="Lainnya" icon={MoreHorizontal} currentPath={location.pathname}>
+                        <SidebarItem to="/qrcodes" icon={QrCode} label="QR Codes" nested />
+                        <SidebarItem to="/settings" icon={Settings} label="Pengaturan" nested />
+                    </SidebarGroup>
                 </nav>
 
                 <div className="p-4 border-t border-zinc-900">
