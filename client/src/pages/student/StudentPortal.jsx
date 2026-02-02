@@ -8,15 +8,19 @@ import { BookOpen, ClipboardList, Trophy, BarChart2, User, FileText } from 'luci
 const getEmbedUrl = (url) => {
     if (!url) return '';
 
-    // 1. YouTube (Embed Mode) - YouTube embed biasanya aman dari X-Frame-Options
+    // 1. Google Drive (Preview Mode)
+    if (url.includes('drive.google.com')) {
+        return url.replace('/view', '/preview');
+    }
+
+    // 2. YouTube (Embed Mode)
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
         const videoId = url.split('v=')[1] || url.split('/').pop();
         const cleanId = videoId?.split('&')[0];
         return `https://www.youtube.com/embed/${cleanId}?autoplay=0`;
     }
 
-    // 2. SEMUA URL LAIN (termasuk Google Drive, R2, External PDF) -> Use Proxy
-    // Proxy akan bypass X-Frame-Options, CSP, dan header restrictive lainnya
+    // 3. General Files (R2/External) -> Use Proxy to bypass CORS/X-Frame
     return `/api/proxy?url=${encodeURIComponent(url)}`;
 };
 
