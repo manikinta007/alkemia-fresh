@@ -398,7 +398,7 @@ export async function handleTaskRequest(request, env) {
                     question_count: t.question_count,
                     status: status,
                     // My Grade hanya jika is_published=1 DAN bukan draft
-                    my_grade: (sub && sub.is_published === 1 && sub.is_graded !== -1) ? sub.grade : null
+                    my_grade: (sub && sub.is_published == 1 && sub.is_graded != -1) ? sub.grade : null
                 });
             }
 
@@ -475,7 +475,7 @@ export async function handleTaskRequest(request, env) {
 
                 if (sub) {
                     // [SECURITY] Only show grade & feedback if published
-                    if (sub.is_published === 1 && sub.is_graded !== -1) {
+                    if (sub.is_published == 1 && sub.is_graded != -1) {
                         myGrade = sub.grade;
                         feedback = sub.feedback;
                     }
