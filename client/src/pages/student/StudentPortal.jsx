@@ -186,7 +186,7 @@ export default function StudentPortal() {
                                 <span>🚪</span>
                             </button>
                         </div>
-                        <p className="text-center text-xs text-zinc-600">App Version 2.0 (React PWA)<br />Device ID: ...{localStorage.getItem('student_device_id')?.slice(-6)}</p>
+                        <p className="text-center text-xs text-zinc-600">App Version 2.1 (Fixed)<br />Device ID: ...{localStorage.getItem('student_device_id')?.slice(-6)}</p>
                     </div>
                 );
             default:
