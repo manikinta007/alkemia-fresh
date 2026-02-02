@@ -190,15 +190,15 @@ export default function StudentPortal() {
     };
 
     return (
-        <div className="bg-black min-h-screen text-white pb-24 md:pb-0 font-sans selection:bg-blue-500/30">
+        <div className="bg-zinc-950 min-h-screen text-white pb-24 md:pb-0 font-sans selection:bg-blue-500/30">
             {/* MAIN CONTENT AREA */}
-            <div className="max-w-md mx-auto min-h-screen bg-black relative shadow-2xl overflow-hidden flex flex-col">
+            <div className="max-w-md mx-auto min-h-screen bg-zinc-950 relative shadow-2xl overflow-hidden flex flex-col">
                 <div className="flex-1 overflow-y-auto p-5 pt-safe pt-8 scrollbar-hide">
                     {renderContent()}
                 </div>
 
                 {/* BOTTOM NAVIGATION */}
-                <div className="fixed bottom-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-t border-zinc-800 pb-safe">
+                <div className="fixed bottom-0 left-0 right-0 z-50 glass-nav pb-safe">
                     <div className="max-w-md mx-auto flex justify-around items-center p-2">
                         {['MATERI', 'TUGAS', 'QUIZ', 'NILAI', 'PROFIL'].map((tab) => {
                             const isActive = activeTab === tab;

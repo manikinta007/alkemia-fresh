@@ -180,10 +180,12 @@ export default function StudentLanding() {
         }
     };
 
+    // ... (imports remain)
+
     // TAMPILAN JIKA BELUM INSTALL PWA
     if (!isStandalone && !loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[80vh] animate-in fade-in duration-500 bg-black text-white p-6 text-center">
+            <div className="flex flex-col items-center justify-center min-h-[80vh] animate-in fade-in duration-500 text-center p-6 text-white">
                 <SimpleModal isOpen={alertModal.open} title={alertModal.title} message={alertModal.msg} isError={alertModal.isError} onClose={() => setAlertModal({ ...alertModal, open: false })} />
 
                 <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30"><span className="text-4xl">🎓</span></div>
@@ -236,7 +238,7 @@ export default function StudentLanding() {
                         </div>
                         <div className="space-y-3 pb-10">
                             {students.map(s => {
-                                const isClaimed = s.device_count > 0; // Menggunakan data langsung dari server
+                                const isClaimed = s.device_count > 0;
                                 return (
                                     <button key={s.id} onClick={() => !isClaimed && confirmClaim(s.id)} disabled={isClaimed} className={`w-full p-4 rounded-xl flex items-center justify-between transition-all active:scale-95 ${isClaimed ? 'bg-zinc-900/50 opacity-50 cursor-not-allowed' : 'bg-zinc-900 hover:bg-zinc-800 border border-zinc-800'}`}>
                                         <span className="font-bold text-base">{s.name}</span>
