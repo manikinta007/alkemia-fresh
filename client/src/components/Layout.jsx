@@ -73,10 +73,11 @@ const SidebarGroup = ({ label, icon: Icon, children, initialOpen = false, curren
             </button>
 
             <div
-                className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 opacity-100 mt-1' : 'max-h-0 opacity-0'
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                     }`}
             >
-                <div className="space-y-1">
+                {/* Cloudflare-style vertical line container */}
+                <div className="ml-[1.15rem] pl-3 border-l border-zinc-800 space-y-1 my-1">
                     {children}
                 </div>
             </div>
@@ -148,28 +149,28 @@ export default function Layout() {
 
                     {/* AKADEMIK */}
                     <SidebarGroup label="Akademik" icon={School} currentPath={location.pathname}>
-                        <SidebarItem to="/periods" icon={Calendar} label="Periode" nested />
-                        <SidebarItem to="/classes" icon={Users} label="Kelas & Siswa" nested />
+                        <SidebarItem to="/periods" icon={Calendar} label="Periode" />
+                        <SidebarItem to="/classes" icon={Users} label="Kelas & Siswa" />
                     </SidebarGroup>
 
                     {/* KBM */}
                     <SidebarGroup label="KBM" icon={BookOpen} currentPath={location.pathname}>
-                        <SidebarItem to="/schedule" icon={Calendar} label="Jadwal" nested />
-                        <SidebarItem to="/attendance" icon={ClipboardList} label="Presensi" nested />
-                        <SidebarItem to="/materials" icon={BookOpen} label="Bahan Ajar" nested />
+                        <SidebarItem to="/schedule" icon={Calendar} label="Jadwal" />
+                        <SidebarItem to="/attendance" icon={ClipboardList} label="Presensi" />
+                        <SidebarItem to="/materials" icon={BookOpen} label="Bahan Ajar" />
                     </SidebarGroup>
 
                     {/* EVALUASI */}
                     <SidebarGroup label="Evaluasi" icon={Award} currentPath={location.pathname}>
-                        <SidebarItem to="/tasks" icon={ListTodo} label="Tugas" nested />
-                        <SidebarItem to="/quizzes" icon={Award} label="Kuis & Ujian" nested />
-                        <SidebarItem to="/grades" icon={Award} label="Nilai" nested />
+                        <SidebarItem to="/tasks" icon={ListTodo} label="Tugas" />
+                        <SidebarItem to="/quizzes" icon={Award} label="Kuis & Ujian" />
+                        <SidebarItem to="/grades" icon={Award} label="Nilai" />
                     </SidebarGroup>
 
                     {/* LAINNYA */}
                     <SidebarGroup label="Lainnya" icon={MoreHorizontal} currentPath={location.pathname}>
-                        <SidebarItem to="/qrcodes" icon={QrCode} label="QR Codes" nested />
-                        <SidebarItem to="/settings" icon={Settings} label="Pengaturan" nested />
+                        <SidebarItem to="/qrcodes" icon={QrCode} label="QR Codes" />
+                        <SidebarItem to="/settings" icon={Settings} label="Pengaturan" />
                     </SidebarGroup>
                 </nav>
 
