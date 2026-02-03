@@ -147,7 +147,8 @@ export async function handleApiRequest(request, env) {
     pathname === "/api/login" ||
     pathname === "/api/init" ||
     pathname.startsWith("/api/migrate") || // Allow migration
-    pathname.startsWith("/api/student");
+    pathname.startsWith("/api/student") ||
+    pathname.startsWith("/api/images/file/"); // Allow public image access for student app
 
   if (!isPublicApi) {
     const security = await verifyApiProtection(request, env);
