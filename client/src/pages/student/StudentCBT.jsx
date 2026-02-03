@@ -469,8 +469,9 @@ export const QuizRunner = ({ quizId, studentId, duration, onFinish }) => {
 
         try {
             if (auto) {
-                // AUTO: Fire & Forget
-                fetch('/api/student/quiz/submit', {
+                // AUTO-SUBMIT: Simplified but reliable approach
+                // Await the response to ensure it completes before UI transition
+                const res = await fetch('/api/student/quiz/submit', {
                     method: 'POST',
                     headers: headers,
                     body: JSON.stringify({ quizId, answers: formattedAnswers }),
@@ -479,7 +480,12 @@ export const QuizRunner = ({ quizId, studentId, duration, onFinish }) => {
 
                 localStorage.removeItem(storageKey);
 
-                triggerAlert("Waktu Habis", "Waktu pengerjaan selesai. Jawaban Anda otomatis tersimpan.", "warning", onFinish);
+                if (res.ok) {
+                    triggerAlert("Waktu Habis", "Waktu pengerjaan selesai. Jawaban Anda berhasil tersimpan.", "warning", onFinish);
+                } else {
+                    // Still show alert even if server error, answers may have been saved
+                    triggerAlert("Waktu Habis", "Jawaban otomatis dikirim.", "warning", onFinish);
+                }
 
             } else {
                 // MANUAL

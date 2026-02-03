@@ -69,6 +69,7 @@
 11. ✅ **Period Set Active/Delete**: Fixed `showConfirm` usage in `Periods.jsx` (was callback-based, now Promise-based).
 12. ✅ **Delete Schedule Button**: Fixed `showConfirm` usage in `useScheduleData.js` (was callback-based, now Promise-based).
 13. ✅ **Leaderboard Fullscreen Mode**: Added Browser Fullscreen API toggle in `LiveLeaderboard.jsx` for presentation mode.
+14. ✅ **Quiz Answer Not Saved**: Fixed type mismatch (`question_id` string vs integer) in `quizController.js`. Also improved auto-submit reliability in `StudentCBT.jsx`.
 
 **Session End**: All reported issues resolved. Ready for next session.
 
