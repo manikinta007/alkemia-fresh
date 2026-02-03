@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     Upload,
     Image as ImageIcon,
-    Link as LinkIcon,
     X,
     Loader2,
     Check,
@@ -27,9 +26,6 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect }) {
     const [images, setImages] = useState([]);
     const [activeFolder, setActiveFolder] = useState(null);
     const [selectedImage, setSelectedImage] = useState(null);
-
-    // --- LINK TAB STATE ---
-    const [linkUrl, setLinkUrl] = useState('');
 
     // --- EFFECTS ---
 
@@ -112,9 +108,6 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect }) {
         if (activeTab === 'bank' && selectedImage) {
             onSelect(selectedImage.url);
             onClose();
-        } else if (activeTab === 'link' && linkUrl) {
-            onSelect(linkUrl);
-            onClose();
         }
     };
 
@@ -153,16 +146,6 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect }) {
                     >
                         <ImageIcon size={18} />
                         Bank Gambar
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('link')}
-                        className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-colors border-b-2 ${activeTab === 'link'
-                            ? 'border-orange-500 text-orange-600 bg-white'
-                            : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100'
-                            }`}
-                    >
-                        <LinkIcon size={18} />
-                        Link URL
                     </button>
                 </div>
 
@@ -271,31 +254,11 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect }) {
                         </div>
                     )}
 
-                    {/* 3. LINK TAB */}
-                    {activeTab === 'link' && (
-                        <div className="h-full flex flex-col items-center justify-center p-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                            <div className="w-full max-w-lg">
-                                <label className="block text-sm font-bold text-zinc-700 mb-2">URL Gambar / Google Drive Link</label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={linkUrl}
-                                        onChange={(e) => setLinkUrl(e.target.value)}
-                                        placeholder="https://..."
-                                        className="flex-1 p-3 rounded-lg border border-zinc-300 focus:outline-none focus:border-orange-500"
-                                    />
-                                </div>
-                                <p className="mt-3 text-xs text-zinc-500 leading-relaxed">
-                                    Tip: Anda bisa menempelkan link Google Drive (View Link) secara langsung.<br />
-                                    Sistem akan otomatis mengkonversi link tersebut agar bisa tampil di aplikasi siswa.
-                                </p>
-                            </div>
-                        </div>
-                    )}
+
                 </div>
 
-                {/* FOOTER (Only for Bank & Link tabs) */}
-                {activeTab !== 'upload' && (
+                {/* FOOTER (Only for Bank tab) */}
+                {activeTab === 'bank' && (
                     <div className="p-4 border-t border-zinc-200 bg-zinc-50 flex justify-end gap-3">
                         <button
                             onClick={onClose}
@@ -305,7 +268,7 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect }) {
                         </button>
                         <button
                             onClick={handleConfirmSelection}
-                            disabled={(activeTab === 'bank' && !selectedImage) || (activeTab === 'link' && !linkUrl)}
+                            disabled={!selectedImage}
                             className="px-6 py-2 rounded-lg font-bold bg-orange-600 text-white shadow-lg shadow-orange-600/20 hover:bg-orange-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             PILIH GAMBAR

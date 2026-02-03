@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { fetchApi } from '../utils/api';
 import { useAlertContext } from '../components/Alert';
 import { X } from 'lucide-react';
-import { convertToProxyUrl } from '../utils/imageUtils';
 
 // Sub-Components
 import { CreateTaskModal, StudentModal, WeightModal, DiscussionModal } from './Tasks/TaskModals';
@@ -393,7 +392,7 @@ export default function Tasks() {
         );
     }
 
-    // --- URL MODAL HANDLER (for injecting images) ---
+    // --- URL MODAL HANDLER (for injecting images from R2) ---
     const handleConfirmUrl = (url) => {
         const idx = urlModal.targetIdx;
         if (idx === null || !url) {
@@ -401,16 +400,8 @@ export default function Tasks() {
             return;
         }
 
-        // Use convertToProxyUrl for Google Drive links (uses thumbnail endpoint which works)
-        // convertToProxyUrl handles Google Drive links (uses thumbnail endpoint via proxy)
-        const finalUrl = convertToProxyUrl(url);
-
-        const message = finalUrl !== url
-            ? 'Link Google Drive berhasil dikonversi (via proxy).'
-            : 'Gambar berhasil disisipkan.';
-
-        // Insert image HTML into question text
-        const imgHtml = `<br><img src="${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>`;
+        // Insert image HTML into question text (R2 URLs are used directly)
+        const imgHtml = `<br><img src="${url}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>`;
         // FIX: Create new question object (immutable update) to trigger React re-render
         const newQuestions = questions.map((q, i) =>
             i === idx
@@ -420,7 +411,7 @@ export default function Tasks() {
         setQuestions(newQuestions);
 
         setUrlModal({ isOpen: false, targetIdx: null });
-        showAlert(message, 'success');
+        showAlert('Gambar berhasil disisipkan.', 'success');
     };
 
     // 3. EDITOR MODE
