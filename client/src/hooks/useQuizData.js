@@ -109,17 +109,19 @@ export const useQuizData = (showAlert, showConfirm) => {
             try {
                 // Ensure ID is a string or number and not an event object
                 const quizId = typeof id === 'object' ? id.id : id;
+                console.log("[DELETE] Attempting to delete quiz:", quizId);
 
                 const res = await fetchApi('/api/quizzes?id=' + quizId, { method: 'DELETE' });
                 if (res.ok) {
                     if (showAlert) showAlert('Quiz berhasil dihapus.', 'success');
                     if (onSuccess) onSuccess();
                 } else {
-                    throw new Error('Gagal menghapus');
+                    const err = await res.json();
+                    throw new Error(err.error || 'Server returned error');
                 }
             } catch (e) {
-                if (showAlert) showAlert('Gagal menghapus quiz.', 'error');
-                console.error(e);
+                console.error("[DELETE] Failed:", e);
+                if (showAlert) showAlert('Gagal menghapus quiz: ' + e.message, 'error');
             }
         });
     };
