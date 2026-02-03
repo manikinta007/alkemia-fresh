@@ -197,12 +197,15 @@ export default function StudentTasks({ student, onBack }) {
                     body: JSON.stringify({ taskId: activeTask.id, studentId: student.id, answers: payloadAnswers, isDraft })
                 });
                 if (res.ok) {
-                    if (!isDraft) {
-                        localStorage.removeItem(`draft_task_${student.id}_${activeTask.id}`);
-                        setViewMode('LIST');
-                        fetchTasks();
-                        showAlert('Berhasil', 'Tugas berhasil dikumpulkan!', 'success');
-                    } else showAlert('Tersimpan', 'Jawaban berhasil disimpan sementara.', 'success');
+                    // Both draft and final: clear local draft, navigate to list
+                    localStorage.removeItem(`draft_task_${student.id}_${activeTask.id}`);
+                    // Navigate first, then show alert (prevents flicker)
+                    setViewMode('LIST');
+                    fetchTasks();
+                    // Show success alert AFTER navigation
+                    setTimeout(() => {
+                        showAlert('Berhasil', isDraft ? 'Draft berhasil disimpan!' : 'Tugas berhasil dikumpulkan!', 'success');
+                    }, 150);
                 } else {
                     const err = await res.json();
                     showAlert('Gagal', err.error || 'Gagal mengirim.', 'error');
@@ -309,8 +312,9 @@ export default function StudentTasks({ student, onBack }) {
                         const hasDraft = !isDone && localStorage.getItem(`draft_task_${student.id}_${t.id}`);
 
                         const statusColor = t.status === 'DINILAI' ? 'bg-green-900/30 text-green-400 border-green-800' :
-                            t.status === 'MENUNGGU_NILAI' ? 'bg-yellow-900/30 text-yellow-400 border-yellow-800' :
-                                'bg-zinc-800 text-zinc-400 border-zinc-700';
+                            t.status === 'SEDANG_DIPERIKSA' ? 'bg-blue-900/30 text-blue-400 border-blue-800' :
+                                t.status === 'MENUNGGU_NILAI' ? 'bg-yellow-900/30 text-yellow-400 border-yellow-800' :
+                                    'bg-zinc-800 text-zinc-400 border-zinc-700';
 
                         return (
                             <div key={t.id} onClick={() => !isLocked && openTask(t.id, t.status)} className={`p-4 rounded-xl border transition-all relative overflow-hidden group ${isLocked ? 'bg-zinc-900/50 border-zinc-800 opacity-60 cursor-not-allowed' : 'bg-zinc-900 border-zinc-800 hover:border-orange-900 cursor-pointer active:scale-[0.98]'}`}>

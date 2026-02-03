@@ -379,15 +379,16 @@ export async function handleTaskRequest(request, env) {
 
                 // [LOGIC STATUS]
                 // -1: DRAFT (Belum Submit Final) -> Tampilkan 'BELUM_DIKERJAKAN' di list agar bisa lanjut
-                // Tapi nanti di detail kita load draftnya.
-                // 0: Menunggu Nilai
-                // 1: Dinilai
+                // 0: Menunggu Nilai (Sudah submit, belum dinilai guru)
+                // 1: Dinilai (Sudah dinilai guru)
+                // is_published: 0 = Belum tampil ke siswa, 1 = Sudah tampil
 
                 let status = 'BELUM_DIKERJAKAN';
                 if (sub) {
-                    if (sub.is_graded === -1) status = 'BELUM_DIKERJAKAN'; // Anggap belum selesai karena baru draft
-                    else if (sub.is_graded === 1) status = 'DINILAI';
-                    else status = 'MENUNGGU_NILAI';
+                    if (sub.is_graded === -1) status = 'BELUM_DIKERJAKAN'; // Draft
+                    else if (sub.is_graded === 1 && sub.is_published == 1) status = 'DINILAI'; // Graded AND Published
+                    else if (sub.is_graded === 1 && sub.is_published != 1) status = 'SEDANG_DIPERIKSA'; // Graded but NOT Published
+                    else status = 'MENUNGGU_NILAI'; // Submitted, waiting for grade
                 }
 
                 filteredTasks.push({
