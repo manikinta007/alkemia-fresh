@@ -220,7 +220,7 @@ export default function StudentTasks({ student, onBack }) {
                         {modal.type === 'confirm' ? (
                             <div className="flex gap-3 w-full">
                                 <button onClick={closeModal} className="flex-1 py-2.5 bg-zinc-800 text-zinc-300 font-bold rounded-xl hover:bg-zinc-700">Batal</button>
-                                <button onClick={() => { closeModal(); modal.onConfirm && modal.onConfirm(); }} className="flex-1 py-2.5 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700">Ya, Lanjut</button>
+                                <button onClick={() => { const cb = modal.onConfirm; closeModal(); if (cb) setTimeout(cb, 100); }} className="flex-1 py-2.5 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700">Ya, Lanjut</button>
                             </div>
                         ) : (
                             <button onClick={closeModal} className="w-full py-2.5 bg-zinc-800 text-white font-bold rounded-xl hover:bg-zinc-700">Tutup</button>
