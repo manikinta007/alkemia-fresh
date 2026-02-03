@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { processContentForDisplay } from '../../utils/imageUtils';
 
 // --- UTILS ---
 const compressImage = async (file) => {
@@ -380,7 +381,7 @@ export default function StudentTasks({ student, onBack }) {
                                         </span>
                                     )}
                                 </div>
-                                <div className="prose prose-sm prose-invert max-w-none font-medium" dangerouslySetInnerHTML={{ __html: q.questionText }}></div>
+                                <div className="prose prose-sm prose-invert max-w-none font-medium" dangerouslySetInnerHTML={{ __html: processContentForDisplay(q.questionText) }}></div>
                                 {q.questionImageUrl && <img src={q.questionImageUrl} className="mt-3 rounded-lg border border-zinc-700 max-h-60 object-contain bg-black" />}
                             </div>
 
