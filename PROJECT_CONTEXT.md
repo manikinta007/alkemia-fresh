@@ -2,31 +2,42 @@
 
 ## 1. Overview
 **Goal**: Migrate the legacy AlkeMia exam & learning platform to a modern, serverless architecture using the Cloudflare Stack.
-**State**: Hybrid (Legacy Frontend + New React Frontend) running on Cloudflare Workers.
+**State**: React SPA + Embedded Worker running on **Cloudflare Pages** (Unified Deployment).
 
 ## 2. Architecture Stack
 | Component | Technology | Description |
 | :--- | :--- | :--- |
-| **Frontend** | React (Vite) + TailwindCSS | Single Page Application (SPA), replacing legacy EJS/HTML views. |
-| **Backend** | Cloudflare Workers | Serverless compute, handling API requests and routing. |
+| **Frontend** | React (Vite) + TailwindCSS | Single Page Application (SPA). |
+| **Backend** | Cloudflare Pages Functions (`_worker.js`) | Embedded Worker bundled into Pages deployment. No separate Worker. |
 | **Database** | Cloudflare D1 (SQLite) | Core relational data (Users, Classes, Grades, Quizzes). |
-| **Storage** | Cloudflare R2 | Object storage for image uploads (Quizzes, Profile). |
+| **Storage** | Cloudflare R2 | Object storage for image uploads (Gudang Gambar, Profile). |
 | **Cache/Auth** | Cloudflare KV | High-speed storage for Rate Limiting and Session management. |
 
-## 3. Deployment Environments
-| Env | URL | Worker | DB Binding | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **Production (Legacy)** | `app.alkemia.my.id` | `alkemia2` | `DB` | **Stable**. Reverted to legacy code. |
-| **Staging (V2)** | `v2.alkemia.my.id` | `alkemia-v2` | `DB` | **Active**. For testing React migration features. |
-| **Production (Fresh)** | `https://alkemia-fresh2.pages.dev` | `alkemia-fresh2` | `alkemiafresh2` | **Live**. Main Pages Deployment. |
+## 3. Deployment
+**Live URL**: `https://alkemia-fresh2.pages.dev`
+**Platform**: Cloudflare Pages (Unified Deployment)
+**Repository**: `https://github.com/manikinta007/alkemia-fresh`
+**Build Command**: `npm run build` (builds frontend + bundles `_worker.js`)
+**Build Output**: `client/dist`
+
+| Binding | Type | Value |
+| :--- | :--- | :--- |
+| `DB` | D1 Database | `alkemiafresh2` |
+| `R2` | R2 Bucket | `alkemiafresh2` |
+| `KV` | KV Namespace | `alkemiafresh2` |
+
+> [!NOTE]
+> **No Separate Worker**. The backend logic (`src/worker-fresh.js`) is bundled into `client/dist/_worker.js` during build and runs directly within Pages (Advanced Mode).
 
 ## 4. Migration Progress Tracking
 
 ### 🚀 CI/CD & Deployment
-- **Platform**: Cloudflare Pages.
-- **Repository**: `https://github.com/manikinta007/alkemia-fresh`
 - **Workflow**: Automated build & deploy on `git push main`.
-- **Status**: **Fully Migrated**. Backend logic now resides in `client/src_worker/` and routed via `client/functions/api`.
+- **Build Process**:
+  1. `npm install` (root)
+  2. `cd client && npm install && npm run build` (Vite builds SPA)
+  3. `esbuild src/worker-fresh.js --bundle --outfile=client/dist/_worker.js` (Bundles backend)
+- **Status**: **Fully Migrated & Unified**. Single domain, no CORS issues.
 
 ### ✅ Completed
 - [x] **Backend Modularization**: Refactored `worker.js` into modular controllers (`taskController`, `quizController`, etc.).
