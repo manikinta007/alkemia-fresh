@@ -113,22 +113,23 @@ export const useScheduleData = (showAlert, showConfirm) => {
 
     const deleteSchedule = async (id) => {
         if (showConfirm) {
-            showConfirm('Yakin ingin menghapus jadwal ini?', async () => {
-                setDeletingId(id);
-                try {
-                    const res = await fetchApi(`/api/schedules?id=${id}`, { method: 'DELETE' });
-                    if (res.ok) {
-                        if (showAlert) showAlert('Jadwal dihapus.', 'success');
-                        setSchedules(prev => prev.filter(s => s.id !== id));
-                    } else {
-                        if (showAlert) showAlert('Gagal menghapus.', 'error');
-                    }
-                } catch (e) {
-                    if (showAlert) showAlert('Kesalahan saat menghapus.', 'error');
-                } finally {
-                    setDeletingId(null);
+            const confirmed = await showConfirm('Yakin ingin menghapus jadwal ini?');
+            if (!confirmed) return;
+
+            setDeletingId(id);
+            try {
+                const res = await fetchApi(`/api/schedules?id=${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    if (showAlert) showAlert('Jadwal dihapus.', 'success');
+                    setSchedules(prev => prev.filter(s => s.id !== id));
+                } else {
+                    if (showAlert) showAlert('Gagal menghapus.', 'error');
                 }
-            });
+            } catch (e) {
+                if (showAlert) showAlert('Kesalahan saat menghapus.', 'error');
+            } finally {
+                setDeletingId(null);
+            }
         }
     };
 

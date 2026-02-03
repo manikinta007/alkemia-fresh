@@ -109,43 +109,45 @@ export default function Periods() {
         } catch (e) { showAlert('Gagal update.', 'error'); }
     };
 
-    const handleDelete = (id) => {
-        showConfirm("Hapus periode ini? PERINGATAN: Semua Kelas, Siswa, Nilai, dan Data Quiz dalam periode ini akan HILANG PERMANEN.", async () => {
-            try {
-                const res = await fetchApi('/api/periods?id=' + id, { method: 'DELETE' });
-                if (res.ok) {
-                    const currentActive = JSON.parse(localStorage.getItem('activePeriod') || 'null');
-                    if (currentActive && currentActive.id == id) {
-                        localStorage.removeItem('activePeriod');
-                    }
-                    fetchPeriods();
-                    showAlert('Periode berhasil dihapus.', 'success');
-                } else {
-                    showAlert('Gagal menghapus periode.', 'error');
+    const handleDelete = async (id) => {
+        const confirmed = await showConfirm("Hapus periode ini? PERINGATAN: Semua Kelas, Siswa, Nilai, dan Data Quiz dalam periode ini akan HILANG PERMANEN.");
+        if (!confirmed) return;
+
+        try {
+            const res = await fetchApi('/api/periods?id=' + id, { method: 'DELETE' });
+            if (res.ok) {
+                const currentActive = JSON.parse(localStorage.getItem('activePeriod') || 'null');
+                if (currentActive && currentActive.id == id) {
+                    localStorage.removeItem('activePeriod');
                 }
-            } catch (e) { showAlert('Gagal menghapus.', 'error'); }
-        });
+                fetchPeriods();
+                showAlert('Periode berhasil dihapus.', 'success');
+            } else {
+                showAlert('Gagal menghapus periode.', 'error');
+            }
+        } catch (e) { showAlert('Gagal menghapus.', 'error'); }
     };
 
-    const handleSetActive = (periodId) => {
-        showConfirm("Ubah periode aktif? Data dashboard akan berubah sesuai periode yang dipilih.", async () => {
-            try {
-                const res = await fetchApi('/api/periods/set-active', {
-                    method: 'POST',
-                    body: JSON.stringify({ periodId })
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    localStorage.setItem('activePeriod', JSON.stringify(data.activePeriod));
-                    fetchPeriods();
-                    window.location.reload();
-                } else {
-                    showAlert('Gagal mengubah periode aktif.', 'error');
-                }
-            } catch (e) {
-                showAlert('Terjadi kesalahan server.', 'error');
+    const handleSetActive = async (periodId) => {
+        const confirmed = await showConfirm("Ubah periode aktif? Data dashboard akan berubah sesuai periode yang dipilih.");
+        if (!confirmed) return;
+
+        try {
+            const res = await fetchApi('/api/periods/set-active', {
+                method: 'POST',
+                body: JSON.stringify({ periodId })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('activePeriod', JSON.stringify(data.activePeriod));
+                fetchPeriods();
+                window.location.reload();
+            } else {
+                showAlert('Gagal mengubah periode aktif.', 'error');
             }
-        });
+        } catch (e) {
+            showAlert('Terjadi kesalahan server.', 'error');
+        }
     };
 
     return (

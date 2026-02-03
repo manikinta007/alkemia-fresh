@@ -66,6 +66,9 @@
 8.  ✅ **Grade Status Label**: Added `NILAI_DALAM_PROSES` status (Purple) for graded but unpublished tasks.
 9.  ✅ **Student Modal/Redirect**: Refactored Modal components to fix flicker. Changed Draft flow to "Save & Continue".
 10. ✅ **Quiz Delete/Save Questions**: Fixed `showConfirm` usage in `useQuizData.js` (was callback-based, now Promise-based).
+11. ✅ **Period Set Active/Delete**: Fixed `showConfirm` usage in `Periods.jsx` (was callback-based, now Promise-based).
+12. ✅ **Delete Schedule Button**: Fixed `showConfirm` usage in `useScheduleData.js` (was callback-based, now Promise-based).
+13. ✅ **Leaderboard Fullscreen Mode**: Added Browser Fullscreen API toggle in `LiveLeaderboard.jsx` for presentation mode.
 
 **Session End**: All reported issues resolved. Ready for next session.
 
@@ -76,12 +79,15 @@
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
 > **Rule**: When changing features, update this document immediately.
 
-## 6. Future Roadmap
-### 🎨 Sidebar Restructure (Academic Flow)
-Plan to reorganize sidebar menu to reduce clutter and follow the teaching workflow:
+## 6. Completed Features (Historical)
+### ✅ Sidebar Restructure (Academic Flow)
+Reorganized sidebar menu to follow the teaching workflow:
 1.  **Dashboard**
 2.  **Akademik** (Data Master: Periode, Kelas, Siswa)
 3.  **KBM** (Jadwal, Absensi, Materi)
 4.  **Evaluasi** (Tugas, Bank Soal/Quizzes, Nilai)
 5.  **Tools** (QR Code, dll)
 6.  **Pengaturan**
+
+## 7. Future Roadmap
+- (No active roadmap items)

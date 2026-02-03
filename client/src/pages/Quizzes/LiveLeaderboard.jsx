@@ -1,9 +1,34 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
+import { Maximize, Minimize } from 'lucide-react';
 
 export const LiveLeaderboard = ({ results, onClose }) => {
     const [animatingIds, setAnimatingIds] = useState(new Set());
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const prevResultsRef = useRef({});
+    const containerRef = useRef(null);
+
+    // [LOGIC] Fullscreen API handlers
+    const toggleFullscreen = async () => {
+        try {
+            if (!document.fullscreenElement) {
+                await containerRef.current?.requestFullscreen();
+            } else {
+                await document.exitFullscreen();
+            }
+        } catch (err) {
+            console.error('Fullscreen error:', err);
+        }
+    };
+
+    // [LOGIC] Listen for fullscreen changes
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
 
     // [LOGIC] Watcher: Deteksi perubahan nilai untuk trigger animasi
     useEffect(() => {
@@ -73,14 +98,23 @@ export const LiveLeaderboard = ({ results, onClose }) => {
     ];
 
     return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[9999] bg-zinc-900 text-white flex flex-col animate-in fade-in duration-300 overflow-hidden font-sans">
+        <div ref={containerRef} className="fixed inset-0 z-[9999] bg-zinc-900 text-white flex flex-col animate-in fade-in duration-300 overflow-hidden font-sans">
             {/* Header */}
             <div className="flex justify-between items-center p-6 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md z-50">
                 <div className="flex items-center gap-4">
                     <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_red]"></div>
                     <h2 className="text-2xl font-black tracking-tighter italic uppercase text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">LIVE LEADERBOARD</h2>
                 </div>
-                <button onClick={onClose} className="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-full font-bold text-sm transition border border-zinc-700">TUTUP</button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={toggleFullscreen}
+                        className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded-full font-bold text-sm transition border border-zinc-700"
+                        title={isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'}
+                    >
+                        {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+                    </button>
+                    <button onClick={onClose} className="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-full font-bold text-sm transition border border-zinc-700">TUTUP</button>
+                </div>
             </div>
 
             {/* Content */}
