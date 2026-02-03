@@ -336,6 +336,7 @@ export const QuizRunner = ({ quizId, studentId, duration, onFinish }) => {
     // Refs
     const violationCountRef = useRef(0);
     const hasSubmittedRef = useRef(false);
+    const handleSubmitRef = useRef(null); // Ref to always call latest handleSubmit
     const storageKey = `cbt_temp_${studentId}_${quizId}`;
 
     const triggerAlert = (title, message, type = 'info', onOk = null) => {
@@ -395,7 +396,8 @@ export const QuizRunner = ({ quizId, studentId, duration, onFinish }) => {
                 else if (violationCountRef.current >= 2) {
                     setShowWarning(false);
                     setShowViolationEnd(true);
-                    handleSubmit(true);
+                    // FIX: Use ref to call latest handleSubmit, avoiding stale closure
+                    if (handleSubmitRef.current) handleSubmitRef.current(true);
                 }
             }
         };
@@ -526,6 +528,9 @@ export const QuizRunner = ({ quizId, studentId, duration, onFinish }) => {
             }
         }
     };
+
+    // Keep ref updated with latest handleSubmit (for event listeners that capture old closures)
+    handleSubmitRef.current = handleSubmit;
 
     if (loading) return <div className="flex items-center justify-center h-screen bg-black text-white">Memuat Soal...</div>;
 
