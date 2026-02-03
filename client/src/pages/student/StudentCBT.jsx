@@ -454,9 +454,23 @@ export const QuizRunner = ({ quizId, studentId, duration, onFinish }) => {
             setSubmitting(true);
         }
 
-        const formattedAnswers = Object.keys(answers).map(qId => ({
+        // FIX: For auto-submit (violation/timeout), read from localStorage to avoid stale closure
+        // State `answers` may be outdated when called from event listeners registered at mount time
+        let answersToSubmit = answers;
+        if (auto) {
+            try {
+                const savedAnswers = localStorage.getItem(storageKey);
+                if (savedAnswers) {
+                    answersToSubmit = JSON.parse(savedAnswers);
+                }
+            } catch (e) {
+                console.error("Failed to read answers from localStorage", e);
+            }
+        }
+
+        const formattedAnswers = Object.keys(answersToSubmit).map(qId => ({
             question_id: parseInt(qId),
-            answer: answers[qId]
+            answer: answersToSubmit[qId]
         }));
 
         const token = localStorage.getItem('student_token');
