@@ -54,12 +54,19 @@ export default function StudentTasks({ student, onBack }) {
     const [showGlobalDiscussion, setShowGlobalDiscussion] = useState(false);
 
     // CUSTOM MODAL STATE
-    const [modal, setModal] = useState({ show: false, type: 'info', title: '', msg: '', onConfirm: null });
+    const [modal, setModal] = useState({ show: false, type: 'info', title: '', msg: '' });
+    const modalCallbackRef = useRef(null);
     const timerRef = useRef(null);
 
-    const showAlert = (title, msg, type = 'info') => setModal({ show: true, type, title, msg, onConfirm: null });
-    const showConfirm = (title, msg, onConfirm) => setModal({ show: true, type: 'confirm', title, msg, onConfirm });
-    const closeModal = () => setModal({ ...modal, show: false });
+    const showAlert = (title, msg, type = 'info') => {
+        modalCallbackRef.current = null;
+        setModal({ show: true, type, title, msg });
+    };
+    const showConfirm = (title, msg, onConfirm) => {
+        modalCallbackRef.current = onConfirm;
+        setModal({ show: true, type: 'confirm', title, msg });
+    };
+    const closeModal = () => setModal({ show: false, type: 'info', title: '', msg: '' });
 
     // --- DATA FETCHING ---
     const fetchTasks = async () => {
@@ -220,7 +227,7 @@ export default function StudentTasks({ student, onBack }) {
                         {modal.type === 'confirm' ? (
                             <div className="flex gap-3 w-full">
                                 <button onClick={closeModal} className="flex-1 py-2.5 bg-zinc-800 text-zinc-300 font-bold rounded-xl hover:bg-zinc-700">Batal</button>
-                                <button onClick={() => { const cb = modal.onConfirm; closeModal(); if (cb) setTimeout(cb, 100); }} className="flex-1 py-2.5 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700">Ya, Lanjut</button>
+                                <button onClick={() => { const cb = modalCallbackRef.current; closeModal(); if (cb) setTimeout(cb, 100); }} className="flex-1 py-2.5 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700">Ya, Lanjut</button>
                             </div>
                         ) : (
                             <button onClick={closeModal} className="w-full py-2.5 bg-zinc-800 text-white font-bold rounded-xl hover:bg-zinc-700">Tutup</button>
