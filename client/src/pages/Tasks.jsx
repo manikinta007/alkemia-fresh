@@ -1,12 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { fetchApi } from '../utils/api';
 import { useAlertContext } from '../components/Alert';
+import { X } from 'lucide-react';
 
 // Sub-Components
 import { CreateTaskModal, StudentModal, WeightModal, DiscussionModal } from './Tasks/TaskModals';
 import { ClassGrid, TaskList } from './Tasks/TaskList';
 import { TaskEditor } from './Tasks/TaskEditor';
 import { TaskGrading } from './Tasks/TaskGrading';
+
+// --- URL INPUT MODAL (for Image Injection) ---
+const URLInputModal = ({ isOpen, onClose, onConfirm }) => {
+    const [url, setUrl] = useState('');
+    if (!isOpen) return null;
+
+    const handleConfirm = () => {
+        onConfirm(url);
+        setUrl('');
+    };
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-in zoom-in-95">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold">Sisipkan Gambar / Link</h3>
+                    <button onClick={onClose} className="text-zinc-400 hover:text-black"><X size={20} /></button>
+                </div>
+                <input
+                    type="text"
+                    placeholder="https://drive.google.com/... atau URL gambar lainnya"
+                    className="w-full px-4 py-3 border border-zinc-300 rounded-lg mb-4 focus:outline-none focus:border-black font-mono text-sm"
+                    value={url}
+                    onChange={e => setUrl(e.target.value)}
+                    autoFocus
+                    onKeyDown={e => e.key === 'Enter' && handleConfirm()}
+                />
+                <p className="text-xs text-zinc-400 mb-4">Link Google Drive akan otomatis dikonversi via proxy.</p>
+                <div className="flex gap-2">
+                    <button onClick={onClose} className="flex-1 py-2.5 text-zinc-500 font-bold hover:bg-zinc-100 rounded-lg transition">Batal</button>
+                    <button onClick={handleConfirm} className="flex-1 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-zinc-800 transition">OK, Sisipkan</button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export default function Tasks() {
     // --- GLOBAL VIEW STATE ---
@@ -40,6 +77,7 @@ export default function Tasks() {
     const [studentModal, setStudentModal] = useState(false);
     const [weightModal, setWeightModal] = useState(false);
     const [discussionModal, setDiscussionModal] = useState(false);
+    const [urlModal, setUrlModal] = useState({ isOpen: false, targetIdx: null });
 
     const { showAlert, showConfirm } = useAlertContext();
 
@@ -389,6 +427,37 @@ export default function Tasks() {
         );
     }
 
+    // --- URL MODAL HANDLER (for injecting images) ---
+    const handleConfirmUrl = (url) => {
+        const idx = urlModal.targetIdx;
+        if (idx === null || !url) {
+            setUrlModal({ isOpen: false, targetIdx: null });
+            return;
+        }
+
+        let finalUrl = url;
+        let message = 'Gambar berhasil disisipkan.';
+
+        // Convert Google Drive links to proxy format
+        if (url.includes('drive.google.com') && (url.includes('/view') || url.includes('/file/d/'))) {
+            const idMatch = url.match(/\/d\/([^/]+)/);
+            if (idMatch && idMatch[1]) {
+                const directUrl = `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
+                finalUrl = `/api/proxy?url=${encodeURIComponent(directUrl)}`;
+                message = 'Link Google Drive berhasil dikonversi (via proxy).';
+            }
+        }
+
+        // Insert image HTML into question text
+        const imgHtml = `<br><img src="${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>`;
+        const newQuestions = [...questions];
+        newQuestions[idx].questionText = (newQuestions[idx].questionText || '') + imgHtml;
+        setQuestions(newQuestions);
+
+        setUrlModal({ isOpen: false, targetIdx: null });
+        showAlert(message, 'success');
+    };
+
     // 3. EDITOR MODE
     if (viewMode === 'EDITOR') {
         return (
@@ -402,6 +471,12 @@ export default function Tasks() {
                     onChange={(newIds) => setHeaderForm({ ...headerForm, allowedStudents: newIds })}
                 />
 
+                <URLInputModal
+                    isOpen={urlModal.isOpen}
+                    onClose={() => setUrlModal({ isOpen: false, targetIdx: null })}
+                    onConfirm={handleConfirmUrl}
+                />
+
                 <TaskEditor
                     headerForm={headerForm}
                     setHeaderForm={setHeaderForm}
@@ -412,6 +487,7 @@ export default function Tasks() {
                     onSaveIdentity={handleSaveIdentityOnly}
                     onCancel={() => setViewMode('LIST')}
                     onOpenStudentModal={() => setStudentModal(true)}
+                    onOpenUrlModal={(idx) => setUrlModal({ isOpen: true, targetIdx: idx })}
                 />
             </>
         );
