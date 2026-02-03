@@ -58,8 +58,8 @@ export default function StudentTasks({ student, onBack }) {
     const modalCallbackRef = useRef(null);
     const timerRef = useRef(null);
 
-    const showAlert = (title, msg, type = 'info') => {
-        modalCallbackRef.current = null;
+    const showAlert = (title, msg, type = 'info', onClose = null) => {
+        modalCallbackRef.current = onClose;
         setModal({ show: true, type, title, msg });
     };
     const showConfirm = (title, msg, onConfirm) => {
@@ -197,15 +197,22 @@ export default function StudentTasks({ student, onBack }) {
                     body: JSON.stringify({ taskId: activeTask.id, studentId: student.id, answers: payloadAnswers, isDraft })
                 });
                 if (res.ok) {
-                    // Both draft and final: clear local draft, navigate to list
+                    // Both draft and final: clear local draft
                     localStorage.removeItem(`draft_task_${student.id}_${activeTask.id}`);
-                    // Navigate first, then show alert (prevents flicker)
-                    setViewMode('LIST');
-                    fetchTasks();
-                    // Show success alert AFTER navigation
-                    setTimeout(() => {
-                        showAlert('Berhasil', isDraft ? 'Draft berhasil disimpan!' : 'Tugas berhasil dikumpulkan!', 'success');
-                    }, 150);
+
+                    // Show success alert FIRST
+                    // Pass redirect logic as callback to be executed when "Tutup" is clicked
+                    showAlert(
+                        'Berhasil',
+                        isDraft ? 'Draft berhasil disimpan!' : 'Tugas berhasil dikumpulkan!',
+                        'success',
+                        () => {
+                            // Render list view AND close modal in same batch to prevent flicker
+                            setViewMode('LIST');
+                            fetchTasks();
+                            closeModal();
+                        }
+                    );
                 } else {
                     const err = await res.json();
                     showAlert('Gagal', err.error || 'Gagal mengirim.', 'error');
@@ -233,7 +240,11 @@ export default function StudentTasks({ student, onBack }) {
                                 <button onClick={() => { const cb = modalCallbackRef.current; closeModal(); if (cb) setTimeout(cb, 100); }} className="flex-1 py-2.5 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700">Ya, Lanjut</button>
                             </div>
                         ) : (
-                            <button onClick={closeModal} className="w-full py-2.5 bg-zinc-800 text-white font-bold rounded-xl hover:bg-zinc-700">Tutup</button>
+                            <button onClick={() => {
+                                const cb = modalCallbackRef.current;
+                                if (cb) cb();
+                                else closeModal();
+                            }} className="w-full py-2.5 bg-zinc-800 text-white font-bold rounded-xl hover:bg-zinc-700">Tutup</button>
                         )}
                     </div>
                 </div>
