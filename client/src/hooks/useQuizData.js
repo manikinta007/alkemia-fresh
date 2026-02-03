@@ -104,26 +104,26 @@ export const useQuizData = (showAlert, showConfirm) => {
         }
     };
 
-    const deleteQuiz = (id, onSuccess) => {
-        showConfirm('Hapus quiz ini beserta soal dan nilainya? Tindakan ini tidak dapat dibatalkan.', async () => {
-            try {
-                // Ensure ID is a string or number and not an event object
-                const quizId = typeof id === 'object' ? id.id : id;
-                console.log("[DELETE] Attempting to delete quiz:", quizId);
+    const deleteQuiz = async (id, onSuccess) => {
+        const confirmed = await showConfirm('Hapus quiz ini beserta soal dan nilainya? Tindakan ini tidak dapat dibatalkan.');
+        if (!confirmed) return;
 
-                const res = await fetchApi('/api/quizzes?id=' + quizId, { method: 'DELETE' });
-                if (res.ok) {
-                    if (showAlert) showAlert('Quiz berhasil dihapus.', 'success');
-                    if (onSuccess) onSuccess();
-                } else {
-                    const err = await res.json();
-                    throw new Error(err.error || 'Server returned error');
-                }
-            } catch (e) {
-                console.error("[DELETE] Failed:", e);
-                if (showAlert) showAlert('Gagal menghapus quiz: ' + e.message, 'error');
+        try {
+            const quizId = typeof id === 'object' ? id.id : id;
+            console.log("[DELETE] Attempting to delete quiz:", quizId);
+
+            const res = await fetchApi('/api/quizzes?id=' + quizId, { method: 'DELETE' });
+            if (res.ok) {
+                if (showAlert) showAlert('Quiz berhasil dihapus.', 'success');
+                if (onSuccess) onSuccess();
+            } else {
+                const err = await res.json();
+                throw new Error(err.error || 'Server error');
             }
-        });
+        } catch (e) {
+            console.error("[DELETE] Failed:", e);
+            if (showAlert) showAlert('Gagal menghapus quiz: ' + e.message, 'error');
+        }
     };
 
     const toggleQuizStatus = async (id, isActive, scheduledAt, onSuccess) => {
@@ -139,30 +139,31 @@ export const useQuizData = (showAlert, showConfirm) => {
     };
 
     const saveQuestions = async (quizId, questions, onSuccess) => {
-        showConfirm('Simpan perubahan soal?', async () => {
-            setLoading(true);
-            try {
-                console.log("[SAVE] Saving questions for quiz:", quizId, "Count:", questions.length);
-                const res = await fetchApi('/api/quizzes/questions', {
-                    method: 'POST',
-                    body: JSON.stringify({ quizId, questions })
-                });
+        const confirmed = await showConfirm('Simpan perubahan soal?');
+        if (!confirmed) return;
 
-                if (res.ok) {
-                    if (showAlert) showAlert('Soal berhasil disimpan!', 'success');
-                    if (onSuccess) onSuccess();
-                } else {
-                    const err = await res.text(); // Parse as text first in case it's not JSON
-                    console.error("[SAVE] Server Error:", err);
-                    throw new Error('Gagal menyimpan ke server.');
-                }
-            } catch (e) {
-                console.error("[SAVE] Exception:", e);
-                if (showAlert) showAlert('Gagal menyimpan soal: ' + e.message, 'error');
-            } finally {
-                setLoading(false);
+        setLoading(true);
+        try {
+            console.log("[SAVE] Saving questions for quiz:", quizId, "Count:", questions.length);
+            const res = await fetchApi('/api/quizzes/questions', {
+                method: 'POST',
+                body: JSON.stringify({ quizId, questions })
+            });
+
+            if (res.ok) {
+                if (showAlert) showAlert('Soal berhasil disimpan!', 'success');
+                if (onSuccess) onSuccess();
+            } else {
+                const err = await res.text();
+                console.error("[SAVE] Server Error:", err);
+                throw new Error('Gagal menyimpan ke server.');
             }
-        });
+        } catch (e) {
+            console.error("[SAVE] Exception:", e);
+            if (showAlert) showAlert('Gagal menyimpan soal: ' + e.message, 'error');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const copyQuiz = async (sourceQuizId, targetClassId, onSuccess) => {
@@ -187,23 +188,24 @@ export const useQuizData = (showAlert, showConfirm) => {
             ? "Reset riwayat ujian siswa ini? Siswa harus mengerjakan ulang dari awal."
             : "PERHATIAN: Anda akan mereset SEMUA data ujian di kelas ini. Data nilai akan hilang permanen. Lanjutkan?";
 
-        showConfirm(confirmMsg, async () => {
-            try {
-                const params = new URLSearchParams({ quiz_id: quizId });
-                if (studentId) params.append('student_id', studentId);
+        const confirmed = await showConfirm(confirmMsg);
+        if (!confirmed) return;
 
-                const res = await fetchApi('/api/quizzes/reset-attempt?' + params.toString(), { method: 'DELETE' });
+        try {
+            const params = new URLSearchParams({ quiz_id: quizId });
+            if (studentId) params.append('student_id', studentId);
 
-                if (res.ok) {
-                    if (showAlert) showAlert('Riwayat ujian berhasil direset.', 'success');
-                    if (onSuccess) onSuccess();
-                } else {
-                    if (showAlert) showAlert('Gagal mereset data.', 'error');
-                }
-            } catch (e) {
-                if (showAlert) showAlert('Terjadi kesalahan.', 'error');
+            const res = await fetchApi('/api/quizzes/reset-attempt?' + params.toString(), { method: 'DELETE' });
+
+            if (res.ok) {
+                if (showAlert) showAlert('Riwayat ujian berhasil direset.', 'success');
+                if (onSuccess) onSuccess();
+            } else {
+                if (showAlert) showAlert('Gagal mereset data.', 'error');
             }
-        });
+        } catch (e) {
+            if (showAlert) showAlert('Terjadi kesalahan.', 'error');
+        }
     };
 
     return {
