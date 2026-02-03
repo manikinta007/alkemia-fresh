@@ -71,9 +71,10 @@
 13. ✅ **Leaderboard Fullscreen Mode**: Added Browser Fullscreen API toggle in `LiveLeaderboard.jsx` for presentation mode.
 14. ✅ **Quiz Answer Not Saved**: Fixed type mismatch (`question_id` string vs integer) in `quizController.js`. Fixed stale closure issue in `StudentCBT.jsx` for violation/auto-submit by reading from localStorage and using `handleSubmitRef`.
 15. ✅ **Student App UI**: Prominent orange refresh button in header. Sticky header in Quiz Review page.
-16. ✅ **Google Drive Quiz Images**: Used `/api/proxy` to wrap Drive thumbnail URLs, bypassing CORS for student app.
+16. ✅ **Google Drive Quiz Images**: Improved proxy strategy using `lh3.googleusercontent.com` + `/api/proxy` to bypass strict CORS and hotlink protection.
+17. ✅ **Task Editor Image Button**: Fixed unresponsive button by adding `type="button"`, `z-index`, and `stopPropagation` to prevent conflict with parent elements.
 
-**Session End**: All reported issues resolved. Ready for next session.
+**Session End**: All reported issues resolved. Ready for verification.
 
 ### 🐛 Known Issues (Active)
 1. **None**: All known issues from this session are resolved.

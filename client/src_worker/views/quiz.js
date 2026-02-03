@@ -590,11 +590,11 @@ export function getQuizPage(classes = [], activePeriod = null) {
                 if (url.includes('drive.google.com') && url.includes('/view')) {
                     const idMatch = url.match(/\\/d\\/([^/]+)/);
                     if (idMatch && idMatch[1]) {
-                        // Use lh3.googleusercontent.com format which is optimized for hosting/embedding
-                        // Wrap in proxy to ensure CORS headers are stripped/added correctly
-                        const robustUrl = \`https://lh3.googleusercontent.com/d/\${idMatch[1]}\`;
-                        finalUrl = \`/api/proxy?url=\${encodeURIComponent(robustUrl)}\`;
-                        message = "Tautan Google Drive berhasil dikonversi (via lh3 proxy).";
+                        // Use uc?export=view format which is the standard download link
+                        // Proxy will handle User-Agent to prevent 403 Forbidden
+                        const directUrl = \`https://drive.google.com/uc?export=view&id=\${idMatch[1]}\`;
+                        finalUrl = \`/api/proxy?url=\${encodeURIComponent(directUrl)}\`;
+                        message = "Tautan Google Drive berhasil dikonversi (via proxy bypass).";
                     }
                 }
                 const imgHtml = \`<br><img src="\${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>\`;

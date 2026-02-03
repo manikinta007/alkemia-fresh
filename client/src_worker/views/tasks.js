@@ -385,14 +385,15 @@ export function getTasksPage(classes = [], activePeriod = null) {
                                 const idx = urlModal.targetIdx;
                                 if (idx !== null) {
                                     let finalUrl = url;
-                                    if (url.includes('drive.google.com') && url.includes('/view')) {
-                                        const idMatch = url.match(/\\/d\\/([^/]+)/);
+                                    // Use uc?export=view format and Proxy
+                                    if (url.includes('drive.google.com') && (url.includes('/view') || url.includes('/file/d/'))) {
+                                        const idMatch = url.match(/\\/d\\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
                                         if (idMatch && idMatch[1]) {
-                                            const robustUrl = \`https://lh3.googleusercontent.com/d/\${idMatch[1]}\`;
-                                            finalUrl = \`/api/proxy?url=\${encodeURIComponent(robustUrl)}\`;
+                                            const directUrl = \`https://drive.google.com/uc?export=view&id=\${idMatch[1]}\`;
+                                            finalUrl = \`/api/proxy?url=\${encodeURIComponent(directUrl)}\`;
                                         }
                                     }
-                                    const imgHtml = \`<br><img src="\${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>\`;
+                                    const imgHtml = \`<br><img src="\${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm" loading="lazy"><br>\`;
                                     const newQ = [...questions];
                                     newQ[idx].questionText = (newQ[idx].questionText || '') + imgHtml;
                                     setQuestions(newQ);
@@ -417,7 +418,10 @@ export function getTasksPage(classes = [], activePeriod = null) {
                             onSaveFull={handleSaveFullTask}
                             onSaveIdentity={handleSaveIdentityOnly}
                             onCancel={() => setViewMode('LIST')}
-                            onOpenUrlModal={(idx) => setUrlModal({ isOpen: true, targetIdx: idx })}
+                            onOpenUrlModal={(idx) => {
+                                console.log("Opening URL Modal for idx:", idx);
+                                setUrlModal({ isOpen: true, targetIdx: idx });
+                            }}
                             onOpenStudentModal={() => setStudentModal(true)}
                         />
                     </>
