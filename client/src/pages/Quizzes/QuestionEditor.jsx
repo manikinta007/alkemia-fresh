@@ -1,3 +1,4 @@
+import React, { useState, useRef } from 'react';
 import { Upload, Download, Trash2, Image as ImageIcon, Eye } from 'lucide-react';
 import { useAlertContext } from '../../components/Alert';
 import ImagePickerModal from '../../components/ImagePickerModal';
@@ -78,7 +79,13 @@ export const QuestionEditor = ({ activeQuiz, questions, setQuestions, onSave, on
         }
 
         const imgHtml = `<br><img src="${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>`;
-        updateQuestion(idx, 'question_text', (questions[idx].question_text || '') + imgHtml);
+        // FIX: Create new question object (immutable update) to trigger React re-render
+        const newQuestions = questions.map((q, i) =>
+            i === idx
+                ? { ...q, question_text: (q.question_text || '') + imgHtml }
+                : q
+        );
+        setQuestions(newQuestions);
 
         setUrlModal({ isOpen: false, targetIdx: null });
         showAlert('Gambar berhasil disisipkan.', 'success');

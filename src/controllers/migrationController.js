@@ -14,7 +14,7 @@ export async function handleMigrationRequest(request, env) {
     // 1. FULL RESET & INIT (Jalankan ini HANYA untuk instalasi baru atau jika ingin menghapus semua data tugas)
     // Endpoint: /api/migrate/tasks
     if (pathname === "/api/migrate/tasks" && method === "GET") {
-      
+
       await env.DB.batch([
         // 1. BERSIHKAN TABEL LAMA (Reset Schema agar bersih)
         // Urutan drop penting karena Foreign Key
@@ -100,20 +100,58 @@ export async function handleMigrationRequest(request, env) {
     // 2. INCREMENTAL UPDATE V10 (Jalankan ini jika database SUDAH ADA datanya dan tidak mau hapus)
     // Endpoint: /api/migrate/v10-update
     if (pathname === "/api/migrate/v10-update" && method === "GET") {
-        try {
-            // Tambahkan 3 kolom baru ke tabel tasks
-            await env.DB.batch([
-                env.DB.prepare("ALTER TABLE tasks ADD COLUMN discussion_text TEXT"),
-                env.DB.prepare("ALTER TABLE tasks ADD COLUMN discussion_url TEXT"),
-                env.DB.prepare("ALTER TABLE tasks ADD COLUMN show_discussion INTEGER DEFAULT 0")
-            ]);
-            return jsonResponse({ message: "Update V10 Berhasil: Kolom diskusi ditambahkan ke tabel tasks." });
-        } catch (e) {
-            if (e.message && e.message.includes("duplicate column name")) {
-                return jsonResponse({ message: "Info: Kolom V10 sudah ada sebelumnya." });
-            }
-            throw e;
+      try {
+        // Tambahkan 3 kolom baru ke tabel tasks
+        await env.DB.batch([
+          env.DB.prepare("ALTER TABLE tasks ADD COLUMN discussion_text TEXT"),
+          env.DB.prepare("ALTER TABLE tasks ADD COLUMN discussion_url TEXT"),
+          env.DB.prepare("ALTER TABLE tasks ADD COLUMN show_discussion INTEGER DEFAULT 0")
+        ]);
+        return jsonResponse({ message: "Update V10 Berhasil: Kolom diskusi ditambahkan ke tabel tasks." });
+      } catch (e) {
+        if (e.message && e.message.includes("duplicate column name")) {
+          return jsonResponse({ message: "Info: Kolom V10 sudah ada sebelumnya." });
         }
+        throw e;
+      }
+    }
+
+    // 3. IMAGE TABLES MIGRATION (Bank Gambar)
+    // Endpoint: /api/migrate/images
+    if (pathname === "/api/migrate/images" && method === "GET") {
+      try {
+        await env.DB.batch([
+          // Folder untuk organisasi gambar
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS image_folders (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+          `),
+          // Gambar yang diupload ke R2
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS images (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              folder_id INTEGER,
+              filename TEXT NOT NULL,
+              r2_key TEXT NOT NULL UNIQUE,
+              size_bytes INTEGER,
+              mime_type TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (folder_id) REFERENCES image_folders(id) ON DELETE SET NULL
+            )
+          `),
+          // Index untuk performa
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_images_folder ON images(folder_id)`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_images_created ON images(created_at DESC)`),
+          // Default folder
+          env.DB.prepare(`INSERT OR IGNORE INTO image_folders (id, name) VALUES (1, 'Umum')`)
+        ]);
+        return jsonResponse({ message: "Migrasi Bank Gambar Berhasil: Tabel image_folders & images siap." });
+      } catch (e) {
+        return jsonResponse({ error: "Migrate Images Error: " + e.message }, 500);
+      }
     }
 
     return null;

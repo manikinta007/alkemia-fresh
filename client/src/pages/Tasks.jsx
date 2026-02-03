@@ -415,8 +415,12 @@ export default function Tasks() {
 
         // Insert image HTML into question text
         const imgHtml = `<br><img src="${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>`;
-        const newQuestions = [...questions];
-        newQuestions[idx].questionText = (newQuestions[idx].questionText || '') + imgHtml;
+        // FIX: Create new question object (immutable update) to trigger React re-render
+        const newQuestions = questions.map((q, i) =>
+            i === idx
+                ? { ...q, questionText: (q.questionText || '') + imgHtml }
+                : q
+        );
         setQuestions(newQuestions);
 
         setUrlModal({ isOpen: false, targetIdx: null });

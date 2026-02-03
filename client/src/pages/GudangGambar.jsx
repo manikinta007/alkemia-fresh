@@ -97,7 +97,8 @@ export default function GudangGambar() {
 
     const loadFolders = async () => {
         try {
-            const data = await fetchApi('/api/folders');
+            const res = await fetchApi('/api/folders');
+            const data = await res.json();
             setFolders(data.folders || []);
             // Set default folder as active if first load and no active folder
             if (!activeFolder && data.folders?.length > 0) {
@@ -112,7 +113,8 @@ export default function GudangGambar() {
         setIsLoading(true);
         try {
             const params = folderId ? `?folder_id=${folderId}` : '?folder_id=all';
-            const data = await fetchApi(`/api/images${params}`);
+            const res = await fetchApi(`/api/images${params}`);
+            const data = await res.json();
             setImages(data.images || []);
         } catch (error) {
             console.error('Failed to load images:', error);

@@ -50,7 +50,8 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect }) {
 
     const loadFolders = async () => {
         try {
-            const data = await fetchApi('/api/folders');
+            const res = await fetchApi('/api/folders');
+            const data = await res.json();
             setFolders(data.folders || []);
         } catch (error) {
             console.error('Failed to load folders:', error);
@@ -61,7 +62,8 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect }) {
         setIsLoading(true);
         try {
             const params = folderId ? `?folder_id=${folderId}` : '?folder_id=all';
-            const data = await fetchApi(`/api/images${params}`);
+            const res = await fetchApi(`/api/images${params}`);
+            const data = await res.json();
             setImages(data.images || []);
         } catch (error) {
             console.error('Failed to load images:', error);
@@ -88,10 +90,11 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect }) {
             formData.append('file', blob, file.name);
             formData.append('folder_id', 1); // Upload to 'Umum' by default from here
 
-            const result = await fetchApi('/api/images/upload', {
+            const res = await fetchApi('/api/images/upload', {
                 method: 'POST',
                 body: formData
             }, true);
+            const result = await res.json();
 
             // Select immediately
             if (result.image?.url) {
@@ -134,8 +137,8 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect }) {
                     <button
                         onClick={() => setActiveTab('upload')}
                         className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-colors border-b-2 ${activeTab === 'upload'
-                                ? 'border-orange-500 text-orange-600 bg-white'
-                                : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100'
+                            ? 'border-orange-500 text-orange-600 bg-white'
+                            : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100'
                             }`}
                     >
                         <Upload size={18} />
@@ -144,8 +147,8 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect }) {
                     <button
                         onClick={() => setActiveTab('bank')}
                         className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-colors border-b-2 ${activeTab === 'bank'
-                                ? 'border-orange-500 text-orange-600 bg-white'
-                                : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100'
+                            ? 'border-orange-500 text-orange-600 bg-white'
+                            : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100'
                             }`}
                     >
                         <ImageIcon size={18} />
@@ -154,8 +157,8 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect }) {
                     <button
                         onClick={() => setActiveTab('link')}
                         className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-colors border-b-2 ${activeTab === 'link'
-                                ? 'border-orange-500 text-orange-600 bg-white'
-                                : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100'
+                            ? 'border-orange-500 text-orange-600 bg-white'
+                            : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100'
                             }`}
                     >
                         <LinkIcon size={18} />
@@ -241,8 +244,8 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect }) {
                                                 key={img.id}
                                                 onClick={() => setSelectedImage(img)}
                                                 className={`relative aspect-square rounded-lg border-2 overflow-hidden cursor-pointer group transition-all ${selectedImage?.id === img.id
-                                                        ? 'border-orange-500 ring-2 ring-orange-500/30'
-                                                        : 'border-zinc-200 hover:border-zinc-400'
+                                                    ? 'border-orange-500 ring-2 ring-orange-500/30'
+                                                    : 'border-zinc-200 hover:border-zinc-400'
                                                     }`}
                                             >
                                                 <img

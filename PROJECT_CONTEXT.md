@@ -84,15 +84,21 @@
 15. ✅ **Student App UI**: Prominent orange refresh button in header. Sticky header in Quiz Review page.
 16. ✅ **Google Drive Quiz Images**: Improved proxy strategy using `uc?export=view` via Proxy (with fake User-Agent) to bypass Google Blocking/Flickering.
 17. ✅ **Task Editor Image Button**: Fixed unresponsive button by passing explicit props to `TaskEditor` and using `type="button"`.
+18. ✅ **Bank Gambar (Gudang Gambar)**:
+    - Renamed menu "Gudang Gambar" -> "Bank Gambar".
+    - Fixed `loadFolders` and `loadImages` JSON parsing logic (was using raw Response).
+    - Added `/api/migrate/images` endpoint for initializing `image_folders` and `images` tables.
+    - Verified `ImagePickerModal` is integrated into both Quiz Editor and Task Editor.
 
 **Session End**: Issues persisted despite fixes.
 
 ### 🐛 Known Issues (Active)
-1. ~~**Google Drive Quiz Images**~~: ✅ FIXED - Client-side URL transformation via `imageUtils.js` + `processContentForDisplay()` + thumbnail proxy endpoint. Works in StudentCBT. Consider migrating to R2 for long-term reliability.
+1. ~~**Google Drive Quiz Images**~~: ✅ FIXED - Client-side URL transformation via `imageUtils.js` + `processContentForDisplay()` + thumbnail proxy endpoint.
 2. ~~**Task Editor Image Button**~~: ✅ FIXED - Added `urlModal` state, `URLInputModal` component, and `onOpenUrlModal` prop in `Tasks.jsx`.
-3. **CSRF Allowed Origin**: `worker.js` still uses wildcard `*`. Needs to be restricted to production diff.
-4. **Stored XSS (Question Text)**: Question Input is NOT sanitized. Vulnerable to XSS if a teacher account is compromised or malicious. `dangerouslySetInnerHTML` is used in `cbt.js` without backend sanitization.
-5. **Rate Limiting**: Login attempts are successfully limited via Cloudflare KV (`utils.js` & `api.js`).
+3. ~~**Bank Gambar Integration**~~: ✅ FIXED (Feb 4, 2026) - Changed image insertion handlers to use immutable updates (`.map()`) instead of direct mutation to properly trigger React re-renders in `contentEditable` preview.
+4. **CSRF Allowed Origin**: `worker.js` still uses wildcard `*`. Needs to be restricted to production domain.
+5. **Stored XSS (Question Text)**: Question Input is NOT sanitized. Vulnerable to XSS.
+6. **Rate Limiting**: Login attempts are successfully limited via Cloudflare KV.
 
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
