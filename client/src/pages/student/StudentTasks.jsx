@@ -204,13 +204,17 @@ export default function StudentTasks({ student, onBack }) {
                     // Pass redirect logic as callback to be executed when "Tutup" is clicked
                     showAlert(
                         'Berhasil',
-                        isDraft ? 'Draft berhasil disimpan!' : 'Tugas berhasil dikumpulkan!',
+                        isDraft ? 'Draft berhasil disimpan! Anda dapat melanjutkan pengerjaan.' : 'Tugas berhasil dikumpulkan!',
                         'success',
                         () => {
-                            // Render list view AND close modal in same batch to prevent flicker
-                            setViewMode('LIST');
-                            fetchTasks();
-                            closeModal();
+                            if (isDraft) {
+                                fetchTasks();
+                                closeModal();
+                            } else {
+                                setViewMode('LIST');
+                                fetchTasks();
+                                closeModal();
+                            }
                         }
                     );
                 } else {
@@ -222,88 +226,14 @@ export default function StudentTasks({ student, onBack }) {
         });
     };
 
-    // --- COMPONENTS ---
-    const CustomModal = () => {
-        if (!modal.show) return null;
-        return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in zoom-in-95">
-                    <div className="flex flex-col items-center text-center">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 text-2xl ${modal.type === 'error' ? 'bg-red-900/30 text-red-500' : modal.type === 'success' ? 'bg-green-900/30 text-green-500' : 'bg-blue-900/30 text-blue-500'}`}>
-                            {modal.type === 'error' ? '⚠️' : modal.type === 'success' ? '✅' : modal.type === 'confirm' ? '❓' : 'ℹ️'}
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2">{modal.title}</h3>
-                        <p className="text-sm text-zinc-400 mb-6">{modal.msg}</p>
-                        {modal.type === 'confirm' ? (
-                            <div className="flex gap-3 w-full">
-                                <button onClick={closeModal} className="flex-1 py-2.5 bg-zinc-800 text-zinc-300 font-bold rounded-xl hover:bg-zinc-700">Batal</button>
-                                <button onClick={() => { const cb = modalCallbackRef.current; closeModal(); if (cb) setTimeout(cb, 100); }} className="flex-1 py-2.5 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700">Ya, Lanjut</button>
-                            </div>
-                        ) : (
-                            <button onClick={() => {
-                                const cb = modalCallbackRef.current;
-                                if (cb) cb();
-                                else closeModal();
-                            }} className="w-full py-2.5 bg-zinc-800 text-white font-bold rounded-xl hover:bg-zinc-700">Tutup</button>
-                        )}
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    const DiscussionGlobalModal = () => {
-        if (!showGlobalDiscussion) return null;
-        const { discussion_text, discussion_url } = activeTask;
-
-        return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-in zoom-in-95 max-h-[85vh] overflow-y-auto">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold text-white flex items-center gap-2"><span>🔑</span> Kunci & Pembahasan</h3>
-                        <button onClick={() => setShowGlobalDiscussion(false)} className="w-8 h-8 flex items-center justify-center bg-zinc-800 text-zinc-400 rounded-full hover:bg-zinc-700">✕</button>
-                    </div>
-
-                    <div className="space-y-6">
-                        {discussion_url && (
-                            <div>
-                                <label className="text-xs font-bold text-zinc-500 mb-2 block uppercase">FILE / GAMBAR KUNCI</label>
-                                <div className="p-1 bg-zinc-950 rounded-xl border border-zinc-800">
-                                    <img src={discussion_url} className="w-full rounded-lg" alt="Kunci Jawaban" onError={(e) => { e.target.style.display = 'none'; }} />
-                                    <a href={discussion_url} target="_blank" className="block text-center py-3 text-sm text-blue-400 font-bold hover:underline">
-                                        🔗 Buka File / Link Eksternal
-                                    </a>
-                                </div>
-                            </div>
-                        )}
-
-                        {discussion_text && (
-                            <div>
-                                <label className="text-xs font-bold text-zinc-500 mb-2 block uppercase">PEMBAHASAN TERTULIS</label>
-                                <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 text-zinc-300 text-sm whitespace-pre-wrap leading-relaxed">
-                                    {discussion_text}
-                                </div>
-                            </div>
-                        )}
-
-                        {!discussion_url && !discussion_text && (
-                            <p className="text-center text-zinc-500 italic py-4">Tidak ada data pembahasan yang tersedia.</p>
-                        )}
-                    </div>
-
-                    <button onClick={() => setShowGlobalDiscussion(false)} className="w-full mt-6 py-3 bg-zinc-800 text-white font-bold rounded-xl hover:bg-zinc-700">
-                        Tutup
-                    </button>
-                </div>
-            </div>
-        );
-    };
+    // --- COMPONENTS MOVED OUTSIDE ---
+    // (See External Definitions at bottom)
 
     // 1. LIST VIEW (DARK MODE)
     if (viewMode === 'LIST') {
         return (
             <div className="flex flex-col h-full bg-zinc-950 text-white animate-in fade-in">
-                <CustomModal />
+                <CustomModal modal={modal} closeModal={closeModal} modalCallbackRef={modalCallbackRef} />
                 <div className="bg-zinc-900 border-b border-zinc-800 p-4 pt-safe sticky top-0 z-10 shadow-lg flex items-center gap-3">
                     <button onClick={onBack} className="w-8 h-8 flex items-center justify-center bg-zinc-800 rounded-full font-bold text-zinc-400 hover:text-white hover:bg-zinc-700">←</button>
                     <h2 className="font-bold text-lg text-white">Daftar Tugas</h2>
@@ -372,8 +302,12 @@ export default function StudentTasks({ student, onBack }) {
 
         return (
             <div className="flex flex-col h-full bg-zinc-950 animate-in slide-in-from-bottom-4 duration-300 text-white">
-                <CustomModal />
-                <DiscussionGlobalModal />
+                <CustomModal modal={modal} closeModal={closeModal} modalCallbackRef={modalCallbackRef} />
+                <DiscussionGlobalModal
+                    show={showGlobalDiscussion}
+                    onClose={() => setShowGlobalDiscussion(false)}
+                    activeTask={activeTask}
+                />
 
                 {/* Header Fixed */}
                 <div className="bg-zinc-900 border-b border-zinc-800 p-3 pt-safe sticky top-0 z-20 shadow-lg flex justify-between items-center">
@@ -605,3 +539,80 @@ export default function StudentTasks({ student, onBack }) {
 
     return null;
 }
+
+// --- EXTERNAL COMPONENTS ---
+const CustomModal = ({ modal, closeModal, modalCallbackRef }) => {
+    if (!modal.show) return null;
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in zoom-in-95">
+                <div className="flex flex-col items-center text-center">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 text-2xl ${modal.type === 'error' ? 'bg-red-900/30 text-red-500' : modal.type === 'success' ? 'bg-green-900/30 text-green-500' : 'bg-blue-900/30 text-blue-500'}`}>
+                        {modal.type === 'error' ? '⚠️' : modal.type === 'success' ? '✅' : modal.type === 'confirm' ? '❓' : 'ℹ️'}
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">{modal.title}</h3>
+                    <p className="text-sm text-zinc-400 mb-6">{modal.msg}</p>
+                    {modal.type === 'confirm' ? (
+                        <div className="flex gap-3 w-full">
+                            <button onClick={closeModal} className="flex-1 py-2.5 bg-zinc-800 text-zinc-300 font-bold rounded-xl hover:bg-zinc-700">Batal</button>
+                            <button onClick={() => { const cb = modalCallbackRef.current; closeModal(); if (cb) setTimeout(cb, 100); }} className="flex-1 py-2.5 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700">Ya, Lanjut</button>
+                        </div>
+                    ) : (
+                        <button onClick={() => {
+                            const cb = modalCallbackRef.current;
+                            if (cb) cb();
+                            else closeModal();
+                        }} className="w-full py-2.5 bg-zinc-800 text-white font-bold rounded-xl hover:bg-zinc-700">Tutup</button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const DiscussionGlobalModal = ({ show, onClose, activeTask }) => {
+    if (!show) return null;
+    const { discussion_text, discussion_url } = activeTask;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-in zoom-in-95 max-h-[85vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2"><span>🔑</span> Kunci & Pembahasan</h3>
+                    <button onClick={onClose} className="w-8 h-8 flex items-center justify-center bg-zinc-800 text-zinc-400 rounded-full hover:bg-zinc-700">✕</button>
+                </div>
+
+                <div className="space-y-6">
+                    {discussion_url && (
+                        <div>
+                            <label className="text-xs font-bold text-zinc-500 mb-2 block uppercase">FILE / GAMBAR KUNCI</label>
+                            <div className="p-1 bg-zinc-950 rounded-xl border border-zinc-800">
+                                <img src={discussion_url} className="w-full rounded-lg" alt="Kunci Jawaban" onError={(e) => { e.target.style.display = 'none'; }} />
+                                <a href={discussion_url} target="_blank" className="block text-center py-3 text-sm text-blue-400 font-bold hover:underline">
+                                    🔗 Buka File / Link Eksternal
+                                </a>
+                            </div>
+                        </div>
+                    )}
+
+                    {discussion_text && (
+                        <div>
+                            <label className="text-xs font-bold text-zinc-500 mb-2 block uppercase">PEMBAHASAN TERTULIS</label>
+                            <div className="p-4 bg-zinc-950 rounded-xl border border-zinc-800 text-zinc-300 text-sm whitespace-pre-wrap leading-relaxed">
+                                {discussion_text}
+                            </div>
+                        </div>
+                    )}
+
+                    {!discussion_url && !discussion_text && (
+                        <p className="text-center text-zinc-500 italic py-4">Tidak ada data pembahasan yang tersedia.</p>
+                    )}
+                </div>
+
+                <button onClick={onClose} className="w-full mt-6 py-3 bg-zinc-800 text-white font-bold rounded-xl hover:bg-zinc-700">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    );
+};

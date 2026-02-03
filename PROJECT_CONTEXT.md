@@ -64,12 +64,11 @@
 6.  ✅ **Google Drive Materials**: Simplified fallback UI in `StudentPortal.jsx`.
 7.  ✅ **Grade Leak**: Fixed in `taskController.js` (checked `is_published` before returning `myGrade`).
 8.  ✅ **Grade Status Label**: Added `NILAI_DALAM_PROSES` status (Purple) for graded but unpublished tasks.
-9.  ❌ **Student Modal/Redirect**: Fixes for flicker and Draft redirect behavior were unsuccessful/incomplete.
-**Immediate Plan**: Re-investigate Modal logic in next session.
+9.  ✅ **Student Modal/Redirect**: Refactored Modal components to fix flicker. Changed Draft flow to "Save & Continue".
+**Immediate Plan**: Monitor for any reported issues after deployment.
 
 ### 🐛 Known Issues (Active)
-1. **Modal Flicker**: Student success modal closes prematurely or flickers before redirecting.
-2. **Draft Redirect**: "Simpan Draft" flow UX needs refinement (redirect logic inconsistent).
+1. **None**: All known issues from this session are resolved.
 
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
