@@ -386,7 +386,10 @@ export async function handleTaskRequest(request, env) {
                 let status = 'BELUM_DIKERJAKAN';
                 if (sub) {
                     if (sub.is_graded === -1) status = 'BELUM_DIKERJAKAN'; // Anggap belum selesai karena baru draft
-                    else if (sub.is_graded === 1) status = 'DINILAI';
+                    else if (sub.is_graded === 1) {
+                        if (sub.is_published === 1) status = 'DINILAI';
+                        else status = 'NILAI_DALAM_PROSES';
+                    }
                     else status = 'MENUNGGU_NILAI';
                 }
 

@@ -63,7 +63,8 @@
 5.  ✅ **Task Delete Button**: Fixed in `Tasks.jsx`.
 6.  ✅ **Google Drive Materials**: Simplified fallback UI in `StudentPortal.jsx`.
 7.  ✅ **Grade Leak**: Fixed in `taskController.js` (checked `is_published` before returning `myGrade`).
-8.  ❌ **Student Modal/Redirect**: Fixes for flicker and Draft redirect behavior were unsuccessful/incomplete.
+8.  ✅ **Grade Status Label**: Added `NILAI_DALAM_PROSES` status (Purple) for graded but unpublished tasks.
+9.  ❌ **Student Modal/Redirect**: Fixes for flicker and Draft redirect behavior were unsuccessful/incomplete.
 **Immediate Plan**: Re-investigate Modal logic in next session.
 
 ### 🐛 Known Issues (Active)
