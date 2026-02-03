@@ -140,16 +140,23 @@ export const useQuizData = (showAlert, showConfirm) => {
         showConfirm('Simpan perubahan soal?', async () => {
             setLoading(true);
             try {
+                console.log("[SAVE] Saving questions for quiz:", quizId, "Count:", questions.length);
                 const res = await fetchApi('/api/quizzes/questions', {
                     method: 'POST',
                     body: JSON.stringify({ quizId, questions })
                 });
+
                 if (res.ok) {
                     if (showAlert) showAlert('Soal berhasil disimpan!', 'success');
                     if (onSuccess) onSuccess();
+                } else {
+                    const err = await res.text(); // Parse as text first in case it's not JSON
+                    console.error("[SAVE] Server Error:", err);
+                    throw new Error('Gagal menyimpan ke server.');
                 }
             } catch (e) {
-                if (showAlert) showAlert('Gagal menyimpan soal.', 'error');
+                console.error("[SAVE] Exception:", e);
+                if (showAlert) showAlert('Gagal menyimpan soal: ' + e.message, 'error');
             } finally {
                 setLoading(false);
             }
