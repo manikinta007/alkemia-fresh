@@ -19,10 +19,11 @@ import { handleScheduleRequest } from '../controllers/scheduleController.js';
 import { handleMigrationRequest } from '../controllers/migrationController.js'; // [NEW] Database Migration
 import { handleTaskRequest } from '../controllers/taskController.js'; // [NEW] Task & Remedial
 import { handleDashboardRequest } from '../controllers/dashboardController.js'; // [NEW] Dashboard Stats
+import { handleImageRequest } from '../controllers/imageController.js'; // [NEW] Gudang Gambar
 
 // --- CONFIG & HEADERS ---
 // [PENTING] Ganti URL ini dengan domain Worker Anda sendiri!
-const ALLOWED_ORIGIN = "https://ganti-dengan-domain-anda.workers.dev";
+const ALLOWED_ORIGIN = "*";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
@@ -33,6 +34,9 @@ const corsHeaders = {
 // --- SECURITY CHECKER (CSRF & Session) ---
 async function verifyApiProtection(request, env) {
   const method = request.method;
+
+  // 0. Allow OPTIONS (Preflight)
+  if (method === "OPTIONS") return { valid: true };
 
   // 1. Session Check (Wajib untuk semua method kecuali login/init/student/migrate)
   const sessionToken = getCookieValue(request, "auth_session");
@@ -198,6 +202,9 @@ export async function handleApiRequest(request, env) {
 
     // [NEW] Dashboard API
     if (!apiResponse) apiResponse = await handleDashboardRequest(request, env);
+
+    // [NEW] Gudang Gambar API
+    if (!apiResponse) apiResponse = await handleImageRequest(request, env);
 
     // [NEW] Migration Route
     if (!apiResponse) apiResponse = await handleMigrationRequest(request, env);

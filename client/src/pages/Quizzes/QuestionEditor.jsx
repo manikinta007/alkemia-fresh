@@ -1,6 +1,6 @@
-import React, { useRef, useState } from 'react';
-import { Upload, Download, Trash2, Link as LinkIcon, Eye } from 'lucide-react';
+import { Upload, Download, Trash2, Image as ImageIcon, Eye } from 'lucide-react';
 import { useAlertContext } from '../../components/Alert';
+import ImagePickerModal from '../../components/ImagePickerModal';
 
 export const QuestionEditor = ({ activeQuiz, questions, setQuestions, onSave, onCancel }) => {
     const { showAlert, showConfirm } = useAlertContext();
@@ -56,11 +56,42 @@ export const QuestionEditor = ({ activeQuiz, questions, setQuestions, onSave, on
         reader.readAsText(file);
     };
 
-    // URL Modal Logic handled inside here for simplicity, or we can make it a small inline modal
     const handleOpenUrlModal = (idx) => setUrlModal({ isOpen: true, targetIdx: idx });
+
+    const handleImageSelected = (url) => {
+        const idx = urlModal.targetIdx;
+        if (idx === null || !url) {
+            setUrlModal({ isOpen: false, targetIdx: null });
+            return;
+        }
+
+        let finalUrl = url;
+        // Convert Google Drive links if needed (though ImagePickerModal usually handles direct upload/bank URL)
+        // If user used "Link URL" tab with a drive link, we still want to support it
+        if (url.includes('drive.google.com') && (url.includes('/view') || url.includes('/file/d/'))) {
+            const idMatch = url.match(/\/d\/([^/]+)/);
+            if (idMatch && idMatch[1]) {
+                finalUrl = `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1000`; // Use thumbnail for quiz
+                // Or use proxy: `/api/proxy?url=${encodeURIComponent(directUrl)}` if thumbnail fails
+                // But thumbnail endpoint is usually more robust for public files
+            }
+        }
+
+        const imgHtml = `<br><img src="${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>`;
+        updateQuestion(idx, 'question_text', (questions[idx].question_text || '') + imgHtml);
+
+        setUrlModal({ isOpen: false, targetIdx: null });
+        showAlert('Gambar berhasil disisipkan.', 'success');
+    };
 
     return (
         <div className="max-w-4xl mx-auto animate-in fade-in pb-20">
+            <ImagePickerModal
+                isOpen={urlModal.isOpen}
+                onClose={() => setUrlModal({ isOpen: false, targetIdx: null })}
+                onSelect={handleImageSelected}
+            />
+
             <div className="flex justify-between items-center mb-6 sticky top-0 bg-zinc-50 z-20 py-4 border-b border-zinc-200">
                 <div>
                     <h2 className="text-2xl font-bold text-zinc-900">Editor Soal</h2>
@@ -98,46 +129,36 @@ export const QuestionEditor = ({ activeQuiz, questions, setQuestions, onSave, on
                                 <span className="text-xs font-bold text-zinc-500 tracking-widest">PERTANYAAN NO {idx + 1}</span>
                                 <div className="flex items-center gap-3">
                                     <button
-                                        onClick={() => {
-                                            // Quick prompt for now
-                                            const url = prompt("Masukkan URL Gambar:");
-                                            if (url) {
-                                                let finalUrl = url;
-                                                if (url.includes('drive.google.com') && url.includes('/view')) {
-                                                    const idMatch = url.match(/\/d\/([^/]+)/);
-                                                    if (idMatch && idMatch[1]) finalUrl = `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1000`;
-                                                }
-                                                const imgHtml = `<br><img src="${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>`;
-                                                updateQuestion(idx, 'question_text', q.question_text + imgHtml);
-                                            }
-                                        }}
+                                        onClick={() => handleOpenUrlModal(idx)}
                                         className="flex items-center gap-2 bg-white border border-zinc-300 hover:border-blue-500 hover:text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm group"
-                                        title="Paste Link dari Google"
+                                        title="Sisipkan Gambar"
                                     >
-                                        <LinkIcon size={14} /> <span>Sisipkan URL Gambar</span>
+                                        <ImageIcon size={14} /> <span>Sisipkan Gambar</span>
                                     </button>
                                     <button onClick={() => removeQuestion(idx)} className="text-zinc-400 hover:text-red-500 transition" title="Hapus Soal">
                                         <Trash2 size={18} />
                                     </button>
                                 </div>
                             </div>
-                            <div className="p-0">
-                                <textarea
-                                    className="w-full p-4 border-0 focus:ring-0 text-base font-mono bg-transparent resize-y min-h-[100px] placeholder-zinc-300 focus:bg-yellow-50/30 transition outline-none"
-                                    rows="3"
-                                    value={q.question_text}
-                                    onChange={e => updateQuestion(idx, 'question_text', e.target.value)}
-                                    placeholder="Ketik soal di sini... (HTML Allowed)"
-                                ></textarea>
+
+                            {/* Question Editor (Preview First) */}
+                            <div className="p-4 bg-white relative group-focus-within:bg-yellow-50/10">
+                                <div
+                                    className="w-full min-h-[100px] p-4 border border-zinc-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black/5 transition leading-relaxed prose max-w-none"
+                                    contentEditable
+                                    suppressContentEditableWarning
+                                    onBlur={(e) => updateQuestion(idx, 'question_text', e.currentTarget.innerHTML)}
+                                    dangerouslySetInnerHTML={{ __html: q.question_text || 'Ketik soal di sini...' }}
+                                    onFocus={(e) => {
+                                        if (e.currentTarget.innerHTML === 'Ketik soal di sini...') {
+                                            e.currentTarget.innerHTML = '';
+                                        }
+                                    }}
+                                ></div>
+                                <p className="mt-2 text-[10px] text-zinc-400 text-right">
+                                    * Editor ini mendukung tampilan langsung. Sisipkan gambar menggunakan tombol di atas.
+                                </p>
                             </div>
-                            {q.question_text && (
-                                <div className="bg-blue-50/30 p-4 border-t border-dashed border-blue-200">
-                                    <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-1">
-                                        <Eye size={12} /> Live Preview
-                                    </p>
-                                    <div className="prose prose-sm max-w-none text-zinc-800" dangerouslySetInnerHTML={{ __html: q.question_text }}></div>
-                                </div>
-                            )}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-zinc-50 border-t border-zinc-200">
                                 {['A', 'B', 'C', 'D', 'E'].map(opt => {
                                     const badgeClass = q.correct_answer === opt ? 'bg-green-500 text-white shadow-green-200 shadow-md transform scale-105' : 'bg-zinc-200 text-zinc-500 hover:bg-zinc-300';

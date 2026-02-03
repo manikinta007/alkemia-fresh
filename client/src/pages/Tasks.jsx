@@ -8,42 +8,7 @@ import { CreateTaskModal, StudentModal, WeightModal, DiscussionModal } from './T
 import { ClassGrid, TaskList } from './Tasks/TaskList';
 import { TaskEditor } from './Tasks/TaskEditor';
 import { TaskGrading } from './Tasks/TaskGrading';
-
-// --- URL INPUT MODAL (for Image Injection) ---
-const URLInputModal = ({ isOpen, onClose, onConfirm }) => {
-    const [url, setUrl] = useState('');
-    if (!isOpen) return null;
-
-    const handleConfirm = () => {
-        onConfirm(url);
-        setUrl('');
-    };
-
-    return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-in zoom-in-95">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-bold">Sisipkan Gambar / Link</h3>
-                    <button onClick={onClose} className="text-zinc-400 hover:text-black"><X size={20} /></button>
-                </div>
-                <input
-                    type="text"
-                    placeholder="https://drive.google.com/... atau URL gambar lainnya"
-                    className="w-full px-4 py-3 border border-zinc-300 rounded-lg mb-4 focus:outline-none focus:border-black font-mono text-sm"
-                    value={url}
-                    onChange={e => setUrl(e.target.value)}
-                    autoFocus
-                    onKeyDown={e => e.key === 'Enter' && handleConfirm()}
-                />
-                <p className="text-xs text-zinc-400 mb-4">Link Google Drive akan otomatis dikonversi via proxy.</p>
-                <div className="flex gap-2">
-                    <button onClick={onClose} className="flex-1 py-2.5 text-zinc-500 font-bold hover:bg-zinc-100 rounded-lg transition">Batal</button>
-                    <button onClick={handleConfirm} className="flex-1 py-2.5 bg-black text-white font-bold rounded-lg hover:bg-zinc-800 transition">OK, Sisipkan</button>
-                </div>
-            </div>
-        </div>
-    );
-};
+import ImagePickerModal from '../components/ImagePickerModal';
 
 export default function Tasks() {
     // --- GLOBAL VIEW STATE ---
@@ -471,10 +436,10 @@ export default function Tasks() {
                     onChange={(newIds) => setHeaderForm({ ...headerForm, allowedStudents: newIds })}
                 />
 
-                <URLInputModal
+                <ImagePickerModal
                     isOpen={urlModal.isOpen}
                     onClose={() => setUrlModal({ isOpen: false, targetIdx: null })}
-                    onConfirm={handleConfirmUrl}
+                    onSelect={handleConfirmUrl}
                 />
 
                 <TaskEditor

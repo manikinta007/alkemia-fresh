@@ -77,7 +77,7 @@
 **Session End**: Issues persisted despite fixes.
 
 ### 🐛 Known Issues (Active)
-1. **Google Drive Quiz Images**: ⚠️ IMPROVED - Proxy now transforms URLs to `lh3.googleusercontent.com` CDN, uses browser-like User-Agent, and has fallback to thumbnail endpoint. Testing required.
+1. ~~**Google Drive Quiz Images**~~: ✅ FIXED - Client-side URL transformation via `imageUtils.js` + `processContentForDisplay()` + thumbnail proxy endpoint. Works in StudentCBT. Consider migrating to R2 for long-term reliability.
 2. ~~**Task Editor Image Button**~~: ✅ FIXED - Added `urlModal` state, `URLInputModal` component, and `onOpenUrlModal` prop in `Tasks.jsx`.
 3. **CSRF Allowed Origin**: `worker.js` still uses wildcard `*`. Needs to be restricted to production diff.
 4. **Stored XSS (Question Text)**: Question Input is NOT sanitized. Vulnerable to XSS if a teacher account is compromised or malicious. `dangerouslySetInnerHTML` is used in `cbt.js` without backend sanitization.

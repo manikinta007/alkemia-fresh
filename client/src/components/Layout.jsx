@@ -18,7 +18,8 @@ import {
     ChevronRight,
     School,
     GraduationCap,
-    MoreHorizontal
+    MoreHorizontal,
+    Image as ImageIcon
 } from 'lucide-react';
 import { fetchApi } from '../utils/api';
 
@@ -169,6 +170,7 @@ export default function Layout() {
 
                     {/* LAINNYA */}
                     <SidebarGroup label="Lainnya" icon={MoreHorizontal} currentPath={location.pathname}>
+                        <SidebarItem to="/gudang-gambar" icon={ImageIcon} label="Gudang Gambar" />
                         <SidebarItem to="/qrcodes" icon={QrCode} label="QR Codes" />
                         <SidebarItem to="/settings" icon={Settings} label="Pengaturan" />
                     </SidebarGroup>

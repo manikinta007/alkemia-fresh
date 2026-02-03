@@ -19,6 +19,7 @@ import { handleScheduleRequest } from '../controllers/scheduleController.js';
 import { handleMigrationRequest } from '../controllers/migrationController.js'; // [NEW] Database Migration
 import { handleTaskRequest } from '../controllers/taskController.js'; // [NEW] Task & Remedial
 import { handleDashboardRequest } from '../controllers/dashboardController.js'; // [NEW] Dashboard Stats
+import { handleImageRequest } from '../controllers/imageController.js'; // [NEW] Gudang Gambar
 
 // --- CONFIG & HEADERS ---
 // [PENTING] Ganti URL ini dengan domain Worker Anda sendiri!
@@ -198,6 +199,9 @@ export async function handleApiRequest(request, env) {
 
     // [NEW] Dashboard API
     if (!apiResponse) apiResponse = await handleDashboardRequest(request, env);
+
+    // [NEW] Gudang Gambar API
+    if (!apiResponse) apiResponse = await handleImageRequest(request, env);
 
     // [NEW] API Proxy for Iframe
     if (!apiResponse && pathname === '/api/proxy') {

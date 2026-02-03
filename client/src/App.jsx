@@ -13,9 +13,11 @@ import Quizzes from './pages/Quizzes';
 import Grades from './pages/Grades';
 
 import QRCodes from './pages/QRCodes';
-import Settings from './pages/Settings';
+import GudangGambar from './pages/GudangGambar';
 
+import Settings from './pages/Settings';
 import StudentLanding from './pages/student/StudentLanding';
+// Wrapper for protected routes
 import StudentPortal from './pages/student/StudentPortal';
 import { initSession, getCsrfToken } from './utils/api';
 
@@ -58,6 +60,7 @@ function AppContent() {
         <Route path="qrcodes" element={<QRCodes />} />
         <Route path="qrcodes" element={<QRCodes />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="gudang-gambar" element={<GudangGambar />} />
         <Route path="lab" element={<div className="p-8 text-center text-zinc-500 bg-white rounded-xl border border-zinc-200 mt-4 mx-4 shadow-sm"><div className="text-4xl mb-4">🧪</div><h2 className="text-xl font-bold text-zinc-800">Virtual Lab</h2><p className="mt-2">Fitur ini sedang dalam pengembangan.</p></div>} />
 
         {/* Fallback */}

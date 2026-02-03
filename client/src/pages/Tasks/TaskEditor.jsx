@@ -40,11 +40,11 @@ export const TaskEditor = ({
     onSaveFull,
     onSaveIdentity,
     onCancel,
-    onOpenUrlModal, // Passed from parent
+    onOpenUrlModal, // Passed from parent (triggers ImagePickerModal)
     onOpenStudentModal
 }) => {
     const fileInputRef = React.useRef(null);
-    const [isIdentityOpen, setIsIdentityOpen] = useState(false); // Managed manually for React
+    const [isIdentityOpen, setIsIdentityOpen] = useState(false);
 
     // --- INTERNAL HELPERS ---
     const addQuestion = (type) => {
@@ -160,7 +160,6 @@ export const TaskEditor = ({
                     <span className="text-zinc-400">Edit Judul, Deadline & Target Siswa</span>
                 </div>
 
-                {/* Custom Details Logic for React */}
                 <div className="relative">
                     <button
                         onClick={() => setIsIdentityOpen(!isIdentityOpen)}
@@ -214,8 +213,8 @@ export const TaskEditor = ({
                                 <span className="text-[10px] font-bold bg-black text-white px-2 py-0.5 rounded uppercase">{q.type.replace('_', ' ').replace('text', 'teks')}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => onOpenUrlModal(idx)} className="flex items-center gap-2 bg-white border border-zinc-300 hover:border-black hover:text-black text-zinc-600 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm" title="Sisipkan URL Gambar">
-                                    <Link size={12} /> Link Gambar
+                                <button onClick={() => onOpenUrlModal(idx)} className="flex items-center gap-2 bg-white border border-zinc-300 hover:border-black hover:text-black text-zinc-600 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm" title="Sisipkan Gambar">
+                                    <ImageIcon size={14} /> Sisipkan Gambar
                                 </button>
                                 <button onClick={() => removeQuestion(idx)} className="text-zinc-400 hover:text-red-500 transition px-2">
                                     <Trash2 size={18} />
@@ -223,26 +222,24 @@ export const TaskEditor = ({
                             </div>
                         </div>
 
-                        {/* Question Text Area */}
-                        <div className="p-0 border-b border-zinc-100 relative group-focus-within:bg-yellow-50/10">
-                            <textarea
-                                className="w-full p-4 border-0 focus:ring-0 text-base font-mono bg-transparent resize-y min-h-[120px] placeholder-zinc-300 focus:bg-yellow-50/30 transition leading-relaxed outline-none"
-                                rows="3"
-                                value={q.questionText}
-                                onChange={e => updateQuestion(idx, 'questionText', e.target.value)}
-                                placeholder="Ketik soal di sini... (HTML Allowed like <br>, <b>, <img>)"
-                            />
+                        {/* Question Editor (Preview First) */}
+                        <div className="p-4 bg-white relative group-focus-within:bg-yellow-50/10">
+                            <div
+                                className="w-full min-h-[120px] p-4 border border-zinc-200 rounded-lg focus:outline-none focus:border-black focus:ring-1 focus:ring-black/5 transition leading-relaxed prose max-w-none"
+                                contentEditable
+                                suppressContentEditableWarning
+                                onBlur={(e) => updateQuestion(idx, 'questionText', e.currentTarget.innerHTML)}
+                                dangerouslySetInnerHTML={{ __html: q.questionText || 'Ketik soal di sini...' }}
+                                onFocus={(e) => {
+                                    if (e.currentTarget.innerHTML === 'Ketik soal di sini...') {
+                                        e.currentTarget.innerHTML = '';
+                                    }
+                                }}
+                            ></div>
+                            <p className="mt-2 text-[10px] text-zinc-400 text-right">
+                                * Editor ini mendukung tampilan langsung. Sisipkan gambar menggunakan tombol di atas.
+                            </p>
                         </div>
-
-                        {/* LIVE PREVIEW */}
-                        {q.questionText && (
-                            <div className="p-4 bg-blue-50/30 border-b border-dashed border-blue-200">
-                                <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-1">
-                                    <span>👁️</span> LIVE PREVIEW
-                                </p>
-                                <div className="prose prose-sm max-w-none text-zinc-800" dangerouslySetInnerHTML={{ __html: q.questionText }}></div>
-                            </div>
-                        )}
 
                         {/* Options Area */}
                         <div className="bg-white p-4">
