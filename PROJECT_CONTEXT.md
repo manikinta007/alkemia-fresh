@@ -65,7 +65,9 @@
 7.  ✅ **Grade Leak**: Fixed in `taskController.js` (checked `is_published` before returning `myGrade`).
 8.  ✅ **Grade Status Label**: Added `NILAI_DALAM_PROSES` status (Purple) for graded but unpublished tasks.
 9.  ✅ **Student Modal/Redirect**: Refactored Modal components to fix flicker. Changed Draft flow to "Save & Continue".
-**Immediate Plan**: Monitor for any reported issues after deployment.
+10. ✅ **Quiz Delete/Save Questions**: Fixed `showConfirm` usage in `useQuizData.js` (was callback-based, now Promise-based).
+
+**Session End**: All reported issues resolved. Ready for next session.
 
 ### 🐛 Known Issues (Active)
 1. **None**: All known issues from this session are resolved.
