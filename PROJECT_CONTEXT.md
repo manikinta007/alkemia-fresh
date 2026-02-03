@@ -62,8 +62,13 @@
 4.  ✅ **Global QR Reset**: Fixed `handleReset` in `QRCodes.jsx` (Promise-based).
 5.  ✅ **Task Delete Button**: Fixed in `Tasks.jsx`.
 6.  ✅ **Google Drive Materials**: Simplified fallback UI in `StudentPortal.jsx`.
-7.  ✅ **Grade Visibility**: Fixed `/api/student/task-detail` to check `is_published` before exposing grades.
-**Immediate Plan**: User verification of grade visibility fix.
+7.  ✅ **Grade Leak**: Fixed in `taskController.js` (checked `is_published` before returning `myGrade`).
+8.  ❌ **Student Modal/Redirect**: Fixes for flicker and Draft redirect behavior were unsuccessful/incomplete.
+**Immediate Plan**: Re-investigate Modal logic in next session.
+
+### 🐛 Known Issues (Active)
+1. **Modal Flicker**: Student success modal closes prematurely or flickers before redirecting.
+2. **Draft Redirect**: "Simpan Draft" flow UX needs refinement (redirect logic inconsistent).
 
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
