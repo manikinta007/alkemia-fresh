@@ -374,10 +374,17 @@ export default function StudentTasks({ student, onBack }) {
                             <div className="mb-4">
                                 <div className="flex justify-between items-start mb-2">
                                     <span className="bg-zinc-800 text-zinc-400 px-2 py-1 rounded text-[10px] font-bold">NO {idx + 1}</span>
-                                    {/* [TRANSPARANSI POIN] */}
+                                    {/* [TRANSPARANSI POIN] - Tampilkan poin yang didapat jika sudah dinilai */}
                                     {isReadOnly && (
-                                        <span className="text-[10px] font-bold text-zinc-500">
-                                            {q.type === 'pg' ? `Max: ${pgScorePerItem.toFixed(1)} Poin` : `Bobot: ${q.weight || 0}%`}
+                                        <span className="text-[10px] font-bold">
+                                            {/* Jika nilai sudah publish dan ada earnedScore, tampilkan poin yang didapat */}
+                                            {activeTask.my_grade !== null && answers[q.id]?.earnedScore !== undefined ? (
+                                                <span className="text-green-500">Poin: {answers[q.id].earnedScore.toFixed(1)}</span>
+                                            ) : (
+                                                <span className="text-zinc-500">
+                                                    {q.type === 'pg' ? `Max: ${pgScorePerItem.toFixed(1)} Poin` : `Bobot: ${q.weight || 0}%`}
+                                                </span>
+                                            )}
                                         </span>
                                     )}
                                 </div>

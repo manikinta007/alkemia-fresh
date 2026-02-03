@@ -513,13 +513,14 @@ export async function handleTaskRequest(request, env) {
                         feedback = sub.feedback;
                     }
 
-                    // Muat Jawaban Detail (Teks & Gambar) - Always show student's own answers
-                    const { results: ansRows } = await env.DB.prepare("SELECT question_id, answer_text, answer_image_url FROM task_answers WHERE submission_id = ?").bind(sub.id).all();
+                    // Muat Jawaban Detail (Teks, Gambar, DAN Score) - Always show student's own answers
+                    const { results: ansRows } = await env.DB.prepare("SELECT question_id, answer_text, answer_image_url, score FROM task_answers WHERE submission_id = ?").bind(sub.id).all();
 
                     ansRows.forEach(a => {
                         existingAnswers[a.question_id] = {
                             answerText: a.answer_text,
-                            answerImage: a.answer_image_url
+                            answerImage: a.answer_image_url,
+                            earnedScore: a.score  // [TRANSPARANSI] Kirim poin yang didapat per soal
                         };
                     });
                 }
