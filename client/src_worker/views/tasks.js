@@ -14,7 +14,7 @@ import { TASK_GRADING_COMPONENT } from './tasks/taskGrading.js';
 
 export function getTasksPage(classes = [], activePeriod = null) {
     const initialData = { classes, activePeriod };
-  
+
     const contentComponent = `
         ${UI_COMPONENTS}
         ${TASK_MODALS_COMPONENT}
@@ -387,7 +387,10 @@ export function getTasksPage(classes = [], activePeriod = null) {
                                     let finalUrl = url;
                                     if (url.includes('drive.google.com') && url.includes('/view')) {
                                         const idMatch = url.match(/\\/d\\/([^/]+)/);
-                                        if (idMatch && idMatch[1]) finalUrl = \`https://drive.google.com/thumbnail?id=\${idMatch[1]}&sz=w1000\`;
+                                        if (idMatch && idMatch[1]) {
+                                            const thumbnailUrl = \`https://drive.google.com/thumbnail?id=\${idMatch[1]}&sz=w1000\`;
+                                            finalUrl = \`/api/proxy?url=\${encodeURIComponent(thumbnailUrl)}\`;
+                                        }
                                     }
                                     const imgHtml = \`<br><img src="\${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>\`;
                                     const newQ = [...questions];

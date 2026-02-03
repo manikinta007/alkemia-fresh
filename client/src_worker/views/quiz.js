@@ -8,7 +8,7 @@ import { UI_COMPONENTS } from './ui.js';
 
 export function getQuizPage(classes = [], activePeriod = null) {
     const initialData = { classes, activePeriod };
-  
+
     const contentComponent = UI_COMPONENTS + `
 
         const { useState, useEffect, useRef } = React;
@@ -590,8 +590,10 @@ export function getQuizPage(classes = [], activePeriod = null) {
                 if (url.includes('drive.google.com') && url.includes('/view')) {
                     const idMatch = url.match(/\\/d\\/([^/]+)/);
                     if (idMatch && idMatch[1]) {
-                        finalUrl = \`https://drive.google.com/thumbnail?id=\${idMatch[1]}&sz=w1000\`;
-                        message = "Tautan Google Drive berhasil dikonversi ke format yang kompatibel.";
+                        // Convert to thumbnail URL and wrap with proxy to bypass CORS
+                        const thumbnailUrl = \`https://drive.google.com/thumbnail?id=\${idMatch[1]}&sz=w1000\`;
+                        finalUrl = \`/api/proxy?url=\${encodeURIComponent(thumbnailUrl)}\`;
+                        message = "Tautan Google Drive berhasil dikonversi (via proxy).";
                     }
                 }
                 const imgHtml = \`<br><img src="\${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>\`;
