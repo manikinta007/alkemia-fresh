@@ -388,8 +388,8 @@ export function getTasksPage(classes = [], activePeriod = null) {
                                     if (url.includes('drive.google.com') && url.includes('/view')) {
                                         const idMatch = url.match(/\\/d\\/([^/]+)/);
                                         if (idMatch && idMatch[1]) {
-                                            const thumbnailUrl = \`https://drive.google.com/thumbnail?id=\${idMatch[1]}&sz=w1000\`;
-                                            finalUrl = \`/api/proxy?url=\${encodeURIComponent(thumbnailUrl)}\`;
+                                            const robustUrl = \`https://lh3.googleusercontent.com/d/\${idMatch[1]}\`;
+                                            finalUrl = \`/api/proxy?url=\${encodeURIComponent(robustUrl)}\`;
                                         }
                                     }
                                     const imgHtml = \`<br><img src="\${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>\`;

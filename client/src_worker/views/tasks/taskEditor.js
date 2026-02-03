@@ -167,7 +167,7 @@ export const TASK_EDITOR_COMPONENT = `
                                     <span className="text-[10px] font-bold bg-black text-white px-2 py-0.5 rounded uppercase">{q.type.replace('_', ' ')}</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <button onClick={() => onOpenUrlModal(idx)} className="flex items-center gap-2 bg-white border border-zinc-300 hover:border-black hover:text-black text-zinc-600 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm" title="Sisipkan URL Gambar">
+                                    <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpenUrlModal(idx); }} className="flex items-center gap-2 bg-white border border-zinc-300 hover:border-black hover:text-black text-zinc-600 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm z-10 relative cursor-pointer" title="Sisipkan URL Gambar">
                                         <span>🔗 Sisipkan URL Gambar</span>
                                     </button>
                                     <button onClick={() => removeQuestion(idx)} className="text-zinc-400 hover:text-red-500 transition px-2">
