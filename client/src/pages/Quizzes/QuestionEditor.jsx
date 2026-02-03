@@ -66,17 +66,9 @@ export const QuestionEditor = ({ activeQuiz, questions, setQuestions, onSave, on
             return;
         }
 
-        let finalUrl = url;
-        // Convert Google Drive links if needed (though ImagePickerModal usually handles direct upload/bank URL)
-        // If user used "Link URL" tab with a drive link, we still want to support it
-        if (url.includes('drive.google.com') && (url.includes('/view') || url.includes('/file/d/'))) {
-            const idMatch = url.match(/\/d\/([^/]+)/);
-            if (idMatch && idMatch[1]) {
-                finalUrl = `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1000`; // Use thumbnail for quiz
-                // Or use proxy: `/api/proxy?url=${encodeURIComponent(directUrl)}` if thumbnail fails
-                // But thumbnail endpoint is usually more robust for public files
-            }
-        }
+        // Use convertToProxyUrl for Google Drive links (uses thumbnail endpoint which works)
+        const { convertToProxyUrl } = require('../../utils/imageUtils');
+        const finalUrl = convertToProxyUrl(url);
 
         const imgHtml = `<br><img src="${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>`;
         // FIX: Create new question object (immutable update) to trigger React re-render

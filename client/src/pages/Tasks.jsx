@@ -400,18 +400,13 @@ export default function Tasks() {
             return;
         }
 
-        let finalUrl = url;
-        let message = 'Gambar berhasil disisipkan.';
+        // Use convertToProxyUrl for Google Drive links (uses thumbnail endpoint which works)
+        const { convertToProxyUrl } = require('../utils/imageUtils');
+        const finalUrl = convertToProxyUrl(url);
 
-        // Convert Google Drive links to proxy format
-        if (url.includes('drive.google.com') && (url.includes('/view') || url.includes('/file/d/'))) {
-            const idMatch = url.match(/\/d\/([^/]+)/);
-            if (idMatch && idMatch[1]) {
-                const directUrl = `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
-                finalUrl = `/api/proxy?url=${encodeURIComponent(directUrl)}`;
-                message = 'Link Google Drive berhasil dikonversi (via proxy).';
-            }
-        }
+        const message = finalUrl !== url
+            ? 'Link Google Drive berhasil dikonversi (via proxy).'
+            : 'Gambar berhasil disisipkan.';
 
         // Insert image HTML into question text
         const imgHtml = `<br><img src="${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>`;
