@@ -192,8 +192,13 @@ export default function StudentPortal() {
                             <h1 className="text-xl font-bold text-white tracking-tight">{data.student.name.split(' ')[0]}</h1>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button onClick={refreshData} disabled={isRefreshing} className="w-10 h-10 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-full text-orange-500 active:scale-95 transition shadow-lg">
-                                <span className={isRefreshing ? "animate-spin" : ""}>↻</span>
+                            <button
+                                onClick={refreshData}
+                                disabled={isRefreshing}
+                                className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 border border-orange-500 rounded-xl text-white font-bold text-xs uppercase tracking-wide active:scale-95 transition shadow-lg disabled:opacity-50"
+                            >
+                                <span className={isRefreshing ? "animate-spin text-base" : "text-base"}>↻</span>
+                                <span className="hidden sm:inline">REFRESH</span>
                             </button>
                             <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-sm shadow-lg">{data.student.name.substring(0, 2)}</div>
                         </div>

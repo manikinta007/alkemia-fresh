@@ -234,9 +234,11 @@ export const QuizReview = ({ quizId, onBack }) => {
     return (
         <div className="flex flex-col h-full bg-black text-white">
             <GlobalCBTStyles />
-            <div className="px-4 pt-safe pt-4 pb-4 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between shadow-md z-10">
-                <button onClick={onBack} className="w-8 h-8 flex items-center justify-center bg-zinc-800 rounded-full font-bold">←</button>
-                <div className="text-center"><h3 className="font-bold text-lg">Pembahasan</h3><p className="text-xs text-zinc-400">Skor: {Math.round(score)}</p></div><div className="w-8"></div>
+            {/* STICKY HEADER */}
+            <div className="sticky top-0 px-4 pt-safe pt-4 pb-4 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between shadow-md z-20">
+                <button onClick={onBack} className="w-10 h-10 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 rounded-full font-bold text-lg transition">←</button>
+                <div className="text-center"><h3 className="font-bold text-lg">Pembahasan</h3><p className="text-xs text-zinc-400">Skor: {Math.round(score)}</p></div>
+                <div className="w-10"></div>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-6 hide-scrollbar">
                 {questions.map((q, idx) => {
