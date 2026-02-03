@@ -104,16 +104,22 @@ export const useQuizData = (showAlert, showConfirm) => {
         }
     };
 
-    const deleteQuiz = async (id, onSuccess) => {
-        showConfirm('Hapus quiz ini beserta soal dan nilainya?', async () => {
+    const deleteQuiz = (id, onSuccess) => {
+        showConfirm('Hapus quiz ini beserta soal dan nilainya? Tindakan ini tidak dapat dibatalkan.', async () => {
             try {
-                const res = await fetchApi('/api/quizzes?id=' + id, { method: 'DELETE' });
+                // Ensure ID is a string or number and not an event object
+                const quizId = typeof id === 'object' ? id.id : id;
+
+                const res = await fetchApi('/api/quizzes?id=' + quizId, { method: 'DELETE' });
                 if (res.ok) {
                     if (showAlert) showAlert('Quiz berhasil dihapus.', 'success');
                     if (onSuccess) onSuccess();
+                } else {
+                    throw new Error('Gagal menghapus');
                 }
             } catch (e) {
                 if (showAlert) showAlert('Gagal menghapus quiz.', 'error');
+                console.error(e);
             }
         });
     };
