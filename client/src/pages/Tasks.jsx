@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchApi } from '../utils/api';
 import { useAlertContext } from '../components/Alert';
 import { X } from 'lucide-react';
+import { convertToProxyUrl } from '../utils/imageUtils';
 
 // Sub-Components
 import { CreateTaskModal, StudentModal, WeightModal, DiscussionModal } from './Tasks/TaskModals';
@@ -401,7 +402,7 @@ export default function Tasks() {
         }
 
         // Use convertToProxyUrl for Google Drive links (uses thumbnail endpoint which works)
-        const { convertToProxyUrl } = require('../utils/imageUtils');
+        // convertToProxyUrl handles Google Drive links (uses thumbnail endpoint via proxy)
         const finalUrl = convertToProxyUrl(url);
 
         const message = finalUrl !== url

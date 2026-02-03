@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, Download, Trash2, Image as ImageIcon, Eye } from 'lucide-react';
 import { useAlertContext } from '../../components/Alert';
 import ImagePickerModal from '../../components/ImagePickerModal';
+import { convertToProxyUrl } from '../../utils/imageUtils';
 
 export const QuestionEditor = ({ activeQuiz, questions, setQuestions, onSave, onCancel }) => {
     const { showAlert, showConfirm } = useAlertContext();
@@ -67,7 +68,7 @@ export const QuestionEditor = ({ activeQuiz, questions, setQuestions, onSave, on
         }
 
         // Use convertToProxyUrl for Google Drive links (uses thumbnail endpoint which works)
-        const { convertToProxyUrl } = require('../../utils/imageUtils');
+        // convertToProxyUrl handles Google Drive links (uses thumbnail endpoint via proxy)
         const finalUrl = convertToProxyUrl(url);
 
         const imgHtml = `<br><img src="${finalUrl}" class="w-full max-w-sm rounded-lg border border-zinc-200 my-2 shadow-sm"><br>`;
