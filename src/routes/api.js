@@ -23,12 +23,18 @@ import { handleImageRequest } from '../controllers/imageController.js'; // [NEW]
 
 // --- CONFIG & HEADERS ---
 // [PENTING] Ganti URL ini dengan domain Worker Anda sendiri!
-const ALLOWED_ORIGIN = "*";
+// --- CONFIG & HEADERS ---
+const getCorsHeaders = (requestOrigin) => {
+  // Reflected Origin Strategy: Always allow the requesting origin
+  // This is required when Access-Control-Allow-Credentials is true
+  const origin = requestOrigin || "*";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, Cookie, X-CSRF-Token, X-Student-Token, X-Device-Id",
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, Cookie, X-CSRF-Token, X-Student-Token, X-Device-Id",
+    "Access-Control-Allow-Credentials": "true"
+  };
 };
 
 // --- SECURITY CHECKER (CSRF & Session) ---
@@ -110,7 +116,9 @@ export async function handleApiRequest(request, env) {
           `auth_session=${data.sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
         );
         // Inject CORS headers
-        Object.entries(corsHeaders).forEach(([key, value]) => {
+        const requestOrigin = request.headers.get("Origin");
+        const headers = getCorsHeaders(requestOrigin);
+        Object.entries(headers).forEach(([key, value]) => {
           newResponse.headers.set(key, value);
         });
         return newResponse;
@@ -122,7 +130,9 @@ export async function handleApiRequest(request, env) {
 
     // Return error response (jika gagal) dengan CORS
     const errResponse = new Response(response.body, response);
-    Object.entries(corsHeaders).forEach(([key, value]) => {
+    const requestOrigin = request.headers.get("Origin");
+    const headers = getCorsHeaders(requestOrigin);
+    Object.entries(headers).forEach(([key, value]) => {
       errResponse.headers.set(key, value);
     });
     return errResponse;
@@ -211,7 +221,9 @@ export async function handleApiRequest(request, env) {
 
     if (apiResponse) {
       const finalRes = new Response(apiResponse.body, apiResponse);
-      Object.entries(corsHeaders).forEach(([key, value]) => {
+      const requestOrigin = request.headers.get("Origin");
+      const headers = getCorsHeaders(requestOrigin);
+      Object.entries(headers).forEach(([key, value]) => {
         finalRes.headers.set(key, value);
       });
       return finalRes;

@@ -3,11 +3,13 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy",
+		"build": "cd client && npm install && npm run build && cd .. && npx esbuild src/worker-fresh.js --bundle --outfile=client/dist/_worker.js --format=esm --platform=neutral",
+		"deploy": "wrangler pages deploy client/dist",
 		"dev": "wrangler dev",
 		"start": "wrangler dev"
 	},
 	"devDependencies": {
+		"esbuild": "^0.25.0",
 		"wrangler": "^4.61.1"
 	}
 }

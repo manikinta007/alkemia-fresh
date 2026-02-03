@@ -3,11 +3,16 @@
 let csrfToken = null;
 let user = null;
 
+// Detect environment
+const IS_PROD = import.meta.env.PROD || window.location.hostname !== 'localhost';
+const API_BASE_URL = ''; // Unified Deployment: Always relative path!
+// const API_BASE_URL = IS_PROD ? 'https://alkemia-fresh.altratimuri.workers.dev' : '';
+
 // Initialize session (fetch CSRF token)
 export const initSession = async () => {
     try {
         // Must include credentials to send the httpOnly cookie
-        const res = await fetch('/api/auth/session', { credentials: 'include' });
+        const res = await fetch(`${API_BASE_URL}/api/auth/session`, { credentials: 'include' });
         if (res.ok) {
             const data = await res.json();
             csrfToken = data.csrfToken;
@@ -53,7 +58,10 @@ export const fetchApi = async (endpoint, options = {}) => {
         }
     }
 
-    const res = await fetch(endpoint, options);
+    // Prepend API_BASE_URL if endpoint starts with /
+    const url = endpoint.startsWith('/') ? `${API_BASE_URL}${endpoint}` : endpoint;
+
+    const res = await fetch(url, options);
 
     // Global Error Handling
     if (res.status === 401) {

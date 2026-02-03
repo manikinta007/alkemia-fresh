@@ -13,13 +13,18 @@ import { handleTaskRequest } from './controllers/taskController.js';
 import { handleMigrationRequest } from './controllers/migrationController.js';
 
 // --- CONFIG & HEADERS ---
-// [PENTING] Ganti URL ini dengan domain Worker Anda sendiri jika sudah production!
-const ALLOWED_ORIGIN = "*"; // Saat development boleh bintang (*), nanti ganti domain asli.
+// --- CONFIG & HEADERS ---
+const getCorsHeaders = (requestOrigin) => {
+  // Reflected Origin Strategy: Always allow the requesting origin
+  // This is required when Access-Control-Allow-Credentials is true
+  const origin = requestOrigin || "*";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, Cookie, X-CSRF-Token, X-Student-Token, X-Device-Id",
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, Cookie, X-CSRF-Token, X-Student-Token, X-Device-Id",
+    "Access-Control-Allow-Credentials": "true"
+  };
 };
 
 // --- MAIN LOGIC ---
@@ -27,7 +32,8 @@ export default {
   async fetch(request, env) {
     // 1. GLOBAL CORS PREFLIGHT (OPTIONS)
     if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
+      const requestOrigin = request.headers.get("Origin");
+      return new Response(null, { headers: getCorsHeaders(requestOrigin) });
     }
 
     try {
