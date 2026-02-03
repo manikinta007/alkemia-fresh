@@ -29,9 +29,9 @@ export async function handleProxyRequest(request, env) {
             if (!fileId && thumbMatch) fileId = thumbMatch[1];
 
             if (fileId) {
-                // Use lh3.googleusercontent.com which is Google's CDN
-                // This is the most reliable format for public files
-                targetUrl = `https://lh3.googleusercontent.com/d/${fileId}=w1000`;
+                // Use Google Drive thumbnail endpoint (most reliable for public files)
+                // sz=w1000 gives us a decent resolution image
+                targetUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
             }
         }
 

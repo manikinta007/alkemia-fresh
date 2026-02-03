@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { processContentForDisplay } from '../../utils/imageUtils';
 
 // --- GLOBAL STYLES (Injected as component) ---
 const GlobalCBTStyles = () => (
@@ -248,7 +249,7 @@ export const QuizReview = ({ quizId, onBack }) => {
                             <div className="flex gap-3 mb-3">
                                 <div className="flex-shrink-0 w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-sm font-bold text-zinc-400">{idx + 1}</div>
                                 <div className="flex-1">
-                                    <div className="soal-content text-base font-medium leading-relaxed mb-4 text-zinc-200" dangerouslySetInnerHTML={{ __html: q.question_text }}></div>
+                                    <div className="soal-content text-base font-medium leading-relaxed mb-4 text-zinc-200" dangerouslySetInnerHTML={{ __html: processContentForDisplay(q.question_text) }}></div>
                                     <div className="space-y-2">
                                         {['A', 'B', 'C', 'D', 'E'].map(opt => {
                                             const text = q['option_' + opt.toLowerCase()];
@@ -261,7 +262,7 @@ export const QuizReview = ({ quizId, onBack }) => {
                                                 <div key={opt} className={`p-3 rounded-lg border text-sm flex justify-between items-center ${style}`}>
                                                     <div className="flex gap-3 w-full">
                                                         <span className="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-black/20 text-xs">{opt}</span>
-                                                        <span className="break-words soal-content" dangerouslySetInnerHTML={{ __html: text }}></span>
+                                                        <span className="break-words soal-content" dangerouslySetInnerHTML={{ __html: processContentForDisplay(text) }}></span>
                                                     </div>
                                                     <span>{icon}</span>
                                                 </div>
@@ -580,7 +581,7 @@ export const QuizRunner = ({ quizId, studentId, duration, onFinish }) => {
 
             {/* CONTENT AREA */}
             <div className="flex-1 overflow-y-auto p-6 bg-zinc-50">
-                <div className="soal-content text-lg font-medium leading-relaxed mb-8 prose max-w-none text-zinc-900" dangerouslySetInnerHTML={{ __html: q.question_text }}></div>
+                <div className="soal-content text-lg font-medium leading-relaxed mb-8 prose max-w-none text-zinc-900" dangerouslySetInnerHTML={{ __html: processContentForDisplay(q.question_text) }}></div>
 
                 <div className="space-y-3 pb-20">
                     {['A', 'B', 'C', 'D', 'E'].map(opt => {
@@ -590,7 +591,7 @@ export const QuizRunner = ({ quizId, studentId, duration, onFinish }) => {
                         return (
                             <button key={opt} onClick={() => handleAnswer(opt)} className={`w-full text-left p-4 rounded-xl border-2 transition-all flex gap-4 items-start active:scale-[0.99] ${isSelected ? 'border-black bg-blue-50/50 ring-1 ring-black' : 'border-zinc-200 bg-white hover:bg-zinc-100 hover:border-zinc-300'}`}>
                                 <span className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg font-bold text-sm shadow-sm ${isSelected ? 'bg-black text-white' : 'bg-zinc-100 text-zinc-500'}`}>{opt}</span>
-                                <span className="py-0.5 w-full soal-content text-base text-zinc-700" dangerouslySetInnerHTML={{ __html: text }}></span>
+                                <span className="py-0.5 w-full soal-content text-base text-zinc-700" dangerouslySetInnerHTML={{ __html: processContentForDisplay(text) }}></span>
                             </button>
                         )
                     })}
