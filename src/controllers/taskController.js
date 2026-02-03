@@ -318,15 +318,47 @@ export async function handleTaskRequest(request, env) {
 
             if (!submission) return jsonResponse({ error: "Data tidak ditemukan" }, 404);
 
-            const { results: answers } = await env.DB.prepare(`
-            SELECT ta.id as answer_id, ta.answer_text, ta.answer_image_url, ta.score,
-            tq.id as question_id, tq.type, tq.question_text, tq.question_image_url, tq.correct_key, tq.options, tq.weight
-            FROM task_answers ta
-            JOIN task_questions tq ON ta.question_id = tq.id
-            WHERE ta.submission_id = ? ORDER BY tq.id ASC
-        `).bind(submissionId).all();
+            // [FIX] Ambil SEMUA soal dari task ini, bukan hanya yang dijawab
+            const { results: allQuestions } = await env.DB.prepare(`
+                SELECT id, type, question_text, question_image_url, correct_key, options, weight
+                FROM task_questions 
+                WHERE task_id = ? 
+                ORDER BY id ASC
+            `).bind(submission.task_id).all();
 
-            const parsedAnswers = answers.map(a => ({ ...a, options: a.options ? JSON.parse(a.options) : [] }));
+            // Ambil jawaban siswa untuk submission ini
+            const { results: studentAnswers } = await env.DB.prepare(`
+                SELECT id as answer_id, question_id, answer_text, answer_image_url, score
+                FROM task_answers 
+                WHERE submission_id = ?
+            `).bind(submissionId).all();
+
+            // Buat map jawaban berdasarkan question_id
+            const answersMap = {};
+            studentAnswers.forEach(a => {
+                answersMap[a.question_id] = a;
+            });
+
+            // Gabungkan: semua soal + jawaban (atau null jika tidak dijawab)
+            const parsedAnswers = allQuestions.map(q => {
+                const ans = answersMap[q.id] || null;
+                return {
+                    question_id: q.id,
+                    type: q.type,
+                    question_text: q.question_text,
+                    question_image_url: q.question_image_url,
+                    correct_key: q.correct_key,
+                    options: q.options ? JSON.parse(q.options) : [],
+                    weight: q.weight,
+                    // Jawaban siswa (bisa null jika tidak dijawab)
+                    answer_id: ans?.answer_id || null,
+                    answer_text: ans?.answer_text || '',
+                    answer_image_url: ans?.answer_image_url || null,
+                    score: ans?.score || 0,
+                    is_answered: !!ans
+                };
+            });
+
             return jsonResponse({ submission, answers: parsedAnswers });
         }
 

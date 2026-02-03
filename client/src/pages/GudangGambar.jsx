@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     Folder,
+    FolderInput,
     Image as ImageIcon,
     Plus,
     Trash2,
@@ -39,7 +40,7 @@ const FolderItem = ({ folder, isActive, onClick, onDelete }) => (
     </div>
 );
 
-const ImageGridItem = ({ image, onClick, onDelete }) => (
+const ImageGridItem = ({ image, onClick, onDelete, onMove }) => (
     <div className="group relative bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all">
         {/* Thumbnail */}
         <div className="aspect-square bg-zinc-100 relative overflow-hidden">
@@ -53,12 +54,21 @@ const ImageGridItem = ({ image, onClick, onDelete }) => (
                 <button
                     onClick={() => window.open(image.url, '_blank')}
                     className="p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg backdrop-blur-sm transition-colors"
+                    title="Lihat gambar"
                 >
                     <Search size={18} />
                 </button>
                 <button
+                    onClick={(e) => { e.stopPropagation(); onMove(image); }}
+                    className="p-2 bg-orange-500/80 hover:bg-orange-600 text-white rounded-lg backdrop-blur-sm transition-colors"
+                    title="Pindahkan ke folder lain"
+                >
+                    <FolderInput size={18} />
+                </button>
+                <button
                     onClick={(e) => { e.stopPropagation(); onDelete(image); }}
                     className="p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-lg backdrop-blur-sm transition-colors"
+                    title="Hapus gambar"
                 >
                     <Trash2 size={18} />
                 </button>
@@ -90,6 +100,12 @@ export default function GudangGambar() {
     // Create Folder State
     const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
+
+    // Move Image Modal State
+    const [moveModalOpen, setMoveModalOpen] = useState(false);
+    const [imageToMove, setImageToMove] = useState(null);
+    const [targetFolderId, setTargetFolderId] = useState(null);
+    const [isMoving, setIsMoving] = useState(false);
 
     const fileInputRef = useRef(null);
 
@@ -169,6 +185,34 @@ export default function GudangGambar() {
             loadFolders(); // Refresh counts
         } catch (error) {
             alert('Gagal menghapus gambar: ' + error.message);
+        }
+    };
+
+    // Open move modal
+    const openMoveModal = (image) => {
+        setImageToMove(image);
+        setTargetFolderId(null);
+        setMoveModalOpen(true);
+    };
+
+    // Execute move
+    const handleMoveImage = async () => {
+        if (!imageToMove || !targetFolderId) return;
+
+        setIsMoving(true);
+        try {
+            await fetchApi(`/api/images/${imageToMove.id}/move`, {
+                method: 'PUT',
+                body: JSON.stringify({ folder_id: targetFolderId })
+            });
+            setMoveModalOpen(false);
+            setImageToMove(null);
+            loadImages(activeFolder?.id);
+            loadFolders(); // Refresh counts
+        } catch (error) {
+            alert('Gagal memindahkan gambar: ' + error.message);
+        } finally {
+            setIsMoving(false);
         }
     };
 
@@ -326,12 +370,78 @@ export default function GudangGambar() {
                                     key={img.id}
                                     image={img}
                                     onDelete={handleDeleteImage}
+                                    onMove={openMoveModal}
                                 />
                             ))}
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Move Image Modal */}
+            {moveModalOpen && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-in zoom-in-95">
+                        {/* Header */}
+                        <div className="p-5 border-b border-zinc-100">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-lg font-bold text-zinc-800">Pindahkan Gambar</h3>
+                                <button
+                                    onClick={() => setMoveModalOpen(false)}
+                                    className="p-1 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-zinc-600 transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <p className="text-sm text-zinc-500 mt-1 truncate">{imageToMove?.filename}</p>
+                        </div>
+
+                        {/* Folder List */}
+                        <div className="p-4 max-h-64 overflow-y-auto">
+                            <p className="text-sm text-zinc-500 mb-3">Pilih folder tujuan:</p>
+                            <div className="space-y-2">
+                                {folders.map(folder => (
+                                    <button
+                                        key={folder.id}
+                                        onClick={() => setTargetFolderId(folder.id)}
+                                        disabled={folder.id === imageToMove?.folder_id}
+                                        className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${targetFolderId === folder.id
+                                                ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                                : folder.id === imageToMove?.folder_id
+                                                    ? 'border-zinc-100 bg-zinc-50 text-zinc-400 cursor-not-allowed'
+                                                    : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700'
+                                            }`}
+                                    >
+                                        <Folder size={18} className={targetFolderId === folder.id ? 'text-orange-500 fill-orange-200' : 'text-zinc-400'} />
+                                        <span className="font-medium">{folder.name}</span>
+                                        {folder.id === imageToMove?.folder_id && (
+                                            <span className="ml-auto text-xs text-zinc-400">(folder saat ini)</span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-zinc-100 flex justify-end gap-3">
+                            <button
+                                onClick={() => setMoveModalOpen(false)}
+                                className="px-4 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={handleMoveImage}
+                                disabled={!targetFolderId || isMoving}
+                                className="px-4 py-2 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {isMoving && <Loader2 size={16} className="animate-spin" />}
+                                {isMoving ? 'Memindahkan...' : 'Pindahkan'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

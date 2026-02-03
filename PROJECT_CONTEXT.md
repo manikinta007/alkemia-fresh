@@ -96,9 +96,13 @@
 1. ~~**Google Drive Quiz Images**~~: ✅ FIXED - Client-side URL transformation via `imageUtils.js` + `processContentForDisplay()` + thumbnail proxy endpoint.
 2. ~~**Task Editor Image Button**~~: ✅ FIXED - Added `urlModal` state, `URLInputModal` component, and `onOpenUrlModal` prop in `Tasks.jsx`.
 3. ~~**Bank Gambar Integration**~~: ✅ FIXED (Feb 4, 2026) - Changed image insertion handlers to use immutable updates (`.map()`) instead of direct mutation to properly trigger React re-renders in `contentEditable` preview.
-4. **CSRF Allowed Origin**: `worker.js` still uses wildcard `*`. Needs to be restricted to production domain.
-5. **Stored XSS (Question Text)**: Question Input is NOT sanitized. Vulnerable to XSS.
-6. **Rate Limiting**: Login attempts are successfully limited via Cloudflare KV.
+4. ~~**Bank Gambar Move Image**~~: ✅ ADDED (Feb 4, 2026) - Added Move button on image hover with folder selection modal. Uses `/api/images/:id/move` endpoint.
+5. **Bank Gambar Future Enhancements** (Planned):
+    - Bulk delete with checkbox selection
+    - Sort by name, date, size, or extension
+6. **CSRF Allowed Origin**: `worker.js` still uses wildcard `*`. Needs to be restricted to production domain.
+7. **Stored XSS (Question Text)**: Question Input is NOT sanitized. Vulnerable to XSS.
+8. **Rate Limiting**: Login attempts are successfully limited via Cloudflare KV.
 
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
