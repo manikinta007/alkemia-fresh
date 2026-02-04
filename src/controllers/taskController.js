@@ -391,14 +391,45 @@ export async function handleTaskRequest(request, env) {
 
             await env.DB.prepare(`UPDATE task_submissions SET grade = ?, feedback = ?, is_graded = 1 WHERE id = ?`).bind(grade, feedback || '', submissionId).run();
 
+            const stmts = [];
+
+            // 1. Update Essay Scores (dari input guru)
             if (essayScores && Object.keys(essayScores).length > 0) {
-                const stmts = [];
                 for (const [answerId, score] of Object.entries(essayScores)) {
                     // [NEW] Set is_graded=1 when teacher saves essay score
                     stmts.push(env.DB.prepare("UPDATE task_answers SET score = ?, is_graded = 1 WHERE id = ?").bind(score, answerId));
                 }
-                if (stmts.length > 0) await env.DB.batch(stmts);
             }
+
+            // [FIX] 2. Recalculate & Update PG Scores (Agar di siswa muncul poin per soal yang benar)
+            // Ambil Task ID & Jawaban PG Siswa
+            const subData = await env.DB.prepare("SELECT task_id FROM task_submissions WHERE id = ?").bind(submissionId).first();
+            if (subData) {
+                const task = await env.DB.prepare("SELECT pg_weight FROM tasks WHERE id = ?").bind(subData.task_id).first();
+                const { results: pgQuestions } = await env.DB.prepare("SELECT id, correct_key FROM task_questions WHERE task_id = ? AND type = 'pg'").bind(subData.task_id).all();
+
+                if (task && pgQuestions.length > 0) {
+                    const pgWeight = task.pg_weight || 0;
+                    const scorePerPg = pgWeight / pgQuestions.length;
+
+                    // Ambil jawaban PG siswa
+                    const { results: pgAnswers } = await env.DB.prepare(`
+                        SELECT ta.id, ta.answer_text, tq.correct_key 
+                        FROM task_answers ta
+                        JOIN task_questions tq ON ta.question_id = tq.id
+                        WHERE ta.submission_id = ? AND tq.type = 'pg'
+                    `).bind(submissionId).all();
+
+                    // Update score per item jawaban PG
+                    for (const ans of pgAnswers) {
+                        const isCorrect = ans.answer_text === ans.correct_key;
+                        const score = isCorrect ? scorePerPg : 0;
+                        stmts.push(env.DB.prepare("UPDATE task_answers SET score = ?, is_graded = 1 WHERE id = ?").bind(score, ans.id));
+                    }
+                }
+            }
+
+            if (stmts.length > 0) await env.DB.batch(stmts);
 
             return jsonResponse({ message: "Nilai berhasil disimpan" });
         }

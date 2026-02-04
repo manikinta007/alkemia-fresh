@@ -144,6 +144,7 @@
     - Simplified "Tugas diperbarui" alert message
     - Fixed floating panel partial save warning using real-time session input
     - Replaced browser `confirm()` with custom `showConfirm()` modal
+    - **PG Score Sync Fix**: Backend now automatically recalculates and updates PG `task_answers.score` when teacher saves grades. Fixes issue where students saw 0.0 points for correct answers if weight was changed after submission.
     - Files modified: `taskController.js`, `TaskGrading.jsx`, `Tasks.jsx`
 
 > [!IMPORTANT]
