@@ -264,12 +264,16 @@ export default function Tasks() {
     const handleSaveGrade = async (calculatedScore, next = false) => {
         if (!selectedSubmission) return;
 
+        // [FIX] Hanya kirim essay yang benar-benar diinput (bukan undefined/empty)
         const detailScores = {};
         selectedSubmission.answers.forEach(a => {
             if (a.type !== 'pg') {
-                const quality = gradeInput.essayScores[a.answer_id] || 0;
-                const points = (quality / 100) * (a.weight || 0);
-                detailScores[a.answer_id] = points;
+                const quality = gradeInput.essayScores[a.answer_id];
+                // Skip jika undefined atau empty string - essay ini belum dinilai
+                if (quality !== undefined && quality !== '') {
+                    const points = (Number(quality) / 100) * (a.weight || 0);
+                    detailScores[a.answer_id] = points;
+                }
             }
         });
 
