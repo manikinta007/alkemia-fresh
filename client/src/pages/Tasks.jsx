@@ -139,14 +139,16 @@ export default function Tasks() {
                 const data = await res.json();
                 setSelectedSubmission(data);
 
-                // Konversi score poin dari DB menjadi skala 0-100 untuk input GUI
+                // [FIX] Hanya isi score untuk essay yang sudah di-grade (is_graded=1)
+                // Essay yang belum dinilai = kosong (undefined), bukan 0
                 const scores = {};
                 data.answers.forEach(a => {
-                    if (a.type !== 'pg') {
+                    if (a.type !== 'pg' && a.is_graded === 1) {
                         const w = a.weight || 0;
                         const s = a.score || 0;
                         scores[a.answer_id] = w > 0 ? Math.round((s / w) * 100) : 0;
                     }
+                    // Essay dengan is_graded=0 tidak dimasukkan ke scores
                 });
 
                 setGradeInput({

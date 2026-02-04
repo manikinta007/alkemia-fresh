@@ -423,9 +423,11 @@ export const TaskGrading = ({
                                                             <input
                                                                 type="number" min="0" max="100"
                                                                 className="text-center text-3xl font-black p-2 rounded-xl border border-blue-200 focus:border-blue-500 outline-none w-full shadow-inner bg-white text-blue-900"
-                                                                value={gradeInput.essayScores[ans.answer_id] || 0}
+                                                                placeholder="-"
+                                                                value={gradeInput.essayScores[ans.answer_id] ?? ''}
                                                                 onChange={e => {
-                                                                    const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                                                                    const rawVal = e.target.value;
+                                                                    const val = rawVal === '' ? '' : Math.min(100, Math.max(0, parseInt(rawVal) || 0));
                                                                     setGradeInput({ ...gradeInput, essayScores: { ...gradeInput.essayScores, [ans.answer_id]: val } });
                                                                 }}
                                                             />
