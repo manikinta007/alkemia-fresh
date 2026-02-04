@@ -30,12 +30,27 @@ export default function StudentPortal() {
     const [activeTab, setActiveTab] = useState('MATERI');
     const [data, setData] = useState(null); // Dashboard Data
     const [loading, setLoading] = useState(true);
+    const [isPWA, setIsPWA] = useState(true); // Default true to avoid flash
 
     // CBT STATE
     const [activeQuizId, setActiveQuizId] = useState(null);
     const [reviewQuizId, setReviewQuizId] = useState(null);
     const [selectedMaterial, setSelectedMaterial] = useState(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // PWA CHECK
+    useEffect(() => {
+        const checkPWA = () => {
+            const isApp =
+                window.matchMedia('(display-mode: standalone)').matches ||
+                window.navigator.standalone === true ||
+                document.referrer.includes('android-app://');
+            setIsPWA(isApp);
+        };
+        checkPWA();
+        window.addEventListener('resize', checkPWA);
+        return () => window.removeEventListener('resize', checkPWA);
+    }, []);
 
     // AUTH CHECK
     useEffect(() => {
@@ -84,6 +99,28 @@ export default function StudentPortal() {
         }
     };
 
+    // --- NON-PWA WARNING (Block browser access for quizzes) ---
+    if (!isPWA && activeQuizId) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-8 text-center">
+                <div className="w-20 h-20 bg-red-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                    <span className="text-4xl">⚠️</span>
+                </div>
+                <h1 className="text-2xl font-bold mb-4">Akses Ditolak</h1>
+                <p className="text-zinc-400 mb-8 max-w-sm">
+                    Ujian hanya bisa diakses melalui <strong className="text-white">aplikasi yang terinstall</strong>.
+                    Buka aplikasi Portal Siswa dari layar utama HP Anda.
+                </p>
+                <button
+                    onClick={() => setActiveQuizId(null)}
+                    className="px-8 py-3 bg-white text-black rounded-xl font-bold"
+                >
+                    Kembali
+                </button>
+            </div>
+        );
+    }
+
     // --- FULL SCREEN MODES ---
     if (activeQuizId && data) {
         const quiz = data.quizzes.find(q => q.id === activeQuizId);
@@ -112,6 +149,7 @@ export default function StudentPortal() {
     // --- MAIN RENDER ---
     if (loading) return <div className="flex items-center justify-center min-h-screen bg-black text-white"><div className="animate-spin text-4xl">⚓</div></div>;
     if (!data) return <div className="flex items-center justify-center min-h-screen bg-black text-white p-6 text-center">Gagal memuat data. Periksa koneksi internet.<br /><button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-white text-black rounded font-bold">Refresh</button></div>;
+
 
     const renderContent = () => {
         if (activeTab === 'MATERI') return (

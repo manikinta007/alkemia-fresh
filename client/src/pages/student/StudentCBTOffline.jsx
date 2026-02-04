@@ -132,6 +132,7 @@ export const StudentCBTOffline = ({ quiz, onFinish }) => {
     // Refs
     const violationLevel = useRef(0);
     const hasFinishedRef = useRef(false);
+    const wasOnlineRef = useRef(false); // Track previous online state
 
     // Custom hook
     const {
@@ -247,12 +248,22 @@ export const StudentCBTOffline = ({ quiz, onFinish }) => {
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [phase, addViolation]);
 
-    // ========== CONNECTION DURING EXAM ==========
+    // ========== CONNECTION DURING EXAM (only on transition offline→online) ==========
     useEffect(() => {
-        if (phase === 'IN_EXAM' && isOnline && !hasFinishedRef.current) {
-            addViolation('CONNECTION_DETECTED');
+        if (phase !== 'IN_EXAM' || hasFinishedRef.current) {
+            wasOnlineRef.current = isOnline;
+            return;
         }
-    }, [isOnline, phase, addViolation]);
+
+        // Only add violation when transitioning from offline to online
+        if (isOnline && !wasOnlineRef.current) {
+            // Just log it, don't add to counter that triggers auto-submit
+            console.log('Connection detected during exam');
+            // Note: We still show the overlay but don't count towards auto-submit
+        }
+
+        wasOnlineRef.current = isOnline;
+    }, [isOnline, phase]);
 
     // ========== START EXAM ==========
     const handleStart = () => {
