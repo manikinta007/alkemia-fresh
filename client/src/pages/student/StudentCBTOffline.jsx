@@ -127,6 +127,7 @@ export const StudentCBTOffline = ({ quiz, onFinish }) => {
     const [showTabWarning, setShowTabWarning] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
     const [error, setError] = useState(null);
+    const [isStarting, setIsStarting] = useState(false);
 
     // Refs
     const violationLevel = useRef(0);
@@ -254,8 +255,14 @@ export const StudentCBTOffline = ({ quiz, onFinish }) => {
     }, [isOnline, phase, addViolation]);
 
     // ========== START EXAM ==========
-    const handleStart = async () => {
-        await updateStatus('in_exam');
+    const handleStart = () => {
+        if (isStarting) return; // Prevent double-click
+        setIsStarting(true);
+
+        // Fire-and-forget: don't await network call (we're offline anyway)
+        updateStatus('in_exam').catch(() => { });
+
+        // Start immediately without waiting for network
         startTimer();
         setPhase('IN_EXAM');
     };
@@ -384,11 +391,11 @@ export const StudentCBTOffline = ({ quiz, onFinish }) => {
 
                 <button
                     onClick={handleStart}
-                    disabled={isOnline}
-                    className={`w-full max-w-xs py-4 rounded-xl font-black text-lg shadow-lg transition ${isOnline ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'bg-white text-black hover:scale-105 active:scale-95'
+                    disabled={isOnline || isStarting}
+                    className={`w-full max-w-xs py-4 rounded-xl font-black text-lg shadow-lg transition ${isOnline || isStarting ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'bg-white text-black hover:scale-105 active:scale-95'
                         }`}
                 >
-                    {isOnline ? 'Matikan Jaringan Dulu' : 'MULAI UJIAN →'}
+                    {isStarting ? 'Memulai...' : isOnline ? 'Matikan Jaringan Dulu' : 'MULAI UJIAN →'}
                 </button>
 
                 <button onClick={onFinish} className="mt-4 text-zinc-500 hover:text-white text-sm font-bold">
