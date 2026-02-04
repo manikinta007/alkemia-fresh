@@ -167,6 +167,14 @@
   - **Frontend** (`StudentTasks.jsx`): Changed submit to iterate over `questions` array (all), not `answers` object (only filled).
   - **Backend** (`taskController.js`): Submit endpoint now iterates over ALL questions and force creates rows for empty answers.
 
+### ✅ Review Mode Summary Card (Added - Feb 4, 2026)
+- **Feature**: Added a "Jawaban Kamu" Summary Card below PG options in review mode.
+- **Display**: Shows color-coded status with icons:
+  - ✅ **Benar** (green): `Jawaban Kamu: A • BENAR`
+  - ❌ **Salah** (red): `Jawaban Kamu: B • Jawaban Benar: A`
+  - ⚠️ **Tidak Dijawab** (yellow): `Tidak Dijawab • Jawaban Benar: A`
+- **Applied to**: Both Quiz (`StudentCBT.jsx`) and Task (`StudentTasks.jsx`) review modes.
+
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
 > **Rule**: When changing features, update this document immediately.
