@@ -510,6 +510,7 @@ export default function Tasks() {
                     onOpenWeightModal={() => setWeightModal(true)}
                     onOpenUrlModal={(idx) => setUrlModal({ isOpen: true, targetIdx: idx })}
                     pgWeight={headerForm.pgWeight}
+                    showConfirm={showConfirm}
                 />
             </>
         );

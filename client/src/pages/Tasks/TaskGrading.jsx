@@ -15,7 +15,8 @@ export const TaskGrading = ({
     onPublish,
     onBack,
     onOpenWeightModal,
-    pgWeight
+    pgWeight,
+    showConfirm  // [NEW] Custom confirm modal
 }) => {
     // State untuk Lightbox Gambar
     const [previewImage, setPreviewImage] = useState(null);
@@ -34,13 +35,16 @@ export const TaskGrading = ({
             .filter(ans => ans.type !== 'pg');
     }, [selectedSubmission]);
 
-    // [FIX] Essay Grading Progress - use is_graded from database, not gradeInput
+    // [FIX] Essay Grading Progress - use gradeInput for real-time tracking during session
     const essayProgress = useMemo(() => {
         const total = essayQuestions.length;
-        // Gunakan is_graded dari database untuk tracking yang sudah dinilai
-        const graded = essayQuestions.filter(ans => ans.is_graded === 1).length;
+        // Gunakan gradeInput untuk tracking sesi saat ini (update setelah mini save)
+        const graded = essayQuestions.filter(ans => {
+            const inputVal = gradeInput.essayScores[ans.answer_id];
+            return inputVal !== undefined && inputVal !== '';
+        }).length;
         return { graded, total };
-    }, [essayQuestions]);
+    }, [essayQuestions, gradeInput]);
 
     // [NEW] Scroll to Question
     const scrollToQuestion = (idx) => {
@@ -513,12 +517,13 @@ export const TaskGrading = ({
 
                                 {/* Save All Button */}
                                 <button
-                                    onClick={() => {
-                                        // Warning jika belum lengkap
+                                    onClick={async () => {
+                                        // Warning jika belum lengkap - gunakan custom confirm
                                         if (essayProgress.graded < essayProgress.total) {
-                                            if (!confirm(`Masih ada ${essayProgress.total - essayProgress.graded} soal essay yang belum diperiksa. Tetap simpan?`)) {
-                                                return;
-                                            }
+                                            const confirmed = await showConfirm(
+                                                `Masih ada ${essayProgress.total - essayProgress.graded} soal essay yang belum diperiksa. Tetap simpan?`
+                                            );
+                                            if (!confirmed) return;
                                         }
                                         onSave(currentTotalScore, true);
                                     }}

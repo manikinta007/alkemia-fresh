@@ -123,17 +123,28 @@
     - Partial save warning when not all essays are graded
     - Files modified: `TaskGrading.jsx`
 
-22. ✅ **4-Level Grading Status System** (Completed):
+22. ✅ **4-Level Grading Status System** (Completed & Tested - Feb 4, 2026):
     - Added `is_graded` flag per answer: Migration `/api/migrate/is-graded`
     - PG auto `is_graded=1` on submit, Essay starts `is_graded=0`
-    - 4-level status: GRAY (not submitted), BLUE (submitted ungraded), YELLOW (partial), GREEN (complete)
+    - 4-level status:
+      - ⚪ GRAY: Belum submit
+      - 🔵 BLUE: Sudah kumpul, belum dinilai sama sekali
+      - 🟡 YELLOW: Sebagian essay sudah dinilai (X/Y Essay)
+      - 🟢 GREEN: Semua essay sudah dinilai
     - Changed publish from block to warning-only
-    - **Fixes Applied**:
-      - Submissions API now includes `answers` with `is_graded` and `type` fields
-      - Essay input shows empty (placeholder "-") instead of default 0 for ungraded
+    - **Key Fixes**:
+      - Submissions API includes `answers` with `is_graded` and `type` fields
+      - Essay input shows placeholder "-" instead of default 0 for ungraded
       - Floating panel uses `is_graded` from database, not gradeInput values
-      - Only essays with actual input are sent to backend for grading
+      - Only essays with actual input are sent to backend for grading (skip undefined/empty)
+      - Real-time score updates in floating panel
     - Files modified: `migrationController.js`, `taskController.js`, `TaskGrading.jsx`, `Tasks.jsx`
+
+23. ✅ **UX Improvements on Grading Flow** (Completed - Feb 4, 2026):
+    - Simplified "Tugas diperbarui" alert message
+    - Fixed floating panel partial save warning using real-time session input
+    - Replaced browser `confirm()` with custom `showConfirm()` modal
+    - Files modified: `taskController.js`, `TaskGrading.jsx`, `Tasks.jsx`
 
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.

@@ -235,7 +235,7 @@ export async function handleTaskRequest(request, env) {
                 if (recalcStmts.length > 0) await env.DB.batch(recalcStmts);
             }
 
-            return jsonResponse({ message: `Tugas diperbarui. Nilai ${submissions.length} siswa telah dihitung ulang.` });
+            return jsonResponse({ message: `Tugas berhasil diperbarui.` });
         }
 
         // [NEW ENDPOINT V10] 5. SAVE DISCUSSION & KEY CONFIG (Guru - Master Key)
