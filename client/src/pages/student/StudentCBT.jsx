@@ -269,6 +269,20 @@ export const QuizReview = ({ quizId, onBack }) => {
                                             )
                                         })}
                                     </div>
+
+                                    {/* [NEW] Summary Card: Jawaban Kamu */}
+                                    <div className={`mt-4 p-3 rounded-lg border text-sm font-bold flex items-center gap-2 ${!myAns ? 'bg-yellow-900/20 border-yellow-700 text-yellow-400' :
+                                            myAns === q.correct_answer ? 'bg-green-900/20 border-green-700 text-green-400' :
+                                                'bg-red-900/20 border-red-700 text-red-400'
+                                        }`}>
+                                        <span>{!myAns ? '⚠️' : myAns === q.correct_answer ? '✅' : '❌'}</span>
+                                        <span>
+                                            {!myAns ? 'Tidak Dijawab' : `Jawaban Kamu: ${myAns}`}
+                                            {myAns && myAns !== q.correct_answer && <span className="text-zinc-400 font-normal ml-2">• Jawaban Benar: {q.correct_answer}</span>}
+                                            {myAns === q.correct_answer && <span className="ml-2">• BENAR</span>}
+                                            {!myAns && <span className="text-zinc-400 font-normal ml-2">• Jawaban Benar: {q.correct_answer}</span>}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -474,6 +474,25 @@ export default function StudentTasks({ student, onBack }) {
                                                 </div>
                                             );
                                         })}
+                                        {/* [NEW] Summary Card: Jawaban Kamu (hanya tampil saat showKey true) */}
+                                        {isReadOnly && showKey && (() => {
+                                            const myAns = answers[q.id]?.answerText || null;
+                                            const isCorrect = myAns === q.correctKey;
+                                            return (
+                                                <div className={`mt-4 p-3 rounded-xl border text-sm font-bold flex items-center gap-2 ${!myAns ? 'bg-yellow-900/20 border-yellow-700 text-yellow-400' :
+                                                        isCorrect ? 'bg-green-900/20 border-green-700 text-green-400' :
+                                                            'bg-red-900/20 border-red-700 text-red-400'
+                                                    }`}>
+                                                    <span>{!myAns ? '⚠️' : isCorrect ? '✅' : '❌'}</span>
+                                                    <span>
+                                                        {!myAns ? 'Tidak Dijawab' : `Jawaban Kamu: ${myAns}`}
+                                                        {myAns && !isCorrect && <span className="text-zinc-400 font-normal ml-2">• Jawaban Benar: {q.correctKey}</span>}
+                                                        {isCorrect && <span className="ml-2">• BENAR</span>}
+                                                        {!myAns && <span className="text-zinc-400 font-normal ml-2">• Jawaban Benar: {q.correctKey}</span>}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 )}
 
