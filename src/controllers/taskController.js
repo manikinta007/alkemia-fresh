@@ -571,10 +571,25 @@ export async function handleTaskRequest(request, env) {
                     const { results: ansRows } = await env.DB.prepare("SELECT question_id, answer_text, answer_image_url, score FROM task_answers WHERE submission_id = ?").bind(sub.id).all();
 
                     ansRows.forEach(a => {
+                        // [MULTI-IMAGE] Parse answer_image_url as JSON array if possible
+                        let answerImages = [];
+                        if (a.answer_image_url) {
+                            try {
+                                if (a.answer_image_url.startsWith('[')) {
+                                    answerImages = JSON.parse(a.answer_image_url);
+                                } else {
+                                    answerImages = [a.answer_image_url];
+                                }
+                            } catch (e) {
+                                answerImages = [a.answer_image_url];
+                            }
+                        }
+
                         existingAnswers[a.question_id] = {
                             answerText: a.answer_text,
-                            answerImage: a.answer_image_url,
-                            earnedScore: a.score  // [TRANSPARANSI] Kirim poin yang didapat per soal
+                            answerImage: a.answer_image_url,  // Keep for backward compat
+                            answerImages: answerImages,       // [NEW] Array format for multi-image
+                            earnedScore: a.score
                         };
                     });
                 }
