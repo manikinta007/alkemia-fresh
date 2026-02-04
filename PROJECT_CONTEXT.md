@@ -147,6 +147,24 @@
     - **PG Score Sync Fix**: Backend now automatically recalculates and updates PG `task_answers.score` when teacher saves grades. Fixes issue where students saw 0.0 points for correct answers if weight was changed after submission.
     - Files modified: `taskController.js`, `TaskGrading.jsx`, `Tasks.jsx`
 
+## 6. Future Improvement Plans (Backlog)
+### 🔄 Batch Grade Recalculation (Planned)
+- **Goal**: Automatically update all student grades when the teacher updates task weights (PG/Essay).
+- **Current Issue**: Changing weights in "Edit Task" does not update existing submission scores automatically. Teacher must manually re-save each student.
+- **Proposed Logic**:
+  1. Trigger on `PUT /api/tasks` (Weight Update).
+  2. **Security**: Read `old_weight` from DB before update.
+  3. **Essay**: Reverse calculate `Quality (0-100) = (Old Point / Old Weight) * 100`. Then `New Point = (Quality / 100) * New Weight`.
+  4. **PG**: Recalculate based on `New Weight / Total PG Questions`.
+  5. **Safety**: System already enforces initial weight setup (preventing Old Weight = 0), making this safe.
+
+### ✅ Empty Answer Handling (Fixed - Feb 4, 2026)
+- **Issue**: Submitting empty essays previously skipped creating `task_answers` rows.
+- **Symptoms**:
+  1. **Sync Input Bug**: Multiple empty grading inputs shared `null` ID, causing them to update together.
+  2. **False Green Status**: System thought grading was complete because it only saw PG answers.
+- **Fix Applied**: Updated `taskController.js` (submit endpoint) to iterate over ALL questions and **FORCE CREATE** rows for empty answers with `answer_text=""`, `score=0`, `is_graded=0`.
+
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
 > **Rule**: When changing features, update this document immediately.

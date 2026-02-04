@@ -638,27 +638,36 @@ export async function handleTaskRequest(request, env) {
             const pgWeight = taskData.pg_weight || 0;
             const scorePerPg = pgTotalCount > 0 ? pgWeight / pgTotalCount : 0;
 
+            // [FIX] Buat map dari jawaban yang dikirim siswa
+            const submittedAnswersMap = {};
+            answers.forEach(ans => {
+                submittedAnswersMap[ans.questionId] = ans;
+            });
+
             let pgCorrectCount = 0;
             const processedAnswers = [];
 
-            for (const ans of answers) {
-                const qDb = qMap[ans.questionId];
+            // [FIX] Iterasi SEMUA soal, bukan hanya yang dijawab
+            // Ini memastikan jawaban kosong tetap punya row di database
+            for (const q of dbQuestions) {
+                const submittedAns = submittedAnswersMap[q.id] || null;
                 let answerScore = 0;
-                const isPG = qDb && qDb.type === 'pg';
+                const isPG = q.type === 'pg';
 
                 if (isPG) {
-                    if (ans.answerText === qDb.correct_key) {
-                        answerScore = scorePerPg; // [FIX] Simpan poin sebenarnya, bukan 1
+                    const studentAnswer = submittedAns?.answerText || '';
+                    if (studentAnswer === q.correct_key) {
+                        answerScore = scorePerPg;
                         pgCorrectCount++;
                     }
                 }
 
                 processedAnswers.push({
-                    qId: ans.questionId,
-                    text: ans.answerText || '',
-                    img: ans.answerImage || null,
+                    qId: q.id,
+                    text: submittedAns?.answerText || '',
+                    img: submittedAns?.answerImage || null,
                     score: answerScore,
-                    isGraded: isPG ? 1 : 0  // [NEW] PG auto-graded, Essay starts ungraded
+                    isGraded: isPG ? 1 : 0  // PG auto-graded, Essay starts ungraded
                 });
             }
 
