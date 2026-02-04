@@ -11,6 +11,7 @@ import { handlePageRequest } from './routes/pages.js';
 // --- SPECIFIC CONTROLLERS (New Features) ---
 import { handleTaskRequest } from './controllers/taskController.js';
 import { handleMigrationRequest } from './controllers/migrationController.js';
+import { handleOfflineQuizRequest } from './controllers/offlineQuizController.js';
 
 // --- CONFIG & HEADERS ---
 // --- CONFIG & HEADERS ---
@@ -62,6 +63,12 @@ export default {
           return await handleTaskRequest(request, env);
         }
 
+        // [JALUR KHUSUS 3] Offline Quiz (CBT Mode Offline)
+        if (pathname.match(/^\/api\/quiz\/\d+\/offline-/) ||
+          pathname.startsWith("/api/quiz/offline/")) {
+          return await handleOfflineQuizRequest(request, env);
+        }
+
         // [JALUR UMUM] Sisa request lainnya (Auth, Dashboard, Absensi, dll)
         return await handleApiRequest(request, env);
       }
@@ -108,7 +115,7 @@ export default {
       // Global Error Handler
       return new Response(JSON.stringify({ error: "Worker Error: " + err.message }), {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders }
+        headers: { "Content-Type": "application/json", ...getCorsHeaders(request.headers.get("Origin")) }
       });
     }
   }
