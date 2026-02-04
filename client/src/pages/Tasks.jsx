@@ -111,6 +111,8 @@ export default function Tasks() {
 
                 if (mode === 'EDITOR') setViewMode('EDITOR');
                 if (mode === 'GRADING') {
+                    // [FIX] Reset state saat masuk grading tugas baru
+                    setSelectedSubmission(null);
                     fetchSubmissions(taskId);
                     // Auto-trigger Weight Modal jika belum disetting (Smart Logic legacy)
                     const totalEssayWeight = (data.questions || []).reduce((acc, q) => acc + (q.weight || 0), 0);
