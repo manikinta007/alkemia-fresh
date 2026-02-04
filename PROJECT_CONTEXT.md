@@ -104,6 +104,18 @@
 7. **Stored XSS (Question Text)**: Question Input is NOT sanitized. Vulnerable to XSS.
 8. **Rate Limiting**: Login attempts are successfully limited via Cloudflare KV.
 
+### ✅ Completed (Feb 4, 2026)
+19. ✅ **R2 Image Public Access**: Fixed images not displaying in student app. Added `/api/images/file/` to public API whitelist in `api.js`. Images now accessible without authentication.
+20. ✅ **Transparent Task Grading System**: 
+    - **Backend Fix**: PG scoring now stores actual weight-based points (`pg_weight / total_pg_questions`) instead of just 1.
+    - **Frontend Display**: Shows both Bobot (weight) AND Poin (earned) per question after grades are published.
+    - **Color Grading**: Applied to per-question scores and final grade display:
+      - 🔴 Merah: 0-50%
+      - 🟡 Kuning: 51-69%
+      - 🔵 Biru: 70-79%
+      - 🟢 Hijau: 80-100%
+    - Files modified: `taskController.js`, `StudentTasks.jsx`
+
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
 > **Rule**: When changing features, update this document immediately.
