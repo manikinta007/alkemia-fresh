@@ -154,6 +154,20 @@ export async function handleMigrationRequest(request, env) {
       }
     }
 
+    // 4. IS_GRADED COLUMN MIGRATION (For proper grading workflow)
+    // Endpoint: /api/migrate/is-graded
+    if (pathname === "/api/migrate/is-graded" && method === "GET") {
+      try {
+        await env.DB.prepare("ALTER TABLE task_answers ADD COLUMN is_graded INTEGER DEFAULT 0").run();
+        return jsonResponse({ message: "Migrasi is_graded Berhasil: Kolom is_graded ditambahkan ke task_answers." });
+      } catch (e) {
+        if (e.message && e.message.includes("duplicate column name")) {
+          return jsonResponse({ message: "Info: Kolom is_graded sudah ada sebelumnya." });
+        }
+        return jsonResponse({ error: "Migrate is_graded Error: " + e.message }, 500);
+      }
+    }
+
     return null;
   } catch (err) {
     return jsonResponse({ error: "Migration Error: " + err.message }, 500);

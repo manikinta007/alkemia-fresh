@@ -328,7 +328,7 @@ export async function handleTaskRequest(request, env) {
 
             // Ambil jawaban siswa untuk submission ini
             const { results: studentAnswers } = await env.DB.prepare(`
-                SELECT id as answer_id, question_id, answer_text, answer_image_url, score
+                SELECT id as answer_id, question_id, answer_text, answer_image_url, score, is_graded
                 FROM task_answers 
                 WHERE submission_id = ?
             `).bind(submissionId).all();
@@ -355,7 +355,8 @@ export async function handleTaskRequest(request, env) {
                     answer_text: ans?.answer_text || '',
                     answer_image_url: ans?.answer_image_url || null,
                     score: ans?.score || 0,
-                    is_answered: !!ans
+                    is_answered: !!ans,
+                    is_graded: ans?.is_graded || 0  // [NEW] Flag untuk tracking essay yang sudah dinilai
                 };
             });
 
@@ -372,7 +373,8 @@ export async function handleTaskRequest(request, env) {
             if (essayScores && Object.keys(essayScores).length > 0) {
                 const stmts = [];
                 for (const [answerId, score] of Object.entries(essayScores)) {
-                    stmts.push(env.DB.prepare("UPDATE task_answers SET score = ? WHERE id = ?").bind(score, answerId));
+                    // [NEW] Set is_graded=1 when teacher saves essay score
+                    stmts.push(env.DB.prepare("UPDATE task_answers SET score = ?, is_graded = 1 WHERE id = ?").bind(score, answerId));
                 }
                 if (stmts.length > 0) await env.DB.batch(stmts);
             }
@@ -590,20 +592,21 @@ export async function handleTaskRequest(request, env) {
             for (const ans of answers) {
                 const qDb = qMap[ans.questionId];
                 let answerScore = 0;
+                const isPG = qDb && qDb.type === 'pg';
 
-                if (qDb && qDb.type === 'pg') {
+                if (isPG) {
                     if (ans.answerText === qDb.correct_key) {
                         answerScore = scorePerPg; // [FIX] Simpan poin sebenarnya, bukan 1
                         pgCorrectCount++;
                     }
                 }
-                // Essay score = 0 awalnya, akan diisi guru nanti
 
                 processedAnswers.push({
                     qId: ans.questionId,
                     text: ans.answerText || '',
                     img: ans.answerImage || null,
-                    score: answerScore
+                    score: answerScore,
+                    isGraded: isPG ? 1 : 0  // [NEW] PG auto-graded, Essay starts ungraded
                 });
             }
 
@@ -624,9 +627,9 @@ export async function handleTaskRequest(request, env) {
             for (const p of processedAnswers) {
                 stmts.push(
                     env.DB.prepare(`
-                    INSERT INTO task_answers (submission_id, question_id, answer_text, answer_image_url, score)
-                    VALUES (?, ?, ?, ?, ?)
-                `).bind(submissionId, p.qId, p.text, p.img, p.score)
+                    INSERT INTO task_answers (submission_id, question_id, answer_text, answer_image_url, score, is_graded)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                `).bind(submissionId, p.qId, p.text, p.img, p.score, p.isGraded)
                 );
             }
 

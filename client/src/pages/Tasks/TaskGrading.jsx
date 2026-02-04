@@ -108,16 +108,17 @@ export const TaskGrading = ({
         return targets.map(student => {
             const sub = submissions.find(s => s.student_id === student.id);
 
-            // [UPDATED] 3-Level Status: GRAY, YELLOW (partial), GREEN (complete)
+            // [UPDATED] 4-Level Status: GRAY, BLUE, YELLOW, GREEN
+            // GRAY = Belum Kumpul, BLUE = Sudah Kumpul, YELLOW = Sebagian Dinilai, GREEN = Semua Dinilai
             let status = 'GRAY'; // Default: Belum Mengerjakan
             let essayGraded = 0;
             let essayTotal = 0;
 
             if (sub) {
-                // Hitung essay progress dari answers
+                // [NEW] Gunakan is_graded flag bukan score > 0
                 const essayAnswers = sub.answers?.filter(a => a.type !== 'pg') || [];
                 essayTotal = essayAnswers.length;
-                essayGraded = essayAnswers.filter(a => a.score !== null && a.score !== undefined && a.score > 0).length;
+                essayGraded = essayAnswers.filter(a => a.is_graded === 1).length;
 
                 if (essayTotal === 0) {
                     // Tidak ada essay, langsung hijau (PG only)
@@ -128,11 +129,9 @@ export const TaskGrading = ({
                 } else if (essayGraded > 0) {
                     // Sebagian essay sudah dinilai
                     status = 'YELLOW';
-                } else if (sub.needs_review) {
-                    // Fallback ke backend flag
-                    status = 'YELLOW';
                 } else {
-                    status = 'YELLOW'; // Default jika ada essay belum dinilai
+                    // Essay ada tapi belum ada yang dinilai = Sudah Kumpul
+                    status = 'BLUE';
                 }
             }
 
@@ -143,25 +142,30 @@ export const TaskGrading = ({
     // --- 3. VALIDASI PUBLISH MASSAL ---
     const handlePublishAll = () => {
         // [UPDATED] Hitung status detail
-        const pendingCount = studentList.filter(item => item.status === 'YELLOW').length;
+        const blueCount = studentList.filter(item => item.status === 'BLUE').length;
+        const yellowCount = studentList.filter(item => item.status === 'YELLOW').length;
         const notSubmittedCount = studentList.filter(item => item.status === 'GRAY').length;
         const readyCount = studentList.filter(item => item.status === 'GREEN').length;
-
-        if (pendingCount > 0) {
-            alert(`❌ Tidak bisa publish!\n\nMasih ada ${pendingCount} siswa dengan penilaian belum lengkap (warna kuning).\n\nSelesaikan semua essay terlebih dahulu.`);
-            return;
-        }
 
         if (readyCount === 0) {
             alert('Tidak ada siswa yang sudah selesai dinilai.');
             return;
         }
 
-        const message = notSubmittedCount > 0
-            ? `Terbitkan nilai ${readyCount} siswa yang sudah dinilai?\n\n(${notSubmittedCount} siswa belum mengumpulkan)`
-            : `Terbitkan nilai semua ${readyCount} siswa?`;
+        // [CHANGED] Warning instead of block
+        let warningMessage = '';
+        if (blueCount > 0 || yellowCount > 0) {
+            warningMessage = `⚠️ Perhatian:\n\n`;
+            if (blueCount > 0) warningMessage += `• ${blueCount} siswa belum diperiksa sama sekali\n`;
+            if (yellowCount > 0) warningMessage += `• ${yellowCount} siswa penilaian belum lengkap\n`;
+            warningMessage += `\nHanya ${readyCount} siswa yang nilai lengkap akan dipublish.\n\nLanjutkan?`;
+        } else {
+            warningMessage = notSubmittedCount > 0
+                ? `Terbitkan nilai ${readyCount} siswa yang sudah dinilai?\n\n(${notSubmittedCount} siswa belum mengumpulkan)`
+                : `Terbitkan nilai semua ${readyCount} siswa?`;
+        }
 
-        if (confirm(message)) {
+        if (confirm(warningMessage)) {
             onPublish(task.id, true, 'TASK');
         }
     };
@@ -223,6 +227,14 @@ export const TaskGrading = ({
                                     <div className="flex justify-between items-center mt-1">
                                         {/* Status Badge Traffic Light */}
                                         {status === 'GRAY' && <span className="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded">BELUM KUMPUL</span>}
+
+                                        {status === 'BLUE' && (
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded border border-blue-200">
+                                                    SUDAH KUMPUL
+                                                </span>
+                                            </div>
+                                        )}
 
                                         {status === 'YELLOW' && (
                                             <div className="flex items-center gap-1">
