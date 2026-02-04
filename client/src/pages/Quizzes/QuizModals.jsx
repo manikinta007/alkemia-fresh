@@ -65,7 +65,8 @@ export const EditQuizModal = ({ isOpen, quiz, students, onClose, onSave }) => {
         isRandom: quiz?.is_random === 1,
         showResults: quiz?.show_results === 1,
         checkAttendance: quiz?.check_attendance === 1,
-        allowedStudents: JSON.parse(quiz?.allowed_students || '[]')
+        allowedStudents: JSON.parse(quiz?.allowed_students || '[]'),
+        isOfflineMode: quiz?.is_offline_mode === 1
     });
 
     useEffect(() => {
@@ -80,7 +81,8 @@ export const EditQuizModal = ({ isOpen, quiz, students, onClose, onSave }) => {
                 isRandom: quiz.is_random === 1,
                 showResults: quiz.show_results === 1,
                 checkAttendance: quiz.check_attendance === 1,
-                allowedStudents: JSON.parse(quiz.allowed_students || '[]')
+                allowedStudents: JSON.parse(quiz.allowed_students || '[]'),
+                isOfflineMode: quiz.is_offline_mode === 1
             });
         }
     }, [quiz]);
@@ -149,6 +151,17 @@ export const EditQuizModal = ({ isOpen, quiz, students, onClose, onSave }) => {
                     </div>
 
                     <div><label className="block text-xs font-bold text-zinc-500 uppercase mb-2">Deskripsi</label><textarea className="w-full px-4 py-3 rounded input-mono bg-zinc-50 border-zinc-200" rows="2" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}></textarea></div>
+
+                    {/* Offline Mode Toggle */}
+                    <div className="p-4 bg-purple-50 border border-purple-100 rounded-xl">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" className="w-5 h-5 accent-purple-600" checked={form.isOfflineMode} onChange={e => setForm({ ...form, isOfflineMode: e.target.checked })} />
+                            <div>
+                                <span className="text-sm font-bold text-purple-900 block flex items-center gap-2">🛫 Mode Offline Wajib</span>
+                                <span className="text-xs text-purple-700">Siswa harus matikan jaringan saat mengerjakan (anti-curang).</span>
+                            </div>
+                        </label>
+                    </div>
                 </div>
                 <div className="flex gap-3"><button onClick={onClose} className="flex-1 py-3 border border-zinc-200 text-zinc-600 rounded-xl font-bold hover:bg-zinc-50 transition">BATAL</button><button onClick={handleSubmit} className="flex-1 py-3 bg-black text-white rounded-xl font-bold hover:bg-zinc-800 transition">SIMPAN</button></div>
             </div>

@@ -1,6 +1,82 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, RefreshCcw, MonitorPlay } from 'lucide-react';
+import { Trophy, RefreshCcw, MonitorPlay, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
 import { LiveLeaderboard } from './LiveLeaderboard';
+import { fetchApi } from '../../utils/api';
+
+// Offline Monitoring Panel Component
+const OfflineMonitorPanel = ({ quizId }) => {
+    const [students, setStudents] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [lastUpdate, setLastUpdate] = useState(null);
+
+    const fetchMonitor = async () => {
+        try {
+            const res = await fetchApi(`/api/quiz/${quizId}/offline-monitor`);
+            const data = await res.json();
+            setStudents(data.students || []);
+            setLastUpdate(new Date());
+            setLoading(false);
+        } catch (e) {
+            console.error('Offline monitor fetch error:', e);
+        }
+    };
+
+    useEffect(() => {
+        fetchMonitor();
+        const interval = setInterval(fetchMonitor, 10000); // Auto-refresh 10 detik
+        return () => clearInterval(interval);
+    }, [quizId]);
+
+    const getStatusBadge = (status) => {
+        switch (status) {
+            case 'downloading': return <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">📥 DOWNLOAD</span>;
+            case 'ready': return <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-bold">⏳ SIAP</span>;
+            case 'in_exam': return <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold animate-pulse">✍️ MENGERJAKAN</span>;
+            case 'submitted': return <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">✅ SELESAI</span>;
+            default: return <span className="text-[10px] bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full font-bold">— BELUM</span>;
+        }
+    };
+
+    return (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                    <WifiOff className="text-purple-600" size={20} />
+                    <h3 className="font-bold text-purple-900">Monitoring Mode Offline</h3>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-purple-600">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    Auto-refresh 10 detik
+                    {lastUpdate && <span className="text-purple-400 ml-2">{lastUpdate.toLocaleTimeString('id-ID')}</span>}
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="text-center py-4 text-purple-500">Memuat...</div>
+            ) : (
+                <div className="grid gap-2 max-h-40 overflow-y-auto">
+                    {students.map(s => (
+                        <div key={s.student_id} className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-purple-100">
+                            <span className="font-medium text-sm text-zinc-800">{s.student_name}</span>
+                            <div className="flex items-center gap-2">
+                                {getStatusBadge(s.offline_status)}
+                                {s.violationCount > 0 && (
+                                    <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                                        <AlertTriangle size={10} /> {s.violationCount}
+                                    </span>
+                                )}
+                                {s.score !== null && s.offline_status === 'submitted' && (
+                                    <span className="text-xs font-bold text-zinc-600">{s.score}</span>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                    {students.length === 0 && <div className="text-center py-2 text-purple-400 text-sm">Belum ada siswa.</div>}
+                </div>
+            )}
+        </div>
+    );
+};
 
 export const QuizResults = ({ activeQuiz, results, fetchResults, onReset, onBack }) => {
     const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -38,6 +114,11 @@ export const QuizResults = ({ activeQuiz, results, fetchResults, onReset, onBack
             </div>
 
             <h2 className="text-2xl font-bold mb-6">Hasil: {activeQuiz.title}</h2>
+
+            {/* Offline Monitoring Panel - Show only for offline mode quizzes */}
+            {activeQuiz.is_offline_mode === 1 && (
+                <OfflineMonitorPanel quizId={activeQuiz.id} />
+            )}
 
             <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
                 <table className="w-full text-sm text-left">

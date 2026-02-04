@@ -13,13 +13,36 @@
 | **Storage** | Cloudflare R2 | Object storage for image uploads (Gudang Gambar, Profile). |
 | **Cache/Auth** | Cloudflare KV | High-speed storage for Rate Limiting and Session management. |
 
-## 3. Deployment
-**Live URL**: `https://alkemia-fresh2.pages.dev`
+## 3. Deployment & Git Strategy
+
+### 🌐 Deployment Target
+| Environment | URL | Status |
+|-------------|-----|--------|
+| **Staging/Dev** | `https://alkemia-fresh2.pages.dev` | ✅ Active |
+| **Production** | `https://app.alkemia.my.id` | ⏸️ Reserved (after all features complete) |
+
 **Platform**: Cloudflare Pages (Unified Deployment)
 **Repository**: `https://github.com/manikinta007/alkemia-fresh`
 **Build Command**: `npm run build` (builds frontend + bundles `_worker.js`)
 **Build Output**: `client/dist`
 
+### 🌿 Git Branching Strategy (Feature Branch)
+```
+main ──────────────────────●── (auto-deploy ke production)
+         \                /
+          feat/xxx ─────── (auto-deploy ke preview URL)
+```
+
+**Workflow:**
+1. Buat branch baru dari `main`: `git checkout -b feat/nama-fitur`
+2. Commit semua perubahan ke branch ini
+3. Push: `git push origin feat/nama-fitur`
+4. Cloudflare Pages auto-deploy ke preview URL (e.g., `feat-nama-fitur.alkemia-fresh2.pages.dev`)
+5. Test di preview URL
+6. Jika OK, merge ke `main` via GitHub PR atau local merge + push
+7. **Rollback**: Revert merge commit atau re-deploy dari commit sebelumnya
+
+### 🔗 Bindings (Cloudflare)
 | Binding | Type | Value |
 | :--- | :--- | :--- |
 | `DB` | D1 Database | `alkemiafresh2` |
@@ -148,15 +171,6 @@
     - Files modified: `taskController.js`, `TaskGrading.jsx`, `Tasks.jsx`
 
 ## 6. Future Improvement Plans (Backlog)
-### 🔄 Batch Grade Recalculation (Planned)
-- **Goal**: Automatically update all student grades when the teacher updates task weights (PG/Essay).
-- **Current Issue**: Changing weights in "Edit Task" does not update existing submission scores automatically. Teacher must manually re-save each student.
-- **Proposed Logic**:
-  1. Trigger on `PUT /api/tasks` (Weight Update).
-  2. **Security**: Read `old_weight` from DB before update.
-  3. **Essay**: Reverse calculate `Quality (0-100) = (Old Point / Old Weight) * 100`. Then `New Point = (Quality / 100) * New Weight`.
-  4. **PG**: Recalculate based on `New Weight / Total PG Questions`.
-  5. **Safety**: System already enforces initial weight setup (preventing Old Weight = 0), making this safe.
 
 ### ✅ Empty Answer Handling (Fixed - Feb 4, 2026)
 - **Issue**: Submitting empty essays previously skipped creating `task_answers` rows.
@@ -192,11 +206,90 @@
 - **Issue**: Switching between task grading modes retained old student selection.
 - **Fix**: Added `setSelectedSubmission(null)` when entering grading mode in `Tasks.jsx`.
 
-> [!IMPORTANT]
-> **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
-> **Rule**: When changing features, update this document immediately.
+### ✅ Delete Question Image Button (Added - Feb 4, 2026)
+- **Feature**: Teachers can now remove inserted images from questions in the editor.
+- **Implementation**:
+  - **Managers**: Added "Detected Images Manager" below `QuestionEditor.jsx` (Quiz) & `TaskEditor.jsx` (Task).
+  - **Logic**: Parses HTML content to list embedded `<img>` tags. Delete button removes the specific image tag from the HTML string.
+  - **UI**: Displayed as a thumbnail gallery with X button.
 
-## 6. Completed Features (Historical)
+  - **UI**: Displayed as a thumbnail gallery with X button.
+
+## 6. Future Development Plan: Offline Mode CBT (Semi-Offline)
+
+### **Objective**
+Create a cheating-resistant quiz mode where students download questions, activate airplane mode to disconnect, answer locally, and reconnect to submit.
+
+### **Architecture Strategy**
+- **Unified Database**: Use existing `quizzes` table with new flag `is_offline_mode` (BOOLEAN).
+- **Unified Student Entry**: Students still use "Quiz" menu. Backend logic redirects to appropriate flow based on flag.
+- **Fail-Safe**: Implement as `StudentCBTOffline.jsx` (separate file) to guarantee zero regression on existing online quizzes.
+
+### **Component Breakdown**
+1.  **Database**:
+    - Add `is_offline_mode` column to `quizzes`.
+2.  **Teacher Side**:
+    - Add toggle "Wajib Mode Offline" in Quiz Editor / Settings.
+3.  **Student Side (Logic Branching)**:
+    - If `offline=0` -> Load `StudentCBT.jsx` (Legacy/Online).
+    - If `offline=1` -> Load `StudentCBTOffline.jsx` (New).
+
+### **Offline Flow (New Component)**
+1.  **Preparation (Online)**:
+    - Download 20 questions JSON.
+    - **Asset Caching**: Convert all `<img>` src URLs to Base64/Blob strings and store in IndexedDB/LocalStorage.
+2.  **Lockdown (Gate)**:
+    - Prompt: "Matikan Data / Hidupkan Mode Pesawat".
+    - Button "Mulai" disabled until `navigator.onLine === false`.
+3.  **Execution (Offline)**:
+    - Timer starts LOCALLY (`performance.now`) at click.
+    - Anti-cheat logic (visibility API) runs locally.
+    - Answers saved to `localStorage`.
+    - If connection detected (`online`), show warning/blocker.
+4.  **Submission (Re-connect)**:
+    - Prompt: "Hidupkan Data untuk Mengirim".
+    - Button "Kirim" disabled until `navigator.onLine === true`.
+    - Batch upload answers + total duration validity check.
+
+### **Risk Mitigation**
+- **Fallback**: Defaults to Online mode if flag is missing.
+- **Device Support**: Compatible with Android 5.0+ (using standard Blob/IndexedDB).
+- **Code Safety**: Development in separate file (`StudentCBTOffline.jsx`) ensures main logic remains untouched.
+
+- **Code Safety**: Development in separate file (`StudentCBTOffline.jsx`) ensures main logic remains untouched.
+
+## 7. Future Development Plan: SaaS Transformation (Multi-Tenant)
+
+### **Objective**
+Transform the single-school system into a SaaS platform where 1 Account = 1 Teacher/School, with centralized Super Admin management.
+
+### **Roadmap Strategy**
+
+#### **Phase 1: Data Isolation (The Foundation)**
+- **Goal**: Ensure Teacher A cannot see Teacher B's classes.
+- **Action**: 
+  - Add `teacher_id` column to all primary tables (`classes`, `academic_periods`, `students`).
+  - Refactor ALL controllers to inject `WHERE teacher_id = ?` in every query.
+  - **Risk**: High effort, requires strict audit of all SQL queries.
+
+#### **Phase 2: Super Admin & Access Control**
+- **Goal**: Centralized management of users.
+- **Action**:
+  - Create `/admin` dashboard separate from teacher login.
+  - Capabilities: Create Teacher, Suspend Account, Reset Password.
+  - Table `teachers` with columns: `plan_type` (BASIC/PRO), `app_config` (JSON).
+
+#### **Phase 3: White Labeling & Customization**
+- **Goal**: Allow teachers to brand their app.
+- **Action**:
+  - **Basic**: Dynamic Header Title & Logo based on `app_config` JSON.
+  - **Advanced**: Dynamic PWA Manifest (custom app icon on student home screen) - requires dynamic endpoint.
+
+#### **Phase 4: Feature Flags (Monetization)**
+- **Goal**: Lock premium features (e.g., Offline Mode) for PRO plans.
+- **Action**: Middleware checks `plan_type` before allowing access to specific API routes (e.g., `/api/quiz/offline`).
+
+## 8. Completed Features (Historical)
 ### ✅ Sidebar Restructure (Academic Flow)
 Reorganized sidebar menu to follow the teaching workflow:
 1.  **Dashboard**

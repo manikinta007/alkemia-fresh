@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StudentTasks from './StudentTasks';
 import { QuizCard, QuizRunner, QuizReview } from './StudentCBT';
+import StudentCBTOffline from './StudentCBTOffline';
 
 import { BookOpen, ClipboardList, Trophy, BarChart2, User, FileText } from 'lucide-react';
 
@@ -85,10 +86,21 @@ export default function StudentPortal() {
 
     // --- FULL SCREEN MODES ---
     if (activeQuizId && data) {
+        const quiz = data.quizzes.find(q => q.id === activeQuizId);
+
+        // Branching: Use offline component for offline mode quizzes
+        if (quiz?.is_offline_mode === 1) {
+            return <StudentCBTOffline
+                quiz={quiz}
+                onFinish={() => { setActiveQuizId(null); refreshData(); }}
+            />;
+        }
+
+        // Regular online quiz
         return <QuizRunner
             quizId={activeQuizId}
             studentId={data.student.id}
-            duration={data.quizzes.find(q => q.id === activeQuizId)?.duration}
+            duration={quiz?.duration}
             onFinish={() => { setActiveQuizId(null); refreshData(); }}
         />;
     }

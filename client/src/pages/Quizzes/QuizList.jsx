@@ -108,6 +108,7 @@ export const QuizList = ({
                                             <h4 className="text-xl font-bold flex items-center gap-2 text-zinc-900">
                                                 {q.title}
                                                 {q.is_active === 1 && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full uppercase tracking-wider font-bold">AKTIF</span>}
+                                                {q.is_offline_mode === 1 && <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded-full uppercase tracking-wider font-bold">🛫 OFFLINE</span>}
                                             </h4>
                                             {q.description && (<p className="text-sm text-zinc-500 mt-2 mb-2 italic">"{q.description}"</p>)}
 

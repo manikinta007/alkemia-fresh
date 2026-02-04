@@ -168,6 +168,38 @@ export async function handleMigrationRequest(request, env) {
       }
     }
 
+    // 5. OFFLINE MODE MIGRATION (For CBT Offline Feature)
+    // Endpoint: /api/migrate/offline-mode
+    if (pathname === "/api/migrate/offline-mode" && method === "GET") {
+      try {
+        await env.DB.prepare("ALTER TABLE quizzes ADD COLUMN is_offline_mode INTEGER DEFAULT 0").run();
+        return jsonResponse({ message: "Migrasi Offline Mode Berhasil: Kolom is_offline_mode ditambahkan ke quizzes." });
+      } catch (e) {
+        if (e.message && e.message.includes("duplicate column name")) {
+          return jsonResponse({ message: "Info: Kolom is_offline_mode sudah ada sebelumnya." });
+        }
+        return jsonResponse({ error: "Migrate Offline Mode Error: " + e.message }, 500);
+      }
+    }
+
+    // 6. OFFLINE TRACKING COLUMNS (For quiz_attempts table)
+    // Endpoint: /api/migrate/offline-tracking
+    if (pathname === "/api/migrate/offline-tracking" && method === "GET") {
+      try {
+        await env.DB.batch([
+          env.DB.prepare("ALTER TABLE quiz_attempts ADD COLUMN offline_status TEXT DEFAULT NULL"),
+          env.DB.prepare("ALTER TABLE quiz_attempts ADD COLUMN offline_violations TEXT DEFAULT NULL"),
+          env.DB.prepare("ALTER TABLE quiz_attempts ADD COLUMN offline_duration INTEGER DEFAULT NULL")
+        ]);
+        return jsonResponse({ message: "Migrasi Offline Tracking Berhasil: Kolom monitoring ditambahkan ke quiz_attempts." });
+      } catch (e) {
+        if (e.message && e.message.includes("duplicate column name")) {
+          return jsonResponse({ message: "Info: Kolom offline tracking sudah ada sebelumnya." });
+        }
+        return jsonResponse({ error: "Migrate Offline Tracking Error: " + e.message }, 500);
+      }
+    }
+
     return null;
   } catch (err) {
     return jsonResponse({ error: "Migration Error: " + err.message }, 500);
