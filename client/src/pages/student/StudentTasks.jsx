@@ -201,10 +201,12 @@ export default function StudentTasks({ student, onBack }) {
 
         showConfirm(isDraft ? 'Simpan Draft' : 'Kumpul Tugas', confirmMsg, async () => {
             setSubmitting(true);
-            const payloadAnswers = Object.keys(answers).map(qId => ({
-                questionId: parseInt(qId),
-                answerText: answers[qId].answerText || '',
-                answerImage: answers[qId].answerImage || null
+            // [FIX] Kirim SEMUA soal, bukan hanya yang ada di state answers
+            // Ini memastikan jawaban kosong juga dikirim ke backend
+            const payloadAnswers = questions.map(q => ({
+                questionId: q.id,
+                answerText: answers[q.id]?.answerText || '',
+                answerImage: answers[q.id]?.answerImage || null
             }));
 
             try {

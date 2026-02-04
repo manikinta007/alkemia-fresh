@@ -163,7 +163,9 @@
 - **Symptoms**:
   1. **Sync Input Bug**: Multiple empty grading inputs shared `null` ID, causing them to update together.
   2. **False Green Status**: System thought grading was complete because it only saw PG answers.
-- **Fix Applied**: Updated `taskController.js` (submit endpoint) to iterate over ALL questions and **FORCE CREATE** rows for empty answers with `answer_text=""`, `score=0`, `is_graded=0`.
+- **Fix Applied**: 
+  - **Frontend** (`StudentTasks.jsx`): Changed submit to iterate over `questions` array (all), not `answers` object (only filled).
+  - **Backend** (`taskController.js`): Submit endpoint now iterates over ALL questions and force creates rows for empty answers.
 
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
