@@ -665,7 +665,10 @@ export async function handleTaskRequest(request, env) {
                 processedAnswers.push({
                     qId: q.id,
                     text: submittedAns?.answerText || '',
-                    img: submittedAns?.answerImage || null,
+                    // [MULTI-IMAGE] Store answerImages array as JSON, fallback to single answerImage
+                    img: submittedAns?.answerImages?.length > 0
+                        ? JSON.stringify(submittedAns.answerImages)
+                        : (submittedAns?.answerImage || null),
                     score: answerScore,
                     isGraded: isPG ? 1 : 0  // PG auto-graded, Essay starts ungraded
                 });

@@ -170,29 +170,69 @@ export default function StudentTasks({ student, onBack }) {
         setAnswers(prev => ({ ...prev, [qId]: { ...prev[qId], [field]: value } }));
     };
 
-    const handleFileUpload = async (qId, file) => {
-        if (!file || isReadOnly || isExpired) return;
-        if (file.size > 10 * 1024 * 1024) return showAlert('Gagal', 'File terlalu besar (Max 10MB)', 'error');
+    // [UPDATED] Multi-image upload handler (max 5 images)
+    const handleFileUpload = async (qId, files) => {
+        if (!files || files.length === 0 || isReadOnly || isExpired) return;
+
+        const currentImages = answers[qId]?.answerImages || [];
+        const remainingSlots = 5 - currentImages.length;
+
+        if (remainingSlots <= 0) {
+            return showAlert('Batas Tercapai', 'Maksimal 5 gambar per soal.', 'error');
+        }
+
+        const filesToProcess = Array.from(files).slice(0, remainingSlots);
 
         setUploading(prev => ({ ...prev, [qId]: true }));
-        try {
-            const compressedFile = await compressImage(file);
-            const formData = new FormData();
-            formData.append('file', compressedFile);
 
-            // Note: Upload endpoint requires headers too, let's allow browser to set Content-Type for FormData
-            const token = localStorage.getItem('student_token');
-            const res = await fetch('/api/student/upload', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-            if (res.ok) {
-                const data = await res.json();
-                handleAnswerChange(qId, 'answerImage', data.url);
-            } else showAlert('Gagal', 'Gagal upload gambar.', 'error');
-        } catch (e) { showAlert('Error', 'Terjadi kesalahan koneksi.', 'error'); }
+        try {
+            const uploadedUrls = [];
+
+            for (const file of filesToProcess) {
+                if (file.size > 10 * 1024 * 1024) {
+                    showAlert('Peringatan', `File ${file.name} terlalu besar (Max 10MB), dilewati.`, 'error');
+                    continue;
+                }
+
+                const compressedFile = await compressImage(file);
+                const formData = new FormData();
+                formData.append('file', compressedFile);
+
+                const token = localStorage.getItem('student_token');
+                const res = await fetch('/api/student/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    uploadedUrls.push(data.url);
+                }
+            }
+
+            if (uploadedUrls.length > 0) {
+                const newImages = [...currentImages, ...uploadedUrls];
+                handleAnswerChange(qId, 'answerImages', newImages);
+                // Also set answerImage for backward compatibility (first image)
+                if (!answers[qId]?.answerImage) {
+                    handleAnswerChange(qId, 'answerImage', newImages[0]);
+                }
+            }
+        } catch (e) {
+            showAlert('Error', 'Terjadi kesalahan koneksi.', 'error');
+        }
+
         setUploading(prev => ({ ...prev, [qId]: false }));
+    };
+
+    // Handler to remove a single image from array
+    const handleRemoveImage = (qId, imageIndex) => {
+        const currentImages = answers[qId]?.answerImages || [];
+        const newImages = currentImages.filter((_, idx) => idx !== imageIndex);
+        handleAnswerChange(qId, 'answerImages', newImages);
+        // Update answerImage for backward compatibility
+        handleAnswerChange(qId, 'answerImage', newImages[0] || null);
     };
 
     const handleSubmit = async (isDraft = false) => {
@@ -206,7 +246,8 @@ export default function StudentTasks({ student, onBack }) {
             const payloadAnswers = questions.map(q => ({
                 questionId: q.id,
                 answerText: answers[q.id]?.answerText || '',
-                answerImage: answers[q.id]?.answerImage || null
+                answerImage: answers[q.id]?.answerImage || null,
+                answerImages: answers[q.id]?.answerImages || []  // [NEW] Multi-image array
             }));
 
             try {
@@ -480,8 +521,8 @@ export default function StudentTasks({ student, onBack }) {
                                             const isCorrect = myAns === q.correctKey;
                                             return (
                                                 <div className={`mt-4 p-3 rounded-xl border text-sm font-bold flex items-center gap-2 ${!myAns ? 'bg-yellow-900/20 border-yellow-700 text-yellow-400' :
-                                                        isCorrect ? 'bg-green-900/20 border-green-700 text-green-400' :
-                                                            'bg-red-900/20 border-red-700 text-red-400'
+                                                    isCorrect ? 'bg-green-900/20 border-green-700 text-green-400' :
+                                                        'bg-red-900/20 border-red-700 text-red-400'
                                                     }`}>
                                                     <span>{!myAns ? '⚠️' : isCorrect ? '✅' : '❌'}</span>
                                                     <span>
@@ -518,37 +559,79 @@ export default function StudentTasks({ student, onBack }) {
                                     </div>
                                 )}
 
-                                {/* TIPE ESSAY IMAGE */}
-                                {q.type === 'essay_image' && (
-                                    <div>
-                                        {answers[q.id]?.answerImage ? (
-                                            <div className="relative inline-block group">
-                                                <img src={answers[q.id].answerImage} className="h-40 rounded-lg border border-zinc-700 shadow-sm bg-black" />
-                                                {!isReadOnly && !isExpired && (
-                                                    <button onClick={() => handleAnswerChange(q.id, 'answerImage', null)} className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs shadow-md hover:bg-red-700 transition">✕</button>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div>
-                                                <input
-                                                    type="file"
-                                                    id={`file-${q.id}`}
-                                                    className="hidden"
-                                                    accept="image/*"
-                                                    capture={activeTask.allow_gallery ? undefined : "environment"}
-                                                    onChange={(e) => handleFileUpload(q.id, e.target.files[0])}
-                                                    disabled={isReadOnly || isExpired}
-                                                />
-                                                <label htmlFor={`file-${q.id}`} className={`w-full py-6 border-2 border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center gap-2 transition ${isReadOnly || isExpired ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-zinc-900 hover:border-orange-900/50'}`}>
-                                                    <span className="text-2xl">{uploading[q.id] ? '⏳' : '📷'}</span>
-                                                    <span className="text-sm font-bold text-zinc-500">
-                                                        {uploading[q.id] ? 'Mengupload...' : (isReadOnly ? 'Tidak ada gambar' : 'Ambil Foto Jawaban')}
-                                                    </span>
-                                                </label>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                {/* TIPE ESSAY IMAGE - Multi-Image Support (Max 5) */}
+                                {q.type === 'essay_image' && (() => {
+                                    const images = answers[q.id]?.answerImages || [];
+                                    const canAddMore = !isReadOnly && !isExpired && images.length < 5;
+
+                                    return (
+                                        <div>
+                                            {/* Image Gallery Grid */}
+                                            {images.length > 0 && (
+                                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                                    {images.map((imgUrl, imgIdx) => (
+                                                        <div key={imgIdx} className="relative group aspect-square">
+                                                            <img
+                                                                src={imgUrl}
+                                                                className="w-full h-full object-cover rounded-lg border border-zinc-700 bg-black"
+                                                                alt={`Jawaban ${imgIdx + 1}`}
+                                                            />
+                                                            {!isReadOnly && !isExpired && (
+                                                                <button
+                                                                    onClick={() => handleRemoveImage(q.id, imgIdx)}
+                                                                    className="absolute -top-1.5 -right-1.5 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold text-[10px] shadow-md hover:bg-red-700 transition opacity-0 group-hover:opacity-100"
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            )}
+                                                            <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
+                                                                {imgIdx + 1}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Add More Button / Initial Upload */}
+                                            {canAddMore && (
+                                                <div>
+                                                    <input
+                                                        type="file"
+                                                        id={`file-${q.id}`}
+                                                        className="hidden"
+                                                        accept="image/*"
+                                                        multiple
+                                                        capture={activeTask.allow_gallery ? undefined : "environment"}
+                                                        onChange={(e) => handleFileUpload(q.id, e.target.files)}
+                                                        disabled={isReadOnly || isExpired}
+                                                    />
+                                                    <label
+                                                        htmlFor={`file-${q.id}`}
+                                                        className={`w-full py-4 border-2 border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center gap-1 transition cursor-pointer hover:bg-zinc-900 hover:border-orange-900/50`}
+                                                    >
+                                                        <span className="text-xl">{uploading[q.id] ? '⏳' : images.length > 0 ? '➕' : '📷'}</span>
+                                                        <span className="text-xs font-bold text-zinc-500">
+                                                            {uploading[q.id] ? 'Mengupload...' : images.length > 0 ? `Tambah Foto (${images.length}/5)` : 'Ambil Foto Jawaban'}
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                            )}
+
+                                            {/* Read-only: No images */}
+                                            {isReadOnly && images.length === 0 && (
+                                                <div className="py-6 border-2 border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center gap-1 opacity-50">
+                                                    <span className="text-xl">🖼️</span>
+                                                    <span className="text-xs font-bold text-zinc-500">Tidak ada gambar</span>
+                                                </div>
+                                            )}
+
+                                            {/* Max reached indicator */}
+                                            {!isReadOnly && !isExpired && images.length >= 5 && (
+                                                <p className="text-[10px] text-zinc-500 text-center mt-2">Maksimal 5 gambar tercapai</p>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* [PEMBAHASAN ESSAY - FASE 2] */}
                                 {isReadOnly && showKey && q.type !== 'pg' && q.explanation && (

@@ -399,20 +399,43 @@ export const TaskGrading = ({
                                                         </div>
                                                     ) : (
                                                         <div className="bg-zinc-50 p-5 rounded-xl border border-zinc-100">
-                                                            {ans.type === 'essay_image' && ans.answer_image_url ? (
-                                                                // [UPDATE] Image Lightbox for Student Answer
-                                                                <div
-                                                                    className="group relative cursor-zoom-in inline-block"
-                                                                    onClick={() => setPreviewImage(ans.answer_image_url)}
-                                                                >
-                                                                    <img src={ans.answer_image_url} className="max-h-64 rounded-lg border bg-white shadow-sm group-hover:shadow-md transition" alt="Jawaban Siswa" />
-                                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition rounded-lg flex items-center justify-center">
-                                                                        <span className="opacity-0 group-hover:opacity-100 bg-black/75 text-white text-[10px] px-3 py-1.5 rounded-full font-bold backdrop-blur-sm flex items-center gap-1">
-                                                                            <ZoomIn size={12} /> PERBESAR
-                                                                        </span>
+                                                            {ans.type === 'essay_image' && ans.answer_image_url ? (() => {
+                                                                // [MULTI-IMAGE] Parse JSON array or use single URL
+                                                                let images = [];
+                                                                try {
+                                                                    if (ans.answer_image_url.startsWith('[')) {
+                                                                        images = JSON.parse(ans.answer_image_url);
+                                                                    } else {
+                                                                        images = [ans.answer_image_url];
+                                                                    }
+                                                                } catch (e) {
+                                                                    images = [ans.answer_image_url];
+                                                                }
+
+                                                                return (
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {images.map((imgUrl, imgIdx) => (
+                                                                            <div key={imgIdx} className="group relative cursor-zoom-in" onClick={() => setPreviewImage(imgUrl)}>
+                                                                                <img
+                                                                                    src={imgUrl}
+                                                                                    className="h-32 w-32 object-cover rounded-lg border bg-white shadow-sm group-hover:shadow-md transition"
+                                                                                    alt={`Jawaban ${imgIdx + 1}`}
+                                                                                />
+                                                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition rounded-lg flex items-center justify-center">
+                                                                                    <span className="opacity-0 group-hover:opacity-100 bg-black/75 text-white text-[10px] px-2 py-1 rounded-full font-bold backdrop-blur-sm flex items-center gap-1">
+                                                                                        <ZoomIn size={10} />
+                                                                                    </span>
+                                                                                </div>
+                                                                                {images.length > 1 && (
+                                                                                    <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
+                                                                                        {imgIdx + 1}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        ))}
                                                                     </div>
-                                                                </div>
-                                                            ) : (
+                                                                );
+                                                            })() : (
                                                                 <p className="whitespace-pre-wrap font-mono text-sm text-zinc-800 leading-relaxed">{ans.answer_text || '-'}</p>
                                                             )}
                                                         </div>
