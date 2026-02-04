@@ -278,13 +278,6 @@ export default function Tasks() {
         });
 
         try {
-            console.log('[DEBUG] Saving grades:', {
-                submissionId: selectedSubmission.submission.id,
-                grade: calculatedScore,
-                gradeInputEssayScores: gradeInput.essayScores,
-                detailScores: detailScores
-            });
-
             const res = await fetchApi('/api/tasks/grade', {
                 method: 'POST',
                 body: JSON.stringify({
