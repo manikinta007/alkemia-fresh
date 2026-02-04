@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { X, CheckCircle2, XCircle, Search, ChevronRight, Image as ImageIcon, ZoomIn, Save, Clock } from 'lucide-react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { X, CheckCircle2, XCircle, Search, ChevronRight, Image as ImageIcon, ZoomIn, Save, Clock, ChevronUp, ChevronDown } from 'lucide-react';
 
 // --- KOMPONEN UTAMA GRADING ---
 export const TaskGrading = ({
@@ -20,6 +20,39 @@ export const TaskGrading = ({
     // State untuk Lightbox Gambar
     const [previewImage, setPreviewImage] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // [NEW] State untuk Floating Panel
+    const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+    const [activeQuestionIdx, setActiveQuestionIdx] = useState(null);
+    const questionRefs = useRef({});
+
+    // [NEW] Get Essay Questions Only with Original Index
+    const essayQuestions = useMemo(() => {
+        if (!selectedSubmission) return [];
+        return selectedSubmission.answers
+            .map((ans, idx) => ({ ...ans, originalIndex: idx }))
+            .filter(ans => ans.type !== 'pg');
+    }, [selectedSubmission]);
+
+    // [NEW] Essay Grading Progress
+    const essayProgress = useMemo(() => {
+        const total = essayQuestions.length;
+        const graded = essayQuestions.filter(ans => {
+            const inputValue = gradeInput.essayScores[ans.answer_id];
+            // Sudah dinilai jika ada input (termasuk 0 yang diinput manual)
+            return inputValue !== undefined && inputValue !== '';
+        }).length;
+        return { graded, total };
+    }, [essayQuestions, gradeInput]);
+
+    // [NEW] Scroll to Question
+    const scrollToQuestion = (idx) => {
+        setActiveQuestionIdx(idx);
+        const ref = questionRefs.current[idx];
+        if (ref) {
+            ref.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    };
 
     // --- 1. CALCULATOR: Hitung Nilai Real-time di sisi Client ---
     const currentTotalScore = useMemo(() => {
@@ -75,31 +108,60 @@ export const TaskGrading = ({
         return targets.map(student => {
             const sub = submissions.find(s => s.student_id === student.id);
 
-            // Tentukan Status Warna
+            // [UPDATED] 3-Level Status: GRAY, YELLOW (partial), GREEN (complete)
             let status = 'GRAY'; // Default: Belum Mengerjakan
+            let essayGraded = 0;
+            let essayTotal = 0;
+
             if (sub) {
-                // Logic: Jika needs_review true (dari backend - biasanya jika ada essay yg belum dinilai), warna Kuning.
-                // Atau simplenya: jika ada essay dan belum dinilai (gradeInput?) -> butuh logic backend 'needs_review' or 'is_graded'
-                // Legacy backend returns needs_review boolean.
-                if (sub.needs_review) status = 'YELLOW';
-                else status = 'GREEN';
+                // Hitung essay progress dari answers
+                const essayAnswers = sub.answers?.filter(a => a.type !== 'pg') || [];
+                essayTotal = essayAnswers.length;
+                essayGraded = essayAnswers.filter(a => a.score !== null && a.score !== undefined && a.score > 0).length;
+
+                if (essayTotal === 0) {
+                    // Tidak ada essay, langsung hijau (PG only)
+                    status = 'GREEN';
+                } else if (essayGraded === essayTotal) {
+                    // Semua essay sudah dinilai
+                    status = 'GREEN';
+                } else if (essayGraded > 0) {
+                    // Sebagian essay sudah dinilai
+                    status = 'YELLOW';
+                } else if (sub.needs_review) {
+                    // Fallback ke backend flag
+                    status = 'YELLOW';
+                } else {
+                    status = 'YELLOW'; // Default jika ada essay belum dinilai
+                }
             }
 
-            return { student, sub, status };
+            return { student, sub, status, essayGraded, essayTotal };
         });
     }, [task, students, submissions, searchTerm]);
 
     // --- 3. VALIDASI PUBLISH MASSAL ---
     const handlePublishAll = () => {
-        // Cek apakah ada yang masih kuning?
+        // [UPDATED] Hitung status detail
         const pendingCount = studentList.filter(item => item.status === 'YELLOW').length;
+        const notSubmittedCount = studentList.filter(item => item.status === 'GRAY').length;
+        const readyCount = studentList.filter(item => item.status === 'GREEN').length;
 
         if (pendingCount > 0) {
-            alert(`Masih ada ${pendingCount} siswa yang belum selesai diperiksa (Status Kuning). Harap selesaikan penilaian essay dan isi feedback terlebih dahulu.`);
+            alert(`❌ Tidak bisa publish!\n\nMasih ada ${pendingCount} siswa dengan penilaian belum lengkap (warna kuning).\n\nSelesaikan semua essay terlebih dahulu.`);
             return;
         }
 
-        if (confirm('Terbitkan semua nilai siswa yang sudah selesai?')) {
+        if (readyCount === 0) {
+            alert('Tidak ada siswa yang sudah selesai dinilai.');
+            return;
+        }
+
+        const message = notSubmittedCount > 0
+            ? `Terbitkan nilai ${readyCount} siswa yang sudah dinilai?\n\n(${notSubmittedCount} siswa belum mengumpulkan)`
+            : `Terbitkan nilai semua ${readyCount} siswa?`;
+
+        if (confirm(message)) {
             onPublish(task.id, true, 'TASK');
         }
     };
@@ -143,7 +205,7 @@ export const TaskGrading = ({
 
                     {/* LIST SISWA */}
                     <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                        {studentList.map(({ student, sub, status }) => (
+                        {studentList.map(({ student, sub, status, essayGraded, essayTotal }) => (
                             <div
                                 key={student.id}
                                 className={`p-3 rounded-lg border transition flex items-center justify-between group ${status === 'GRAY' ? 'opacity-60 bg-zinc-50/50 border-transparent cursor-default' :
@@ -165,7 +227,9 @@ export const TaskGrading = ({
                                         {status === 'YELLOW' && (
                                             <div className="flex items-center gap-1">
                                                 <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
-                                                <span className="text-[10px] font-bold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded border border-yellow-200">BUTUH REVIEW</span>
+                                                <span className="text-[10px] font-bold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded border border-yellow-200">
+                                                    {essayGraded}/{essayTotal} Essay
+                                                </span>
                                             </div>
                                         )}
 
@@ -264,7 +328,11 @@ export const TaskGrading = ({
                                     const savedScore = ans.score || 0;
 
                                     return (
-                                        <div key={idx} className="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm hover:shadow-md transition">
+                                        <div
+                                            key={idx}
+                                            ref={el => questionRefs.current[idx] = el}
+                                            className={`bg-white rounded-2xl border overflow-hidden shadow-sm hover:shadow-md transition ${activeQuestionIdx === idx ? 'border-blue-400 ring-2 ring-blue-100' : 'border-zinc-200'}`}
+                                        >
                                             {/* Soal Header */}
                                             <div className="p-6 border-b border-zinc-50 bg-zinc-50/30">
                                                 <div className="flex justify-between items-start mb-3">
@@ -379,6 +447,80 @@ export const TaskGrading = ({
                     )}
                 </div >
             </div >
+
+            {/* [NEW] FLOATING ESSAY NAVIGATION PANEL */}
+            {selectedSubmission && essayQuestions.length > 0 && (
+                <div className={`fixed bottom-6 right-6 z-[100] transition-all duration-300 ${isPanelCollapsed ? 'w-auto' : 'w-80'}`}>
+                    <div className="bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden">
+                        {/* Header - Always Visible */}
+                        <button
+                            onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
+                            className="w-full flex items-center justify-between p-4 bg-zinc-50 border-b border-zinc-100 hover:bg-zinc-100 transition"
+                        >
+                            <div className="flex items-center gap-3">
+                                <span className="text-lg">📝</span>
+                                <span className="font-bold text-sm text-zinc-700">
+                                    {essayProgress.graded}/{essayProgress.total} Essay Dinilai
+                                </span>
+                            </div>
+                            {isPanelCollapsed ? <ChevronUp size={18} className="text-zinc-400" /> : <ChevronDown size={18} className="text-zinc-400" />}
+                        </button>
+
+                        {/* Content - Collapsible */}
+                        {!isPanelCollapsed && (
+                            <div className="p-4 space-y-4">
+                                {/* Essay Toggle Buttons */}
+                                <div className="flex flex-wrap gap-2">
+                                    {essayQuestions.map((ans) => {
+                                        const inputValue = gradeInput.essayScores[ans.answer_id];
+                                        const isGraded = inputValue !== undefined && inputValue !== '';
+                                        const isActive = activeQuestionIdx === ans.originalIndex;
+
+                                        return (
+                                            <button
+                                                key={ans.answer_id}
+                                                onClick={() => scrollToQuestion(ans.originalIndex)}
+                                                className={`w-10 h-10 rounded-lg font-bold text-sm transition border-2 ${isActive
+                                                    ? 'bg-zinc-700 text-white border-zinc-700'
+                                                    : isGraded
+                                                        ? 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
+                                                        : 'bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-200'
+                                                    }`}
+                                                title={`Soal ${ans.originalIndex + 1} ${isGraded ? '(Sudah Dinilai)' : '(Belum Dinilai)'}`}
+                                            >
+                                                {ans.originalIndex + 1}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Score Display */}
+                                <div className="bg-blue-50 rounded-xl p-3 text-center border border-blue-100">
+                                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Skor Sementara</p>
+                                    <p className="text-2xl font-black text-blue-700">{currentTotalScore}<span className="text-sm text-blue-400">/100</span></p>
+                                </div>
+
+                                {/* Save All Button */}
+                                <button
+                                    onClick={() => {
+                                        // Warning jika belum lengkap
+                                        if (essayProgress.graded < essayProgress.total) {
+                                            if (!confirm(`Masih ada ${essayProgress.total - essayProgress.graded} soal essay yang belum diperiksa. Tetap simpan?`)) {
+                                                return;
+                                            }
+                                        }
+                                        onSave(currentTotalScore, true);
+                                    }}
+                                    className="w-full py-3 bg-black text-white font-bold rounded-xl hover:bg-zinc-800 transition flex items-center justify-center gap-2 shadow-lg"
+                                >
+                                    <Save size={18} />
+                                    Simpan Semua & Lanjut
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* [UPDATE] LIGHTBOX MODAL (IMAGE PREVIEW) */}
             {
