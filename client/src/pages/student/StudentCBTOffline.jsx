@@ -3,7 +3,7 @@
 // Does not affect existing StudentCBT.jsx logic
 
 import React, { useState, useEffect, useRef } from 'react';
-import { processContentForDisplay } from '../../utils/imageUtils';
+import { processContentForDisplay, cacheQuestionsImages } from '../../utils/imageUtils';
 import { useOfflineQuiz } from '../../hooks/useOfflineQuiz';
 import { saveQuizPackage, getQuizPackage, hasQuizPackage } from '../../utils/offlineStorage';
 
@@ -104,7 +104,7 @@ const QuestionGrid = ({ isOpen, questions, answers, currentIdx, onJump, onClose 
                                 key={q.id}
                                 onClick={() => onJump(idx)}
                                 className={`aspect-square rounded-xl font-bold text-sm flex items-center justify-center transition-all ${isCurrent ? 'bg-white text-black border-2 border-purple-500 scale-105' :
-                                        isAnswered ? 'bg-green-600 text-white' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                                    isAnswered ? 'bg-green-600 text-white' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
                                     }`}
                             >
                                 {idx + 1}
@@ -161,6 +161,7 @@ export const StudentCBTOffline = ({ quiz, onFinish }) => {
                 }
 
                 setPhase('DOWNLOADING');
+                setDownloadProgress(10);
 
                 const token = localStorage.getItem('student_token');
                 const deviceId = localStorage.getItem('student_device_id');
@@ -178,13 +179,20 @@ export const StudentCBTOffline = ({ quiz, onFinish }) => {
                 }
 
                 const data = await res.json();
-                setDownloadProgress(50);
+                setDownloadProgress(30);
 
-                // Save to IndexedDB
-                await saveQuizPackage(quiz.id, data);
+                // Cache images as base64 for offline display
+                const cachedQuestions = await cacheQuestionsImages(data.questions, (progress) => {
+                    // Progress from 30% to 90%
+                    setDownloadProgress(30 + Math.floor(progress * 60));
+                });
+
+                // Save to IndexedDB with cached images
+                const packageData = { ...data, questions: cachedQuestions };
+                await saveQuizPackage(quiz.id, packageData);
                 setDownloadProgress(100);
 
-                setQuestions(data.questions);
+                setQuestions(cachedQuestions);
                 setPhase('READY');
             } catch (e) {
                 setError(e.message);
