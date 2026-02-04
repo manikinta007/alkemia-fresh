@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Download, Trash2, Image as ImageIcon, Eye } from 'lucide-react';
+import { Upload, Download, Trash2, Image as ImageIcon, Eye, X } from 'lucide-react';
 import { useAlertContext } from '../../components/Alert';
 import ImagePickerModal from '../../components/ImagePickerModal';
 
@@ -154,6 +154,52 @@ export const QuestionEditor = ({ activeQuiz, questions, setQuestions, onSave, on
                                 <p className="mt-2 text-[10px] text-zinc-400 text-right">
                                     * Editor ini mendukung tampilan langsung. Sisipkan gambar menggunakan tombol di atas.
                                 </p>
+
+                                {/* [NEW] DETECTED IMAGES MANAGER */}
+                                {(() => {
+                                    // Helper to extract images from HTML string
+                                    const htmlContent = q.question_text || '';
+                                    const parser = new DOMParser();
+                                    const doc = parser.parseFromString(htmlContent, 'text/html');
+                                    const images = Array.from(doc.querySelectorAll('img')).map(img => img.src);
+
+                                    if (images.length === 0) return null;
+
+                                    return (
+                                        <div className="mt-3 bg-zinc-50 border border-zinc-200 rounded-lg p-3">
+                                            <p className="text-[10px] font-bold text-zinc-500 uppercase mb-2">Gambar Terdeteksi ({images.length})</p>
+                                            <div className="flex flex-wrap gap-3">
+                                                {images.map((src, imgIdx) => (
+                                                    <div key={imgIdx} className="relative group bg-white p-1 rounded border border-zinc-200 shadow-sm">
+                                                        <img src={src} className="h-16 w-16 object-cover rounded bg-zinc-100" title="Klik tombol X untuk menghapus" />
+                                                        <button
+                                                            onClick={() => {
+                                                                // Remove image by replacing its full tag or src match
+                                                                // Safe regex to remove img tag containing this src
+                                                                // Creating a temp div to manipulate HTML safely
+                                                                const tempDiv = document.createElement('div');
+                                                                tempDiv.innerHTML = q.question_text || '';
+                                                                const imgs = tempDiv.getElementsByTagName('img');
+                                                                for (let i = 0; i < imgs.length; i++) {
+                                                                    if (imgs[i].src === src) {
+                                                                        imgs[i].remove();
+                                                                        break; // Remove one instance at a time
+                                                                    }
+                                                                }
+                                                                updateQuestion(idx, 'question_text', tempDiv.innerHTML);
+                                                                showAlert('Gambar dihapus.', 'success');
+                                                            }}
+                                                            className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md hover:bg-red-700 transition opacity-0 group-hover:opacity-100"
+                                                            title="Hapus Gambar"
+                                                        >
+                                                            <X size={12} strokeWidth={3} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-zinc-50 border-t border-zinc-200">
                                 {['A', 'B', 'C', 'D', 'E'].map(opt => {

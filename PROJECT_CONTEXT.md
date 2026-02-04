@@ -175,6 +175,23 @@
   - ⚠️ **Tidak Dijawab** (yellow): `Tidak Dijawab • Jawaban Benar: A`
 - **Applied to**: Both Quiz (`StudentCBT.jsx`) and Task (`StudentTasks.jsx`) review modes.
 
+### ✅ Multi-Image Upload for Essay_Image (Added - Feb 4, 2026)
+- **Feature**: Students can now upload up to **5 images** per essay_image question.
+- **Implementation**:
+  - **Frontend Student** (`StudentTasks.jsx`): Gallery grid UI with "Tambah Foto" button, individual delete ❌ on each image.
+  - **Backend** (`taskController.js`): Stores `answerImages` array as JSON string in `answer_image_url` column.
+  - **Frontend Teacher** (`TaskGrading.jsx`): Parses JSON and displays image gallery with lightbox.
+- **Features**: All images are compressed before upload, counter shows `(n/5)`.
+
+### ✅ Review Mode Image Display (Fixed - Feb 4, 2026)
+- **Issue**: Uploaded images were not visible in student review mode after submission.
+- **Cause**: API returned `answerImage` (string) but frontend expected `answerImages` (array).
+- **Fix**: Backend now parses `answer_image_url` as JSON and returns `answerImages` array for proper display.
+
+### ✅ Grading State Reset (Fixed - Feb 4, 2026)
+- **Issue**: Switching between task grading modes retained old student selection.
+- **Fix**: Added `setSelectedSubmission(null)` when entering grading mode in `Tasks.jsx`.
+
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
 > **Rule**: When changing features, update this document immediately.

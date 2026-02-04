@@ -241,6 +241,53 @@ export const TaskEditor = ({
                             </p>
                         </div>
 
+                        {/* [NEW] DETECTED IMAGES MANAGER */}
+                        {(() => {
+                            // Helper to extract images from HTML string
+                            const htmlContent = q.questionText || '';
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(htmlContent, 'text/html');
+                            const images = Array.from(doc.querySelectorAll('img')).map(img => img.src);
+
+                            if (images.length === 0) return null;
+
+                            return (
+                                <div className="mx-4 mt-2 bg-zinc-50 border border-zinc-200 rounded-lg p-3">
+                                    <p className="text-[10px] font-bold text-zinc-500 uppercase mb-2">Gambar Terdeteksi ({images.length})</p>
+                                    <div className="flex flex-wrap gap-3">
+                                        {images.map((src, imgIdx) => (
+                                            <div key={imgIdx} className="relative group bg-white p-1 rounded border border-zinc-200 shadow-sm">
+                                                <img src={src} className="h-16 w-16 object-cover rounded bg-zinc-100" title="Klik tombol X untuk menghapus" />
+                                                <button
+                                                    onClick={() => {
+                                                        // Remove image by replacing its full tag or src match
+                                                        const tempDiv = document.createElement('div');
+                                                        tempDiv.innerHTML = q.questionText || '';
+                                                        const imgs = tempDiv.getElementsByTagName('img');
+                                                        let removed = false;
+                                                        for (let i = 0; i < imgs.length; i++) {
+                                                            if (imgs[i].src === src) {
+                                                                imgs[i].remove();
+                                                                removed = true;
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (removed) {
+                                                            updateQuestion(idx, 'questionText', tempDiv.innerHTML);
+                                                        }
+                                                    }}
+                                                    className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md hover:bg-red-700 transition opacity-0 group-hover:opacity-100"
+                                                    title="Hapus Gambar"
+                                                >
+                                                    <X size={12} strokeWidth={3} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                         {/* Options Area */}
                         <div className="bg-white p-4">
                             {/* Pilihan Ganda */}
