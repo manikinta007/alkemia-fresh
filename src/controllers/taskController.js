@@ -572,7 +572,7 @@ export async function handleTaskRequest(request, env) {
             }
 
             // Hitung PG
-            const { results: dbQuestions } = await env.DB.prepare("SELECT id, type, correct_key FROM task_questions WHERE task_id = ?").bind(taskId).all();
+            const { results: dbQuestions } = await env.DB.prepare("SELECT id, type, correct_key, weight FROM task_questions WHERE task_id = ?").bind(taskId).all();
             const qMap = {};
             let pgTotalCount = 0;
             dbQuestions.forEach(q => {
@@ -580,18 +580,25 @@ export async function handleTaskRequest(request, env) {
                 if (q.type === 'pg') pgTotalCount++;
             });
 
+            // [FIX] Hitung poin per soal PG berdasarkan bobot
+            const pgWeight = taskData.pg_weight || 0;
+            const scorePerPg = pgTotalCount > 0 ? pgWeight / pgTotalCount : 0;
+
             let pgCorrectCount = 0;
             const processedAnswers = [];
 
             for (const ans of answers) {
                 const qDb = qMap[ans.questionId];
                 let answerScore = 0;
+
                 if (qDb && qDb.type === 'pg') {
                     if (ans.answerText === qDb.correct_key) {
-                        answerScore = 1;
+                        answerScore = scorePerPg; // [FIX] Simpan poin sebenarnya, bukan 1
                         pgCorrectCount++;
                     }
                 }
+                // Essay score = 0 awalnya, akan diisi guru nanti
+
                 processedAnswers.push({
                     qId: ans.questionId,
                     text: ans.answerText || '',

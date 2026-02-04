@@ -1,6 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { processContentForDisplay } from '../../utils/imageUtils';
 
+// --- COLOR GRADING HELPER ---
+// 0-50: Red, 51-69: Yellow, 70-79: Blue, 80-100: Green
+const getGradeColor = (percentage) => {
+    if (percentage <= 50) return 'text-red-500';
+    if (percentage <= 69) return 'text-yellow-500';
+    if (percentage <= 79) return 'text-blue-500';
+    return 'text-green-500';
+};
+
+const getGradeBorderColor = (percentage) => {
+    if (percentage <= 50) return 'border-red-900/50';
+    if (percentage <= 69) return 'border-yellow-900/50';
+    if (percentage <= 79) return 'border-blue-900/50';
+    return 'border-green-900/50';
+};
+
 // --- UTILS ---
 const compressImage = async (file) => {
     return new Promise((resolve) => {
@@ -265,7 +281,7 @@ export default function StudentTasks({ student, onBack }) {
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${statusColor}`}>
                                         {t.status.replace('_', ' ')}
                                     </span>
-                                    {t.my_grade !== null && <span className="text-xl font-black text-green-500">{t.my_grade}</span>}
+                                    {t.my_grade !== null && <span className={`text-xl font-black ${getGradeColor(t.my_grade)}`}>{t.my_grade}</span>}
                                 </div>
                                 <h3 className="font-bold text-white mb-1 text-lg">{t.title}</h3>
                                 <div className="flex gap-3 text-xs text-zinc-400">
@@ -332,13 +348,13 @@ export default function StudentTasks({ student, onBack }) {
                     {isReadOnly && activeTask.my_grade !== null && (
                         <div className="space-y-4">
                             {/* Kartu Nilai Utama */}
-                            <div className="bg-zinc-900 border border-green-900/50 p-5 rounded-2xl relative overflow-hidden">
+                            <div className={`bg-zinc-900 border ${getGradeBorderColor(activeTask.my_grade)} p-5 rounded-2xl relative overflow-hidden`}>
                                 <div className="absolute top-0 right-0 p-4 opacity-10">
-                                    <svg className="w-24 h-24 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                                    <svg className={`w-24 h-24 ${getGradeColor(activeTask.my_grade)}`} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                                 </div>
                                 <div className="relative z-10">
                                     <p className="text-xs font-bold text-zinc-500 uppercase mb-1">Nilai Akhir</p>
-                                    <p className="text-4xl font-black text-white mb-2">{activeTask.my_grade}<span className="text-lg text-zinc-600 font-medium">/100</span></p>
+                                    <p className={`text-4xl font-black ${getGradeColor(activeTask.my_grade)} mb-2`}>{activeTask.my_grade}<span className="text-lg text-zinc-600 font-medium">/100</span></p>
 
                                     {/* Breakdown Sederhana */}
                                     <div className="flex gap-4 text-xs text-zinc-400 mt-2">
@@ -374,13 +390,25 @@ export default function StudentTasks({ student, onBack }) {
                             <div className="mb-4">
                                 <div className="flex justify-between items-start mb-2">
                                     <span className="bg-zinc-800 text-zinc-400 px-2 py-1 rounded text-[10px] font-bold">NO {idx + 1}</span>
-                                    {/* [TRANSPARANSI POIN] - Tampilkan poin yang didapat jika sudah dinilai */}
+                                    {/* [TRANSPARANSI POIN] - Tampilkan Bobot + Poin dengan warna */}
                                     {isReadOnly && (
                                         <span className="text-[10px] font-bold">
-                                            {/* Jika nilai sudah publish dan ada earnedScore, tampilkan poin yang didapat */}
                                             {activeTask.my_grade !== null && answers[q.id]?.earnedScore !== undefined ? (
-                                                <span className="text-green-500">Poin: {answers[q.id].earnedScore.toFixed(1)}</span>
+                                                // Setelah dinilai: tampilkan Bobot + Poin earned dengan warna
+                                                (() => {
+                                                    const earned = answers[q.id].earnedScore || 0;
+                                                    const maxPoin = q.type === 'pg' ? pgScorePerItem : (q.weight || 0);
+                                                    const percentage = maxPoin > 0 ? (earned / maxPoin) * 100 : 0;
+                                                    return (
+                                                        <span>
+                                                            <span className="text-zinc-500">Bobot: {q.type === 'pg' ? pgScorePerItem.toFixed(0) : q.weight}%</span>
+                                                            <span className="text-zinc-600 mx-1">•</span>
+                                                            <span className={getGradeColor(percentage)}>Poin: {earned.toFixed(1)}</span>
+                                                        </span>
+                                                    );
+                                                })()
                                             ) : (
+                                                // Sebelum dinilai: tampilkan Max saja
                                                 <span className="text-zinc-500">
                                                     {q.type === 'pg' ? `Max: ${pgScorePerItem.toFixed(1)} Poin` : `Bobot: ${q.weight || 0}%`}
                                                 </span>
