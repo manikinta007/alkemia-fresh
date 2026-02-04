@@ -34,16 +34,13 @@ export const TaskGrading = ({
             .filter(ans => ans.type !== 'pg');
     }, [selectedSubmission]);
 
-    // [NEW] Essay Grading Progress
+    // [FIX] Essay Grading Progress - use is_graded from database, not gradeInput
     const essayProgress = useMemo(() => {
         const total = essayQuestions.length;
-        const graded = essayQuestions.filter(ans => {
-            const inputValue = gradeInput.essayScores[ans.answer_id];
-            // Sudah dinilai jika ada input (termasuk 0 yang diinput manual)
-            return inputValue !== undefined && inputValue !== '';
-        }).length;
+        // Gunakan is_graded dari database untuk tracking yang sudah dinilai
+        const graded = essayQuestions.filter(ans => ans.is_graded === 1).length;
         return { graded, total };
-    }, [essayQuestions, gradeInput]);
+    }, [essayQuestions]);
 
     // [NEW] Scroll to Question
     const scrollToQuestion = (idx) => {
@@ -484,8 +481,8 @@ export const TaskGrading = ({
                                 {/* Essay Toggle Buttons */}
                                 <div className="flex flex-wrap gap-2">
                                     {essayQuestions.map((ans) => {
-                                        const inputValue = gradeInput.essayScores[ans.answer_id];
-                                        const isGraded = inputValue !== undefined && inputValue !== '';
+                                        // [FIX] Use is_graded from database, not gradeInput
+                                        const isGraded = ans.is_graded === 1;
                                         const isActive = activeQuestionIdx === ans.originalIndex;
 
                                         return (

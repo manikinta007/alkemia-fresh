@@ -116,6 +116,21 @@
       - 🟢 Hijau: 80-100%
     - Files modified: `taskController.js`, `StudentTasks.jsx`
 
+21. ✅ **Floating Essay Navigation Panel** (Teacher Grading UI):
+    - Collapsible panel (bottom-right) for quick essay navigation
+    - Essay toggle buttons with grading status indicators
+    - Running score display and "Simpan Semua & Lanjut" button
+    - Partial save warning when not all essays are graded
+    - Files modified: `TaskGrading.jsx`
+
+22. ⏳ **4-Level Grading Status System** (In Progress):
+    - Added `is_graded` flag per answer: Migration `/api/migrate/is-graded`
+    - PG auto `is_graded=1` on submit, Essay starts `is_graded=0`
+    - 4-level status: GRAY (not submitted), BLUE (submitted ungraded), YELLOW (partial), GREEN (complete)
+    - Changed publish from block to warning-only
+    - **Known Bug**: Floating panel shows incorrect count due to gradeInput having default 0
+    - Files modified: `migrationController.js`, `taskController.js`, `TaskGrading.jsx`
+
 > [!IMPORTANT]
 > **Rule**: Always update `PROJECT_CONTEXT.md` after completing a major task or update to keep the context fresh. Do not wait for instruction.
 > **Rule**: When changing features, update this document immediately.
