@@ -298,9 +298,30 @@ export async function handleTaskRequest(request, env) {
             ORDER BY ts.submitted_at DESC
         `).bind(taskId).all();
 
-            const parsedResults = results.map(sub => ({
-                ...sub,
-                needs_review: hasEssay && sub.is_graded === 0
+            // [NEW] Get questions to know types
+            const { results: questions } = await env.DB.prepare("SELECT id, type FROM task_questions WHERE task_id = ?").bind(taskId).all();
+            const questionTypeMap = {};
+            questions.forEach(q => questionTypeMap[q.id] = q.type);
+
+            // [NEW] Fetch answers for each submission to include is_graded
+            const parsedResults = await Promise.all(results.map(async sub => {
+                const { results: answers } = await env.DB.prepare(`
+                    SELECT id as answer_id, question_id, is_graded 
+                    FROM task_answers 
+                    WHERE submission_id = ?
+                `).bind(sub.id).all();
+
+                // Add type to each answer
+                const answersWithType = answers.map(a => ({
+                    ...a,
+                    type: questionTypeMap[a.question_id] || 'essay'
+                }));
+
+                return {
+                    ...sub,
+                    needs_review: hasEssay && sub.is_graded === 0,
+                    answers: answersWithType
+                };
             }));
 
             return jsonResponse(parsedResults);
