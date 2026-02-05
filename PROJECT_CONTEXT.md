@@ -8,7 +8,7 @@
 | Component | Technology | Description |
 | :--- | :--- | :--- |
 | **Frontend** | React (Vite) + TailwindCSS | Single Page Application (SPA). |
-| **Backend** | Cloudflare Pages Functions (`_worker.js`) | Embedded Worker bundled into Pages deployment. No separate Worker. |
+| **Backend** | Cloudflare Pages Functions (`_worker.js`) | Source: `src/worker-fresh.js`. Compiled to `_worker.js` during build. |
 | **Database** | Cloudflare D1 (SQLite) | Core relational data (Users, Classes, Grades, Quizzes). |
 | **Storage** | Cloudflare R2 | Object storage for image uploads (Gudang Gambar, Profile). |
 | **Cache/Auth** | Cloudflare KV | High-speed storage for Rate Limiting and Session management. |
