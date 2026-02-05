@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchApi } from '../hooks/../utils/api';
 import { Spinner } from '../components/UI';
 import { useAlertContext } from '../components/Alert';
-import { Settings, Image as ImageIcon, Upload, User, Building, FileText, ArrowLeft, Save } from 'lucide-react';
+import { Settings, Image as ImageIcon, Upload, User, Building, FileText, ArrowLeft, Save, Settings as SettingsIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function JournalSettings() {
@@ -156,6 +156,24 @@ export default function JournalSettings() {
 
             {/* Form */}
             <div className="space-y-6">
+                {/* Template Management Section */}
+                <div className="bg-white rounded-xl border border-zinc-200 p-6 shadow-sm">
+                    <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2 mb-4">
+                        <FileText size={20} className="text-orange-500" />
+                        Template Jurnal
+                    </h3>
+                    <p className="text-sm text-zinc-500 mb-4">
+                        Atur kolom-kolom yang akan muncul di form jurnal mengajar.
+                    </p>
+                    <Link
+                        to="/journal/template-editor"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white font-bold rounded-xl hover:bg-zinc-800 transition"
+                    >
+                        <SettingsIcon size={18} />
+                        Atur Template
+                    </Link>
+                </div>
+
                 {/* School Info Section */}
                 <div className="bg-white rounded-xl border border-zinc-200 p-6 shadow-sm">
                     <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2 mb-6">
