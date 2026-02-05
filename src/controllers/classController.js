@@ -105,8 +105,18 @@ export async function handleClassRequest(request, env) {
           await env.DB.prepare(`DELETE FROM quizzes WHERE id = ?`).bind(quiz.id).run();
         }
 
-        // 3. Hapus Data Lain (Materials, QR Codes, Attendance, Schedules, Tasks, Kelas itu sendiri)
-        // [FIX] Tambahkan cascade delete untuk tabel yang memiliki class_id FK
+        // 3. Hapus Tasks dan child tables-nya
+        const { results: tasks } = await env.DB.prepare("SELECT id FROM tasks WHERE class_id = ?").bind(id).all();
+
+        for (const task of tasks) {
+          // Hapus answers dulu (paling dalam)
+          await env.DB.prepare(`DELETE FROM task_answers WHERE submission_id IN (SELECT id FROM task_submissions WHERE task_id = ?)`).bind(task.id).run();
+          await env.DB.prepare(`DELETE FROM task_submissions WHERE task_id = ?`).bind(task.id).run();
+          await env.DB.prepare(`DELETE FROM task_questions WHERE task_id = ?`).bind(task.id).run();
+          await env.DB.prepare(`DELETE FROM tasks WHERE id = ?`).bind(task.id).run();
+        }
+
+        // 4. Hapus Data Lain (Materials, QR Codes, Attendance, Schedules, Kelas itu sendiri)
         await env.DB.batch([
           env.DB.prepare("DELETE FROM attendance WHERE class_id = ?").bind(id),
           env.DB.prepare("DELETE FROM class_schedules WHERE class_id = ?").bind(id),
