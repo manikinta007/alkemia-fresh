@@ -350,123 +350,64 @@ Reorganized sidebar menu to follow the teaching workflow:
 5.  **Tools** (QR Code, dll)
 6.  **Pengaturan**
 
-## 10. Future Roadmap (Planned)
+### ✅ Completed (Feb 5, 2026)
+27. ✅ **Teaching Journal (Jurnal Mengajar)**:
+    - **Feature**: Digital teaching log with dynamic templates and auto-attendance.
+    - **Architecture**:
+      - **App-Side Join**: `journalController.js` performs manual joining of Journals + Classes + Periods to avoid D1 SQL JOIN instability.
+      - **PWA Fix**: Excluded `/api/*` from VitePWA navigation fallback to prevent React app interception.
+      - **Migration**: `/api/migrate/journals` endpoint for initializing tables.
+    - **Components**: `Journal.jsx`, `JournalForm.jsx`, `JournalSettings.jsx`.
+    - **Database**: `teaching_journals`, `journal_templates`, `journal_settings`.
 
-### 🗓️ Phase 1: Teaching Journal (Jurnal Mengajar) - **IN PLANNING**
+## 10. 📚 Database Schema Reference
+> [!IMPORTANT]
+> **Always refer to this schema before writing SQL queries.**
+> Cloudflare D1 (SQLite) has specific limitations and this project uses specific naming conventions (e.g., `academic_periods` uses `year` & `semester`, NOT `name`).
 
-#### **Objective**
-Digitalize daily teaching logs required for school administration with dynamic template support, auto-attendance integration, and professional PDF export.
+### **Core Identity & School**
+- **`users`**: `username` (PK), `password`, `salt`, `name`, `nip`, `subject`
+- **`admin_sessions`**: `session_token`, `expires_at`, `username`
+- **`school_profile`**: `id`, `name`, `address`, `headmaster`
+- **`academic_periods`**: 
+  - `id` (PK)
+  - `year` (TEXT, e.g., "2024/2025")
+  - `semester` (TEXT, e.g., "Ganjil")
+  - `is_active` (INT)
+  - *Note: No `name` column. Combine `year + ' - ' + semester` for display.*
 
-#### **Key Features**
-1.  **Dynamic Templates**: Guru can customize journal columns via drag-n-drop editor
-2.  **3 Default Templates**: Kurikulum Merdeka, K13 (Kurikulum 2013), Minimalis
-3.  **Auto-Attendance**: Special column type fetches S/I/A data from existing `attendance` table
-4.  **PDF Export**: Generate professional reports with custom KOP (letterhead) and signature
-5.  **Customizable Settings**: Upload school logo, configure KOP, add digital signature
+### **Academic & Students**
+- **`classes`**: `id` (PK), `period_id`, `name` (TEXT), `show_grades`
+- **`students`**: `id` (PK), `period_id`, `class_id`, `name`, `qr_token` (UUID/Shortcode)
+- **`student_sessions`**: `device_token`, `device_uuid_hash`, `is_active`
 
-#### **Database Schema**
+### **Learning Management (KBM)**
+- **`class_schedules`**: `day` (INT 0-6), `start_time`, `end_time`, `subject`
+- **`attendance`**: `class_id`, `student_id`, `date`, `status` (H/S/I/A)
+- **`materials`**: `class_id`, `title`, `file_url`, `file_type`
+- **`grades`**: `student_id`, `uh`, `uts`, `uas`, `tugas`, `final_grade`
 
-**Table 1: `teaching_journals`**
-```sql
-CREATE TABLE teaching_journals (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  period_id INTEGER,
-  class_id INTEGER NOT NULL,
-  date TEXT NOT NULL,
-  start_time TEXT,
-  end_time TEXT,
-  custom_data TEXT, -- JSON: {"jp": "2", "tujuan": "...", "iktp": "..."}
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (period_id) REFERENCES academic_periods(id),
-  FOREIGN KEY (class_id) REFERENCES classes(id)
-)
-```
+### **Examination (CBT & Tasks)**
+- **`quizzes`**: `id`, `title`, `duration`, `is_active`, `is_offline_mode`
+- **`quiz_questions`**: `question_text`, `option_a`...`option_e`, `correct_answer`
+- **`quiz_attempts`**: `student_id`, `score`, `student_answers` (JSON)
+- **`tasks`**: `title`, `deadline`, `target_type` ('all'/'selected'), `pg_weight`
+- **`task_submissions`**: `student_id`, `grade`, `is_graded` (0=None, 1=Partial, 2=Full)
 
-**Table 2: `journal_templates`**
-```sql
-CREATE TABLE journal_templates (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  is_default INTEGER DEFAULT 0,
-  template_config TEXT, -- JSON Array of column definitions
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-)
-```
+### **Teaching Journal (Jurnal Mengajar)**
+- **`teaching_journals`**: 
+  - `id` (PK)
+  - `class_id` (FK -> classes.id)
+  - `period_id` (FK -> academic_periods.id)
+  - `date`, `start_time`, `end_time`
+  - `custom_data` (JSON String: `{"materi": "...", "absensi": "..."}`)
+- **`journal_templates`**: `name`, `template_config` (JSON)
+- **`journal_settings`**: `school_logo_url`, `signature_image_url`
 
-**Table 3: `journal_settings`**
-```sql
-CREATE TABLE journal_settings (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  school_name TEXT,
-  school_address TEXT,
-  school_logo_url TEXT,
-  pdf_orientation TEXT DEFAULT 'landscape',
-  signature_name TEXT,
-  signature_nip TEXT,
-  signature_image_url TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-)
-```
-
-#### **Backend API**
-
-**New Controller**: `src/controllers/journalController.js`
-
-**Endpoints**:
-- `GET /api/journals?class_id=X&date=Y` - List journals
-- `POST /api/journals` - Create journal
-- `PUT /api/journals` - Update journal
-- `DELETE /api/journals?id=X` - Delete journal
-- `GET /api/journal-templates` - List templates
-- `GET /api/journal-templates/:id` - Get template detail
-- `POST /api/journal-templates` - Save/update template
-- `GET /api/journal-settings` - Get settings (KOP, signature)
-- `PUT /api/journal-settings` - Update settings
-- `POST /api/journal-settings/upload-logo` - Upload logo to R2
-- `POST /api/journal-settings/upload-signature` - Upload signature to R2
-- `GET /api/journals/export-pdf?class_id=X&month=Y&orientation=Z` - Export PDF
-
-#### **Frontend Components**
-
-**New Pages**:
-- `client/src/pages/Journal.jsx` - Main list page with filters
-- `client/src/pages/JournalForm.jsx` - Dynamic form (renders based on template)
-- `client/src/pages/TemplateEditor.jsx` - Drag-n-drop column editor
-- `client/src/pages/JournalSettings.jsx` - Configure KOP, logo, signature
-
-**Custom Hooks**:
-- `client/src/hooks/useJournalData.js` - CRUD operations
-- `client/src/hooks/useJournalTemplates.js` - Template management
-
-**Dependencies**:
-- `@dnd-kit/core` - Drag-and-drop utilities
-- `@dnd-kit/sortable` - Sortable list components
-
-#### **Default Templates**
-
-**1. Kurikulum Merdeka**
-Columns: JP, Temu Ke-, Tujuan Pembelajaran, IKTP, Materi, Capaian KKTP, Absensi, Keterangan
-
-**2. Kurikulum 2013**
-Columns: Kompetensi Dasar, Indikator, Materi Pokok, Metode, Absensi, Refleksi
-
-**3. Minimalis**
-Columns: Materi, Kegiatan Pembelajaran, Absensi, Catatan
-
-#### **PDF Export Features**
-- Custom KOP with school name, address, logo
-- Table with dynamic columns (based on template)
-- Footer with signature (name, NIP, signature image)
-- Orientation: Landscape or Portrait (user choice)
-
-#### **Implementation Strategy**
-- **Zero Regression**: All new files, no modification to existing features
-- **Migration Endpoint**: `/api/migrate/journals` (One-time setup)
-- **Menu Location**: Sidebar → KBM → Jurnal Mengajar
-- **Settings**: Accessible via submenu "Pengaturan Jurnal"
+## 11. Future Roadmap (Planned)
 
 ### 📊 Phase 2: Grade Integration (Integrasi Nilai)
-- **Objective**: Auto-sync scores from Quizzes/Tasks to the Gradebook (Buku Nilai).
+- **Objective**: Auto-sync scores from Quizzes/Tasks to the Gradebook.
 - **Current Issue**: Manual double-entry required (Quiz Result → Gradebook).
 - **Plan**:
   - **One-Click Sync**: Button "Export to Gradebook" in Quiz/Task result page.

@@ -79,10 +79,9 @@ export default function JournalSettings() {
             const formData = new FormData();
             formData.append('file', file);
 
-            const res = await fetch('/api/journal-settings/upload-logo', {
+            const res = await fetchApi('/api/journal-settings/upload-logo', {
                 method: 'POST',
-                body: formData,
-                credentials: 'include'
+                body: formData
             });
 
             if (res.ok) {
@@ -109,10 +108,9 @@ export default function JournalSettings() {
             const formData = new FormData();
             formData.append('file', file);
 
-            const res = await fetch('/api/journal-settings/upload-signature', {
+            const res = await fetchApi('/api/journal-settings/upload-signature', {
                 method: 'POST',
-                body: formData,
-                credentials: 'include'
+                body: formData
             });
 
             if (res.ok) {
