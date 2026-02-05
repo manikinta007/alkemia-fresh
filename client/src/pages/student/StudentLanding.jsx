@@ -48,6 +48,85 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel }) => {
     );
 };
 
+// --- MANUAL CODE ENTRY (untuk iOS PWA yang kehilangan data) ---
+const ManualCodeEntry = ({ onSuccess }) => {
+    const [code, setCode] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!code.trim()) return;
+
+        setLoading(true);
+        setError('');
+
+        try {
+            // Kode format: classId-token (contoh: 5-abc123)
+            const [c, t] = code.trim().split('-');
+            if (!c || !t) {
+                setError('Format kode salah. Gunakan format: KODE-TOKEN');
+                setLoading(false);
+                return;
+            }
+
+            const res = await fetch(`/api/student/verify?c=${c}&t=${t}`);
+            if (res.ok) {
+                const data = await res.json();
+                // Simpan untuk PWA
+                localStorage.setItem('pending_class_scan', JSON.stringify({ c, t }));
+                onSuccess(data);
+            } else {
+                setError('Kode tidak valid atau kadaluarsa.');
+            }
+        } catch (e) {
+            setError('Gagal memverifikasi. Periksa koneksi.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="text-center mt-6">
+            <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">🔑</span>
+            </div>
+            <h3 className="text-lg font-bold mb-2">Masukkan Kode Kelas</h3>
+            <p className="text-zinc-500 text-sm mb-6">Minta kode dari guru jika QR Code tidak tersedia.</p>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <input
+                    type="text"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.toUpperCase())}
+                    placeholder="Contoh: 5-ABC123"
+                    className="w-full px-4 py-4 bg-zinc-900 border border-zinc-700 rounded-xl text-white text-center text-lg font-mono tracking-wider placeholder:text-zinc-600 focus:border-blue-500 outline-none"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                />
+
+                {error && (
+                    <div className="text-red-400 text-sm bg-red-900/20 p-3 rounded-lg">
+                        {error}
+                    </div>
+                )}
+
+                <button
+                    type="submit"
+                    disabled={loading || !code.trim()}
+                    className="w-full py-4 bg-white text-black rounded-xl font-bold text-base hover:bg-zinc-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {loading ? 'Memverifikasi...' : 'MASUK'}
+                </button>
+            </form>
+
+            <p className="text-zinc-600 text-xs mt-6">
+                Atau scan ulang QR Code dari browser, lalu buka kembali aplikasi ini.
+            </p>
+        </div>
+    );
+};
+
 export default function StudentLanding() {
     const navigate = useNavigate();
     const [isStandalone, setIsStandalone] = useState(false);
@@ -249,7 +328,11 @@ export default function StudentLanding() {
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center text-zinc-500 mt-10"><p>Data tidak ditemukan.</p><p className="text-xs mt-2">Silakan scan ulang QR Code dari Guru.</p></div>
+                    <ManualCodeEntry onSuccess={(data) => {
+                        setClassData(data.classInfo);
+                        setStudents(data.students);
+                        setClaimedIds(data.students.filter(s => s.device_count > 0).map(s => s.id));
+                    }} />
                 )}
             </div>
         </div>
