@@ -194,10 +194,13 @@ const FullscreenQRModal = ({ cls, onClose }) => {
 
                     {qrData && (
                         <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800 text-center">
-                            <p className="text-[10px] text-zinc-500 mb-2 uppercase font-bold">Alternatif Login</p>
-                            <code className="text-xs text-orange-500 font-mono block truncate select-all">
-                                {window.location.host}{qrData.qrUrl}
-                            </code>
+                            <p className="text-[10px] text-zinc-500 mb-2 uppercase font-bold">Kode Manual (untuk iPhone)</p>
+                            <div className="bg-black px-4 py-3 rounded-lg border border-zinc-700">
+                                <code className="text-2xl text-orange-400 font-mono font-bold tracking-[0.3em] select-all">
+                                    {cls.id}-{qrData.qrToken}
+                                </code>
+                            </div>
+                            <p className="text-[10px] text-zinc-600 mt-2">Siswa masukkan kode ini di app jika QR tidak terbaca</p>
                         </div>
                     )}
                 </div>
