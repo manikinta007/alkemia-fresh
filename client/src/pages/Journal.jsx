@@ -309,6 +309,24 @@ const JournalFormModal = ({
                                         value={formData.custom_data[field.key] || ''}
                                         onChange={e => handleCustomDataChange(field.key, e.target.value)}
                                     />
+                                ) : field.type === 'time' ? (
+                                    <input
+                                        type="time"
+                                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none bg-zinc-50 transition"
+                                        value={formData.custom_data[field.key] || ''}
+                                        onChange={e => handleCustomDataChange(field.key, e.target.value)}
+                                    />
+                                ) : field.type === 'select' ? (
+                                    <select
+                                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none bg-zinc-50 transition"
+                                        value={formData.custom_data[field.key] || ''}
+                                        onChange={e => handleCustomDataChange(field.key, e.target.value)}
+                                    >
+                                        <option value="">-- Pilih {field.label} --</option>
+                                        {(field.options || '').split(',').map((opt, i) => (
+                                            <option key={i} value={opt.trim()}>{opt.trim()}</option>
+                                        ))}
+                                    </select>
                                 ) : (
                                     <input
                                         type="text"
