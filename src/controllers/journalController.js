@@ -497,6 +497,28 @@ export async function handleJournalRequest(request, env) {
             });
         }
 
+        // POST /api/journal-settings/upload-logo-2 - Upload logo 2 to R2
+        if (pathname === "/api/journal-settings/upload-logo-2" && method === "POST") {
+            const formData = await request.formData();
+            const file = formData.get("file");
+
+            if (!file) {
+                return jsonResponse({ error: "File tidak ditemukan" }, 400);
+            }
+
+            const arrayBuffer = await file.arrayBuffer();
+            const key = `journal/logo2_${Date.now()}.${file.name.split('.').pop()}`;
+
+            await env.R2.put(key, arrayBuffer, {
+                httpMetadata: { contentType: file.type }
+            });
+
+            return jsonResponse({
+                message: "Logo 2 berhasil diupload",
+                url: `/api/images/file/${key}`
+            });
+        }
+
         // POST /api/journal-settings/upload-signature - Upload signature to R2
         if (pathname === "/api/journal-settings/upload-signature" && method === "POST") {
             const formData = await request.formData();

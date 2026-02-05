@@ -413,15 +413,17 @@ export default function JournalSettings() {
                                                 if (!file) return;
                                                 const formData = new FormData();
                                                 formData.append('file', file);
-                                                formData.append('folder', 'journal');
                                                 try {
-                                                    const res = await fetch('/api/upload', {
+                                                    const res = await fetchApi('/api/journal-settings/upload-logo-2', {
                                                         method: 'POST',
                                                         body: formData
                                                     });
-                                                    const data = await res.json();
-                                                    if (data.url) {
+                                                    if (res.ok) {
+                                                        const data = await res.json();
                                                         setSettings(prev => ({ ...prev, school_logo_2_url: data.url }));
+                                                        showAlert('Logo 2 berhasil diupload.', 'success');
+                                                    } else {
+                                                        showAlert('Gagal upload logo 2.', 'error');
                                                     }
                                                 } catch (err) {
                                                     showAlert('Gagal upload logo.', 'error');
