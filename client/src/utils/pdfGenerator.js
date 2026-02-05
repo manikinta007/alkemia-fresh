@@ -1,5 +1,5 @@
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 /**
  * Generate PDF for Journal Export
@@ -102,7 +102,7 @@ export const generateJournalPDF = ({ journals, settings, template, className, mo
     });
 
     // AutoTable Configuration
-    doc.autoTable({
+    autoTable(doc, {
         head: [headers],
         body: body,
         startY: currentY,
@@ -137,7 +137,7 @@ export const generateJournalPDF = ({ journals, settings, template, className, mo
     // ==========================================
     // 3. SIGNATURE (Only on last page)
     // ==========================================
-    const finalY = doc.lastAutoTable.finalY + 15;
+    const finalY = (doc.lastAutoTable?.finalY || currentY) + 15;
 
     // Check if signature fits, or add new page
     if (finalY + 30 > pageHeight - 20) {

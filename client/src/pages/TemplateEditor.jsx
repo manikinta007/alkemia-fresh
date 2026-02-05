@@ -254,7 +254,7 @@ function ColumnEditModal({ column, onSave, onClose }) {
 export default function TemplateEditor() {
     const { id } = useParams(); // For editing existing template
     const navigate = useNavigate();
-    const { showAlert } = useAlertContext();
+    const { showAlert, showConfirm } = useAlertContext();
 
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -344,8 +344,9 @@ export default function TemplateEditor() {
         setEditingColumn(null);
     };
 
-    const handleDeleteColumn = (columnId) => {
-        if (confirm('Hapus kolom ini?')) {
+    const handleDeleteColumn = async (columnId) => {
+        const confirmed = await showConfirm('Hapus kolom ini?');
+        if (confirmed) {
             setColumns(columns.filter(c => c.id !== columnId));
         }
     };

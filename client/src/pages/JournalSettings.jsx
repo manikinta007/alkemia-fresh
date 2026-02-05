@@ -6,7 +6,7 @@ import { Settings, Image as ImageIcon, Upload, User, Building, FileText, ArrowLe
 import { Link } from 'react-router-dom';
 
 export default function JournalSettings() {
-    const { showAlert } = useAlertContext();
+    const { showAlert, showConfirm } = useAlertContext();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -54,9 +54,9 @@ export default function JournalSettings() {
         fetchData();
     }, []);
 
-    // Delete template
     const handleDeleteTemplate = async (id, name) => {
-        if (!confirm(`Hapus template "${name}"?`)) return;
+        const confirmed = await showConfirm(`Hapus template "${name}"?`);
+        if (!confirmed) return;
 
         setDeletingTemplateId(id);
         try {
