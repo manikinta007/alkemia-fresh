@@ -202,7 +202,7 @@ export async function handleMigrationRequest(request, env) {
 
     // 7. TEACHING JOURNAL TABLES MIGRATION (Jurnal Mengajar Feature)
     // Endpoint: /api/migrate/journals
-    if (pathname === "/api/migrate/journals" && method === "GET") {
+    if (pathname.startsWith("/api/migrate/journals") && method === "GET") {
       try {
         await env.DB.batch([
           // 1. Tabel Teaching Journals (Data Jurnal Harian)
