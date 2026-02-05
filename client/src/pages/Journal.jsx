@@ -78,7 +78,7 @@ const JournalCard = ({ journal, template, onEdit, onDelete, deletingId }) => {
                 <div className="space-y-1">
                     {previewFields.map((field, idx) => {
                         const value = customData[field.key];
-                        if (!value || field.type === 'attendance') return null;
+                        if (!value || field.type === 'attendance_summary') return null;
                         return (
                             <div key={idx} className="text-xs text-zinc-500 truncate">
                                 <span className="font-medium text-zinc-400">{field.label}:</span>{' '}
@@ -285,7 +285,7 @@ const JournalFormModal = ({
                             <div key={idx}>
                                 <label className="block text-xs font-bold text-zinc-500 uppercase mb-2">
                                     {field.label}
-                                    {field.type === 'attendance' && (
+                                    {field.type === 'attendance_summary' && (
                                         <span className="ml-2 text-orange-500 font-normal">(Otomatis)</span>
                                     )}
                                 </label>
@@ -297,7 +297,7 @@ const JournalFormModal = ({
                                         value={formData.custom_data[field.key] || ''}
                                         onChange={e => handleCustomDataChange(field.key, e.target.value)}
                                     />
-                                ) : field.type === 'attendance' ? (
+                                ) : field.type === 'attendance_summary' ? (
                                     <div className="px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-600 font-mono text-sm">
                                         {attendanceData?.formatted || 'Pilih kelas dan tanggal dulu...'}
                                     </div>
