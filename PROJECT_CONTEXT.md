@@ -123,7 +123,7 @@ main ──────────────────────●──
 6. **CSRF Allowed Origin**: `worker.js` still uses wildcard `*`. Needs to be restricted to production domain.
 7. **Stored XSS (Question Text)**: Question Input is NOT sanitized. Vulnerable to XSS.
 8. **Rate Limiting**: Login attempts are successfully limited via Cloudflare KV.
-9. **Logo 2 Upload**: Fails with 403 Forbidden. Implementation uses raw `fetch` instead of authenticated `fetchApi`. Needs backend endpoint adjustment to avoid overwriting Logo 1.
+9. ~~**Logo 2 Upload**~~: ✅ FIXED (Feb 5, 2026) - Fixed 403 Forbidden by switching to authenticated `fetchApi` and adding dedicated `/api/journal-settings/upload-logo-2` endpoint.
 
 ### ✅ Completed (Feb 4, 2026)
 19. ✅ **R2 Image Public Access**: Fixed images not displaying in student app. Added `/api/images/file/` to public API whitelist in `api.js`. Images now accessible without authentication.
@@ -366,6 +366,12 @@ Reorganized sidebar menu to follow the teaching workflow:
     - **Text Alignment**: Control alignment for School Name & Address (Left/Center/Right).
     - **Signature Features**: Delete button, Place & Date fields (Manual/Auto).
     - **Migration**: Added new columns to `journal_settings` table.
+
+29. ✅ **Journal Visuals & Validation (Feb 5, 2026)**:
+    - **Header**: PDF Table Header changed to White with borders.
+    - **Signature**: Added "Jabatan" (Title) field.
+    - **Validation**: Added `required` field check.
+    - **Logo 2**: Fixed 403 Forbidden.
 
 ## 10. 📚 Database Schema Reference
 > [!IMPORTANT]

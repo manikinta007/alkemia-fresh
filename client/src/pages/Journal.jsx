@@ -21,6 +21,111 @@ const formatShortDate = (dateStr) => {
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 };
 
+// Relative time helper (e.g., "2 hari yang lalu")
+const getRelativeTime = (dateStr) => {
+    if (!dateStr) return '';
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffTime = now - date;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Hari ini';
+    if (diffDays === 1) return 'Kemarin';
+    if (diffDays < 7) return `${diffDays} hari yang lalu`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} minggu yang lalu`;
+    return `${Math.floor(diffDays / 30)} bulan yang lalu`;
+};
+
+// Smart detection of "Materi" field from template config
+const findMateriField = (templateConfig, customData) => {
+    if (!templateConfig || !customData) return '-';
+
+    // Priority 1: Find field with materi-related keywords
+    const keywords = ['materi', 'topik', 'pokok', 'bahasan', 'pembelajaran', 'topic'];
+    const materiField = templateConfig.find(f => {
+        const label = (f.label || '').toLowerCase();
+        const key = (f.key || '').toLowerCase();
+        return keywords.some(kw => label.includes(kw) || key.includes(kw));
+    });
+
+    if (materiField && customData[materiField.key]) {
+        return customData[materiField.key];
+    }
+
+    // Priority 2: First textarea field
+    const textareaField = templateConfig.find(f => f.type === 'textarea');
+    if (textareaField && customData[textareaField.key]) {
+        return customData[textareaField.key];
+    }
+
+    // Priority 3: First text field
+    const textField = templateConfig.find(f => f.type === 'text');
+    if (textField && customData[textField.key]) {
+        return customData[textField.key];
+    }
+
+    return '-';
+};
+
+// Class Insights Card Component
+const ClassInsightsCard = ({ lastJournal, templateConfig, className }) => {
+    if (!lastJournal) return null;
+
+    const materi = findMateriField(templateConfig, lastJournal.custom_data);
+    const truncatedMateri = materi.length > 100 ? materi.substring(0, 100) + '...' : materi;
+
+    return (
+        <div className="mb-6 relative overflow-hidden">
+            {/* Gradient Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 rounded-2xl"></div>
+
+            {/* Decorative Pattern */}
+            <div className="absolute inset-0 opacity-10">
+                <div className="absolute -right-10 -top-10 w-40 h-40 bg-white rounded-full"></div>
+                <div className="absolute -left-5 -bottom-5 w-24 h-24 bg-white rounded-full"></div>
+            </div>
+
+            {/* Content */}
+            <div className="relative p-6">
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center">
+                        <BookOpen size={18} className="text-white" />
+                    </div>
+                    <h3 className="text-white font-bold text-lg">Ringkasan Kelas</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Last Visit */}
+                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Calendar size={16} className="text-blue-200" />
+                            <span className="text-blue-200 text-xs font-medium uppercase tracking-wide">Terakhir Masuk</span>
+                        </div>
+                        <p className="text-white font-bold text-lg">
+                            {formatDate(lastJournal.date)}
+                        </p>
+                        <p className="text-blue-200 text-sm mt-1">
+                            {getRelativeTime(lastJournal.date)}
+                            {lastJournal.start_time && ` • ${lastJournal.start_time}`}
+                        </p>
+                    </div>
+
+                    {/* Last Material */}
+                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                        <div className="flex items-center gap-2 mb-2">
+                            <FileText size={16} className="text-purple-200" />
+                            <span className="text-purple-200 text-xs font-medium uppercase tracking-wide">Materi Terakhir</span>
+                        </div>
+                        <p className="text-white font-medium leading-relaxed">
+                            {truncatedMateri}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Journal Card Component
 const JournalCard = ({ journal, template, onEdit, onDelete, deletingId }) => {
     const customData = journal.custom_data || {};
@@ -642,18 +747,28 @@ export default function Journal() {
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {journals.map(journal => (
-                        <JournalCard
-                            key={journal.id}
-                            journal={journal}
-                            template={selectedTemplate}
-                            onEdit={handleEdit}
-                            onDelete={deleteJournal}
-                            deletingId={deletingId}
-                        />
-                    ))}
-                </div>
+                <>
+                    {/* Class Insights Card */}
+                    <ClassInsightsCard
+                        lastJournal={journals[0]}
+                        templateConfig={selectedTemplate?.template_config}
+                        className={classes.find(c => c.id === parseInt(selectedClassId))?.name}
+                    />
+
+                    {/* Journal Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {journals.map(journal => (
+                            <JournalCard
+                                key={journal.id}
+                                journal={journal}
+                                template={selectedTemplate}
+                                onEdit={handleEdit}
+                                onDelete={deleteJournal}
+                                deletingId={deletingId}
+                            />
+                        ))}
+                    </div>
+                </>
             )}
 
             {/* Modal */}
