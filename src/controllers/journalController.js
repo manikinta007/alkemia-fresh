@@ -16,57 +16,74 @@ export async function handleJournalRequest(request, env) {
 
         // GET /api/journals - List journals with filters
         if (pathname === "/api/journals" && method === "GET") {
-            const classId = url.searchParams.get("class_id");
-            const periodId = url.searchParams.get("period_id");
-            const month = url.searchParams.get("month"); // Format: YYYY-MM
+            try {
+                const classId = url.searchParams.get("class_id");
+                const periodId = url.searchParams.get("period_id");
+                const month = url.searchParams.get("month"); // Format: YYYY-MM
 
-            let query = `
-        SELECT 
-          j.*,
-          c.name as class_name,
-          p.name as period_name
-        FROM teaching_journals j
-        LEFT JOIN classes c ON j.class_id = c.id
-        LEFT JOIN academic_periods p ON j.period_id = p.id
-        WHERE 1=1
-      `;
-            const params = [];
+                let query = `
+                  SELECT 
+                    j.*,
+                    c.name as class_name,
+                    p.name as period_name
+                  FROM teaching_journals j
+                  LEFT JOIN classes c ON j.class_id = c.id
+                  LEFT JOIN academic_periods p ON j.period_id = p.id
+                  WHERE 1=1
+                `;
+                const params = [];
 
-            if (classId) {
-                query += " AND j.class_id = ?";
-                params.push(classId);
-            }
-            if (periodId) {
-                query += " AND j.period_id = ?";
-                params.push(periodId);
-            }
-            if (month) {
-                query += " AND j.date LIKE ?";
-                params.push(`${month}%`);
-            }
-
-            query += " ORDER BY j.date DESC, j.start_time ASC";
-
-            const stmt = env.DB.prepare(query);
-            const { results } = params.length > 0
-                ? await stmt.bind(...params).all()
-                : await stmt.all();
-
-            // Parse custom_data JSON with error handling
-            const journals = (results || []).map(j => {
-                let customData = {};
-                try {
-                    customData = j.custom_data ? JSON.parse(j.custom_data) : {};
-                } catch (e) {
-                    console.error("Failed to parse custom_data for journal", j.id, e);
+                if (classId) {
+                    query += " AND j.class_id = ?";
+                    params.push(classId);
                 }
-                return {
-                    ...j,
-                    custom_data: customData
-                };
-            });
+                if (periodId) {
+                    query += " AND j.period_id = ?";
+                    params.push(periodId);
+                }
+                if (month) {
+                    query += " AND j.date LIKE ?";
+                    params.push(`${month}%`);
+                }
 
-            return jsonResponse({ journals });
+                query += " ORDER BY j.date DESC, j.start_time ASC";
+
+                // DEBUG LOG
+                console.log("DEBUG: Executing query:", query, "Params:", params);
+
+                const stmt = env.DB.prepare(query);
+                const result = params.length > 0
+                    ? await stmt.bind(...params).all()
+                    : await stmt.all();
+
+                const results = result.results || [];
+
+                // Parse custom_data JSON with error handling
+                const journals = results.map(j => {
+                    let customData = {};
+                    try {
+                        // Handle potential null or string formats
+                        if (typeof j.custom_data === 'string') {
+                            customData = JSON.parse(j.custom_data);
+                        } else if (typeof j.custom_data === 'object' && j.custom_data !== null) {
+                            customData = j.custom_data;
+                        }
+                    } catch (e) {
+                        console.error("Failed to parse custom_data for journal", j.id, e);
+                    }
+                    return {
+                        ...j,
+                        custom_data: customData
+                    };
+                });
+
+                return jsonResponse({ journals });
+            } catch (err) {
+                return jsonResponse({
+                    error: "Journal List Error: " + err.message,
+                    stack: err.stack
+                }, 500);
+            }
         }
 
         // GET /api/journals/attendance - Get attendance summary for journal
