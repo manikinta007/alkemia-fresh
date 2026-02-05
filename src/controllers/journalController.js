@@ -384,10 +384,17 @@ export async function handleJournalRequest(request, env) {
                 school_name,
                 school_address,
                 school_logo_url,
+                school_logo_2_url,
+                logo_position,
+                logo_2_position,
+                school_name_align,
+                school_address_align,
                 pdf_orientation,
                 signature_name,
                 signature_nip,
                 signature_image_url,
+                signature_place,
+                signature_date,
                 active_template_id
             } = body;
 
@@ -400,37 +407,60 @@ export async function handleJournalRequest(request, env) {
             school_name = ?,
             school_address = ?,
             school_logo_url = ?,
+            school_logo_2_url = ?,
+            logo_position = ?,
+            logo_2_position = ?,
+            school_name_align = ?,
+            school_address_align = ?,
             pdf_orientation = ?,
             signature_name = ?,
             signature_nip = ?,
             signature_image_url = ?,
+            signature_place = ?,
+            signature_date = ?,
             active_template_id = ?
           WHERE id = ?
         `).bind(
                     school_name || null,
                     school_address || null,
                     school_logo_url || null,
+                    school_logo_2_url || null,
+                    logo_position || 'left',
+                    logo_2_position || null,
+                    school_name_align || 'center',
+                    school_address_align || 'center',
                     pdf_orientation || 'landscape',
                     signature_name || null,
                     signature_nip || null,
                     signature_image_url || null,
+                    signature_place || 'Jakarta',
+                    signature_date || null,
                     active_template_id || null,
                     existing.id
                 ).run();
             } else {
                 await env.DB.prepare(`
           INSERT INTO journal_settings (
-            school_name, school_address, school_logo_url, pdf_orientation,
-            signature_name, signature_nip, signature_image_url, active_template_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            school_name, school_address, school_logo_url, school_logo_2_url,
+            logo_position, logo_2_position, school_name_align, school_address_align,
+            pdf_orientation, signature_name, signature_nip, signature_image_url,
+            signature_place, signature_date, active_template_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
                     school_name || null,
                     school_address || null,
                     school_logo_url || null,
+                    school_logo_2_url || null,
+                    logo_position || 'left',
+                    logo_2_position || null,
+                    school_name_align || 'center',
+                    school_address_align || 'center',
                     pdf_orientation || 'landscape',
                     signature_name || null,
                     signature_nip || null,
                     signature_image_url || null,
+                    signature_place || 'Jakarta',
+                    signature_date || null,
                     active_template_id || null
                 ).run();
             }

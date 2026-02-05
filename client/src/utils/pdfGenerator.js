@@ -46,56 +46,98 @@ export const generateJournalPDF = async ({ journals, settings, template, classNa
     // 1. RENDER KOP SURAT (HEADER)
     // ==========================================
     let currentY = margin;
+    const logoSize = 20; // 20mm square
+    const logoPosition = settings?.logo_position || 'left';
+    const logo2Position = settings?.logo_2_position || 'right';
+    const nameAlign = settings?.school_name_align || 'center';
+    const addressAlign = settings?.school_address_align || 'center';
 
-    // School Logo (if exists)
-    let logoWidth = 0;
-    if (settings?.school_logo_url) {
+    // Helper to get X position based on alignment
+    const getTextX = (textWidth, align) => {
+        if (align === 'left') return margin + (logoPosition === 'left' && settings?.school_logo_url ? logoSize + 5 : 0);
+        if (align === 'right') return pageWidth - margin - textWidth - (logo2Position === 'right' && settings?.school_logo_2_url ? logoSize + 5 : 0);
+        return (pageWidth - textWidth) / 2; // center
+    };
+
+    // Logo at top position (centered above text)
+    if (logoPosition === 'top' && settings?.school_logo_url) {
         try {
             const logoBase64 = await imageToBase64(settings.school_logo_url);
             if (logoBase64) {
-                const logoSize = 20; // 20mm square
-                doc.addImage(logoBase64, 'PNG', margin, currentY, logoSize, logoSize);
-                logoWidth = logoSize + 5; // Add some spacing
+                doc.addImage(logoBase64, 'PNG', (pageWidth - logoSize) / 2, currentY, logoSize, logoSize);
+                currentY += logoSize + 3;
             }
         } catch (e) {
-            console.error('Failed to add logo to PDF:', e);
+            console.error('Failed to add logo:', e);
         }
     }
 
-    // School Name (Bold, Centered or next to logo)
+    // Logo 1 (Left position)
+    if (logoPosition === 'left' && settings?.school_logo_url) {
+        try {
+            const logoBase64 = await imageToBase64(settings.school_logo_url);
+            if (logoBase64) {
+                doc.addImage(logoBase64, 'PNG', margin, currentY, logoSize, logoSize);
+            }
+        } catch (e) {
+            console.error('Failed to add logo:', e);
+        }
+    }
+
+    // Logo 1 (Right position)
+    if (logoPosition === 'right' && settings?.school_logo_url) {
+        try {
+            const logoBase64 = await imageToBase64(settings.school_logo_url);
+            if (logoBase64) {
+                doc.addImage(logoBase64, 'PNG', pageWidth - margin - logoSize, currentY, logoSize, logoSize);
+            }
+        } catch (e) {
+            console.error('Failed to add logo:', e);
+        }
+    }
+
+    // Logo 2 (if exists)
+    if (settings?.school_logo_2_url && logo2Position) {
+        try {
+            const logo2Base64 = await imageToBase64(settings.school_logo_2_url);
+            if (logo2Base64) {
+                let logo2X = margin;
+                let logo2Y = currentY;
+                if (logo2Position === 'right') logo2X = pageWidth - margin - logoSize;
+                else if (logo2Position === 'left') logo2X = margin;
+                else if (logo2Position === 'top') {
+                    logo2X = (pageWidth - logoSize) / 2 + logoSize + 5;
+                    logo2Y = margin;
+                } else if (logo2Position === 'bottom') {
+                    logo2Y = currentY + logoSize + 25; // Below the header
+                }
+                doc.addImage(logo2Base64, 'PNG', logo2X, logo2Y, logoSize, logoSize);
+            }
+        } catch (e) {
+            console.error('Failed to add logo 2:', e);
+        }
+    }
+
+    // School Name
     if (settings?.school_name) {
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        if (logoWidth > 0) {
-            // Text next to logo
-            doc.text(settings.school_name, margin + logoWidth, currentY + 8);
-        } else {
-            // Centered text
-            const schoolNameWidth = doc.getTextWidth(settings.school_name);
-            doc.text(settings.school_name, (pageWidth - schoolNameWidth) / 2, currentY);
-        }
-        currentY += 7;
+        const textWidth = doc.getTextWidth(settings.school_name);
+        const textX = getTextX(textWidth, nameAlign);
+        doc.text(settings.school_name, textX, currentY + 8);
     }
 
-    // School Address (Normal, Centered or next to logo)
+    // School Address
     if (settings?.school_address) {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        if (logoWidth > 0) {
-            // Text next to logo
-            doc.text(settings.school_address, margin + logoWidth, currentY + 8);
-        } else {
-            // Centered text
-            const addressWidth = doc.getTextWidth(settings.school_address);
-            doc.text(settings.school_address, (pageWidth - addressWidth) / 2, currentY);
-        }
-        currentY += 5;
+        const textWidth = doc.getTextWidth(settings.school_address);
+        const textX = getTextX(textWidth, addressAlign);
+        doc.text(settings.school_address, textX, currentY + 16);
     }
 
-    // Adjust Y if logo was taller
-    if (logoWidth > 0) {
-        currentY = margin + 25; // Logo height + spacing
-    }
+    // Adjust Y after header
+    currentY = margin + logoSize + 8;
 
     // Horizontal Line
     doc.setLineWidth(0.5);
@@ -191,7 +233,7 @@ export const generateJournalPDF = async ({ journals, settings, template, classNa
     const finalY = (doc.lastAutoTable?.finalY || currentY) + 15;
 
     // Check if signature fits, or add new page
-    if (finalY + 30 > pageHeight - 20) {
+    if (finalY + 50 > pageHeight - 20) {
         doc.addPage();
         currentY = margin;
     } else {
@@ -199,20 +241,40 @@ export const generateJournalPDF = async ({ journals, settings, template, classNa
     }
 
     // Signature Section (Right Aligned)
-    const signatureX = pageWidth - margin - 60;
-    const dateText = `${getCityName()}, ${formatDateID(new Date().toISOString().split('T')[0])}`;
+    const signatureX = pageWidth - margin - 70;
+
+    // Place and Date
+    const place = settings?.signature_place || 'Jakarta';
+    const dateText = settings?.signature_date || formatDateID(new Date().toISOString().split('T')[0]);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(dateText, signatureX, currentY);
+    doc.text(`${place}, ${dateText}`, signatureX, currentY);
     currentY += 5;
 
-    if (settings?.signature_name) {
-        doc.text(settings.signature_name, signatureX, currentY + 20);
+    // Signature Image (if exists)
+    if (settings?.signature_image_url) {
+        try {
+            const signatureBase64 = await imageToBase64(settings.signature_image_url);
+            if (signatureBase64) {
+                // Signature image: 40mm wide, 20mm height
+                doc.addImage(signatureBase64, 'PNG', signatureX, currentY + 2, 40, 20);
+            }
+        } catch (e) {
+            console.error('Failed to add signature image:', e);
+        }
     }
 
+    // Name (after signature space)
+    if (settings?.signature_name) {
+        doc.setFont('helvetica', 'bold');
+        doc.text(settings.signature_name, signatureX, currentY + 28);
+    }
+
+    // NIP
     if (settings?.signature_nip) {
         doc.setFontSize(9);
-        doc.text(`NIP: ${settings.signature_nip}`, signatureX, currentY + 25);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`NIP: ${settings.signature_nip}`, signatureX, currentY + 33);
     }
 
     // ==========================================
@@ -227,9 +289,4 @@ const formatDateID = (dateStr) => {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-};
-
-// Helper: Get city name from school address (fallback to default)
-const getCityName = () => {
-    return 'Jakarta'; // Default, or parse from settings.school_address if needed
 };

@@ -16,10 +16,17 @@ export default function JournalSettings() {
         school_name: '',
         school_address: '',
         school_logo_url: '',
+        school_logo_2_url: '',
+        logo_position: 'left',
+        logo_2_position: '',
+        school_name_align: 'center',
+        school_address_align: 'center',
         pdf_orientation: 'landscape',
         signature_name: '',
         signature_nip: '',
         signature_image_url: '',
+        signature_place: 'Jakarta',
+        signature_date: '',
         active_template_id: null
     });
 
@@ -354,11 +361,138 @@ export default function JournalSettings() {
                             </div>
                         </div>
 
-                        {/* School Name */}
+                        {/* Logo 1 Position */}
                         <div>
                             <label className="block text-xs font-bold text-zinc-500 uppercase mb-2">
-                                Nama Sekolah
+                                Posisi Logo 1
                             </label>
+                            <div className="flex gap-2">
+                                {['left', 'top', 'right'].map(pos => (
+                                    <button
+                                        key={pos}
+                                        type="button"
+                                        onClick={() => handleChange('logo_position', pos)}
+                                        className={`px-4 py-2 rounded-lg font-medium transition ${settings.logo_position === pos
+                                            ? 'bg-orange-500 text-white'
+                                            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                            }`}
+                                    >
+                                        {pos === 'left' ? 'Kiri' : pos === 'right' ? 'Kanan' : 'Atas'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Logo 2 */}
+                        <div className="flex items-start gap-4 pt-4 border-t border-zinc-100">
+                            <div className="w-24 h-24 bg-zinc-100 rounded-xl border border-zinc-200 flex items-center justify-center overflow-hidden">
+                                {settings.school_logo_2_url ? (
+                                    <img
+                                        src={settings.school_logo_2_url}
+                                        alt="Logo Sekolah 2"
+                                        className="w-full h-full object-contain"
+                                    />
+                                ) : (
+                                    <ImageIcon size={32} className="text-zinc-300" />
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-xs font-bold text-zinc-500 uppercase mb-2">
+                                    Logo 2 (Opsional)
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <label className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-lg font-medium hover:bg-zinc-200 cursor-pointer transition">
+                                        <Upload size={16} />
+                                        Upload Logo 2
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                const formData = new FormData();
+                                                formData.append('file', file);
+                                                formData.append('folder', 'journal');
+                                                try {
+                                                    const res = await fetch('/api/upload', {
+                                                        method: 'POST',
+                                                        body: formData
+                                                    });
+                                                    const data = await res.json();
+                                                    if (data.url) {
+                                                        setSettings(prev => ({ ...prev, school_logo_2_url: data.url }));
+                                                    }
+                                                } catch (err) {
+                                                    showAlert('Gagal upload logo.', 'error');
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                    {settings.school_logo_2_url && (
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                const confirmed = await showConfirm('Hapus logo 2?');
+                                                if (confirmed) {
+                                                    setSettings(prev => ({ ...prev, school_logo_2_url: '' }));
+                                                }
+                                            }}
+                                            className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg font-medium transition"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Logo 2 Position */}
+                        {settings.school_logo_2_url && (
+                            <div>
+                                <label className="block text-xs font-bold text-zinc-500 uppercase mb-2">
+                                    Posisi Logo 2
+                                </label>
+                                <div className="flex gap-2">
+                                    {['left', 'right', 'top', 'bottom'].map(pos => (
+                                        <button
+                                            key={pos}
+                                            type="button"
+                                            onClick={() => handleChange('logo_2_position', pos)}
+                                            className={`px-4 py-2 rounded-lg font-medium transition ${settings.logo_2_position === pos
+                                                ? 'bg-orange-500 text-white'
+                                                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                                }`}
+                                        >
+                                            {pos === 'left' ? 'Kiri' : pos === 'right' ? 'Kanan' : pos === 'top' ? 'Atas' : 'Bawah'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* School Name + Alignment */}
+                        <div className="pt-4 border-t border-zinc-100">
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-xs font-bold text-zinc-500 uppercase">
+                                    Nama Sekolah
+                                </label>
+                                <div className="flex gap-1">
+                                    {['left', 'center', 'right'].map(align => (
+                                        <button
+                                            key={align}
+                                            type="button"
+                                            onClick={() => handleChange('school_name_align', align)}
+                                            className={`px-2 py-1 rounded text-xs font-medium transition ${settings.school_name_align === align
+                                                ? 'bg-orange-500 text-white'
+                                                : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+                                                }`}
+                                        >
+                                            {align === 'left' ? '⬅' : align === 'right' ? '➡' : '⬌'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                             <input
                                 type="text"
                                 className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none bg-zinc-50 transition"
@@ -368,11 +502,28 @@ export default function JournalSettings() {
                             />
                         </div>
 
-                        {/* School Address */}
+                        {/* School Address + Alignment */}
                         <div>
-                            <label className="block text-xs font-bold text-zinc-500 uppercase mb-2">
-                                Alamat Sekolah
-                            </label>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-xs font-bold text-zinc-500 uppercase">
+                                    Alamat Sekolah
+                                </label>
+                                <div className="flex gap-1">
+                                    {['left', 'center', 'right'].map(align => (
+                                        <button
+                                            key={align}
+                                            type="button"
+                                            onClick={() => handleChange('school_address_align', align)}
+                                            className={`px-2 py-1 rounded text-xs font-medium transition ${settings.school_address_align === align
+                                                ? 'bg-orange-500 text-white'
+                                                : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+                                                }`}
+                                        >
+                                            {align === 'left' ? '⬅' : align === 'right' ? '➡' : '⬌'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                             <textarea
                                 className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none bg-zinc-50 transition min-h-[80px] resize-none"
                                 placeholder="Jl. Pendidikan No. 1, Kota Contoh"
@@ -419,7 +570,49 @@ export default function JournalSettings() {
                                         disabled={uploadingSignature}
                                     />
                                 </label>
+                                {settings.signature_image_url && (
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            const confirmed = await showConfirm('Hapus gambar tanda tangan?');
+                                            if (confirmed) {
+                                                setSettings(prev => ({ ...prev, signature_image_url: '' }));
+                                            }
+                                        }}
+                                        className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg font-medium transition"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                )}
                                 <p className="text-xs text-zinc-400 mt-1">Gunakan gambar dengan latar belakang transparan (PNG).</p>
+                            </div>
+                        </div>
+
+                        {/* Signature Place & Date */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-zinc-500 uppercase mb-2">
+                                    Tempat
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none bg-zinc-50 transition"
+                                    placeholder="Jakarta"
+                                    value={settings.signature_place || ''}
+                                    onChange={e => handleChange('signature_place', e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-zinc-500 uppercase mb-2">
+                                    Tanggal
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none bg-zinc-50 transition"
+                                    placeholder="5 Februari 2026"
+                                    value={settings.signature_date || ''}
+                                    onChange={e => handleChange('signature_date', e.target.value)}
+                                />
                             </div>
                         </div>
 

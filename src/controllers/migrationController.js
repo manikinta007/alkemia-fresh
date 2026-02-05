@@ -251,12 +251,24 @@ export async function handleMigrationRequest(request, env) {
           env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_journals_date ON teaching_journals(date DESC)`)
         ]);
 
-        // Add active_template_id column if not exists (for existing tables)
-        try {
-          await env.DB.prepare(`ALTER TABLE journal_settings ADD COLUMN active_template_id INTEGER`).run();
-        } catch (e) {
-          // Column might already exist, ignore error
-          console.log('active_template_id column may already exist:', e.message);
+        // Add new columns if not exist (for existing tables)
+        const newColumns = [
+          'active_template_id INTEGER',
+          'school_logo_2_url TEXT',
+          'logo_position TEXT DEFAULT "left"',
+          'logo_2_position TEXT',
+          'school_name_align TEXT DEFAULT "center"',
+          'school_address_align TEXT DEFAULT "center"',
+          'signature_place TEXT DEFAULT "Jakarta"',
+          'signature_date TEXT'
+        ];
+
+        for (const column of newColumns) {
+          try {
+            await env.DB.prepare(`ALTER TABLE journal_settings ADD COLUMN ${column}`).run();
+          } catch (e) {
+            // Column might already exist, ignore error
+          }
         }
 
         // Insert 3 Default Templates (jika belum ada)
