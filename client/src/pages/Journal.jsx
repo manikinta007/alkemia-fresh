@@ -108,7 +108,8 @@ const JournalFormModal = ({
     onSave,
     submitting,
     editData,
-    fetchAttendance
+    fetchAttendance,
+    showAlert
 }) => {
     const [formData, setFormData] = useState({
         class_id: '',
@@ -188,6 +189,20 @@ const JournalFormModal = ({
         if (!formData.class_id || !formData.date) {
             return;
         }
+
+        // Validate required fields from template
+        const requiredFields = templateConfig.filter(f => f.required && f.type !== 'attendance_summary');
+        const missingFields = requiredFields.filter(f => {
+            const value = formData.custom_data[f.key];
+            return !value || (typeof value === 'string' && value.trim() === '');
+        });
+
+        if (missingFields.length > 0) {
+            const fieldNames = missingFields.map(f => f.label).join(', ');
+            showAlert(`Kolom wajib belum diisi: ${fieldNames}`, 'error');
+            return;
+        }
+
         const success = await onSave(formData);
         if (success) {
             onClose();
@@ -293,6 +308,9 @@ const JournalFormModal = ({
                             <div key={idx}>
                                 <label className="block text-xs font-bold text-zinc-500 uppercase mb-2">
                                     {field.label}
+                                    {field.required && field.type !== 'attendance_summary' && (
+                                        <span className="text-red-500 ml-1">*</span>
+                                    )}
                                     {field.type === 'attendance_summary' && (
                                         <span className="ml-2 text-orange-500 font-normal">(Otomatis)</span>
                                     )}
@@ -651,6 +669,7 @@ export default function Journal() {
                 submitting={submitting}
                 editData={editData}
                 fetchAttendance={fetchAttendance}
+                showAlert={showAlert}
             />
         </div>
     );

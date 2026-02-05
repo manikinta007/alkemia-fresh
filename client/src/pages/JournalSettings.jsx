@@ -27,6 +27,7 @@ export default function JournalSettings() {
         signature_image_url: '',
         signature_place: 'Jakarta',
         signature_date: '',
+        signature_title: '',
         active_template_id: null
     });
 
@@ -616,6 +617,20 @@ export default function JournalSettings() {
                                     onChange={e => handleChange('signature_date', e.target.value)}
                                 />
                             </div>
+                        </div>
+
+                        {/* Signature Title/Position */}
+                        <div>
+                            <label className="block text-xs font-bold text-zinc-500 uppercase mb-2">
+                                Jabatan Penanda Tangan
+                            </label>
+                            <input
+                                type="text"
+                                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none bg-zinc-50 transition"
+                                placeholder="Contoh: Guru Mata Pelajaran"
+                                value={settings.signature_title || ''}
+                                onChange={e => handleChange('signature_title', e.target.value)}
+                            />
                         </div>
 
                         {/* Signature Name */}

@@ -260,7 +260,8 @@ export async function handleMigrationRequest(request, env) {
           'school_name_align TEXT DEFAULT "center"',
           'school_address_align TEXT DEFAULT "center"',
           'signature_place TEXT DEFAULT "Jakarta"',
-          'signature_date TEXT'
+          'signature_date TEXT',
+          'signature_title TEXT'
         ];
 
         for (const column of newColumns) {

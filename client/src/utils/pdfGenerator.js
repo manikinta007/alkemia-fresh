@@ -202,15 +202,19 @@ export const generateJournalPDF = async ({ journals, settings, template, classNa
         margin: { left: margin, right: margin },
         theme: 'grid',
         headStyles: {
-            fillColor: [255, 124, 0], // Orange
-            textColor: [255, 255, 255],
+            fillColor: [255, 255, 255], // White
+            textColor: [0, 0, 0], // Black
             fontStyle: 'bold',
             fontSize: 9,
-            halign: 'center'
+            halign: 'center',
+            lineWidth: 0.2,
+            lineColor: [0, 0, 0]
         },
         bodyStyles: {
             fontSize: 8,
-            cellPadding: 3
+            cellPadding: 3,
+            lineWidth: 0.1,
+            lineColor: [0, 0, 0]
         },
         columnStyles: {
             0: { cellWidth: 10, halign: 'center' }, // No
@@ -250,6 +254,14 @@ export const generateJournalPDF = async ({ journals, settings, template, classNa
     doc.setFont('helvetica', 'normal');
     doc.text(`${place}, ${dateText}`, signatureX, currentY);
     currentY += 5;
+
+    // Signature Title/Position (below date, before signature)
+    if (settings?.signature_title) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(settings.signature_title, signatureX, currentY);
+        currentY += 3;
+    }
 
     // Signature Image (if exists)
     if (settings?.signature_image_url) {

@@ -395,6 +395,7 @@ export async function handleJournalRequest(request, env) {
                 signature_image_url,
                 signature_place,
                 signature_date,
+                signature_title,
                 active_template_id
             } = body;
 
@@ -418,6 +419,7 @@ export async function handleJournalRequest(request, env) {
             signature_image_url = ?,
             signature_place = ?,
             signature_date = ?,
+            signature_title = ?,
             active_template_id = ?
           WHERE id = ?
         `).bind(
@@ -435,6 +437,7 @@ export async function handleJournalRequest(request, env) {
                     signature_image_url || null,
                     signature_place || 'Jakarta',
                     signature_date || null,
+                    signature_title || null,
                     active_template_id || null,
                     existing.id
                 ).run();
@@ -444,8 +447,8 @@ export async function handleJournalRequest(request, env) {
             school_name, school_address, school_logo_url, school_logo_2_url,
             logo_position, logo_2_position, school_name_align, school_address_align,
             pdf_orientation, signature_name, signature_nip, signature_image_url,
-            signature_place, signature_date, active_template_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            signature_place, signature_date, signature_title, active_template_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
                     school_name || null,
                     school_address || null,
@@ -461,6 +464,7 @@ export async function handleJournalRequest(request, env) {
                     signature_image_url || null,
                     signature_place || 'Jakarta',
                     signature_date || null,
+                    signature_title || null,
                     active_template_id || null
                 ).run();
             }

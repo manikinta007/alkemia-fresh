@@ -123,6 +123,7 @@ main ──────────────────────●──
 6. **CSRF Allowed Origin**: `worker.js` still uses wildcard `*`. Needs to be restricted to production domain.
 7. **Stored XSS (Question Text)**: Question Input is NOT sanitized. Vulnerable to XSS.
 8. **Rate Limiting**: Login attempts are successfully limited via Cloudflare KV.
+9. **Logo 2 Upload**: Fails with 403 Forbidden. Implementation uses raw `fetch` instead of authenticated `fetchApi`. Needs backend endpoint adjustment to avoid overwriting Logo 1.
 
 ### ✅ Completed (Feb 4, 2026)
 19. ✅ **R2 Image Public Access**: Fixed images not displaying in student app. Added `/api/images/file/` to public API whitelist in `api.js`. Images now accessible without authentication.
@@ -359,6 +360,12 @@ Reorganized sidebar menu to follow the teaching workflow:
       - **Migration**: `/api/migrate/journals` endpoint for initializing tables.
     - **Components**: `Journal.jsx`, `JournalForm.jsx`, `JournalSettings.jsx`.
     - **Database**: `teaching_journals`, `journal_templates`, `journal_settings`.
+
+28. ✅ **Enhanced KOP Settings (Journal PDF)**:
+    - **Dual Logo Support**: Upload Logo 2, independent positioning (Left/Right/Top/Bottom).
+    - **Text Alignment**: Control alignment for School Name & Address (Left/Center/Right).
+    - **Signature Features**: Delete button, Place & Date fields (Manual/Auto).
+    - **Migration**: Added new columns to `journal_settings` table.
 
 ## 10. 📚 Database Schema Reference
 > [!IMPORTANT]
