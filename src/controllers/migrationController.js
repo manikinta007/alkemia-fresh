@@ -200,6 +200,104 @@ export async function handleMigrationRequest(request, env) {
       }
     }
 
+    // 7. TEACHING JOURNAL TABLES MIGRATION (Jurnal Mengajar Feature)
+    // Endpoint: /api/migrate/journals
+    if (pathname === "/api/migrate/journals" && method === "GET") {
+      try {
+        await env.DB.batch([
+          // 1. Tabel Teaching Journals (Data Jurnal Harian)
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS teaching_journals (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              period_id INTEGER,
+              class_id INTEGER NOT NULL,
+              date TEXT NOT NULL,
+              start_time TEXT,
+              end_time TEXT,
+              custom_data TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (period_id) REFERENCES academic_periods(id),
+              FOREIGN KEY (class_id) REFERENCES classes(id)
+            )
+          `),
+          // 2. Tabel Journal Templates (Template Kolom Jurnal)
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS journal_templates (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              is_default INTEGER DEFAULT 0,
+              template_config TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+          `),
+          // 3. Tabel Journal Settings (Pengaturan KOP & Tanda Tangan)
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS journal_settings (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              school_name TEXT,
+              school_address TEXT,
+              school_logo_url TEXT,
+              pdf_orientation TEXT DEFAULT 'landscape',
+              signature_name TEXT,
+              signature_nip TEXT,
+              signature_image_url TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+          `),
+          // Index untuk performa query
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_journals_class ON teaching_journals(class_id)`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_journals_date ON teaching_journals(date DESC)`)
+        ]);
+
+        // Insert 3 Default Templates (jika belum ada)
+        const existingTemplates = await env.DB.prepare("SELECT COUNT(*) as count FROM journal_templates").first();
+        if (existingTemplates.count === 0) {
+          await env.DB.batch([
+            // Template 1: Kurikulum Merdeka
+            env.DB.prepare(`
+              INSERT INTO journal_templates (name, is_default, template_config) VALUES (?, 1, ?)
+            `).bind("Kurikulum Merdeka", JSON.stringify([
+              { key: "jp", label: "JP", type: "number", width: 40 },
+              { key: "temu", label: "Temu Ke-", type: "number", width: 60 },
+              { key: "tujuan", label: "Tujuan Pembelajaran", type: "textarea", width: 200 },
+              { key: "iktp", label: "IKTP", type: "textarea", width: 150 },
+              { key: "materi", label: "Materi", type: "textarea", width: 150 },
+              { key: "capaian", label: "Capaian KKTP", type: "textarea", width: 150 },
+              { key: "absensi", label: "Absensi", type: "attendance", width: 100 },
+              { key: "keterangan", label: "Keterangan", type: "text", width: 150 }
+            ])),
+            // Template 2: Kurikulum 2013
+            env.DB.prepare(`
+              INSERT INTO journal_templates (name, is_default, template_config) VALUES (?, 1, ?)
+            `).bind("Kurikulum 2013", JSON.stringify([
+              { key: "kd", label: "Kompetensi Dasar", type: "textarea", width: 180 },
+              { key: "indikator", label: "Indikator", type: "textarea", width: 180 },
+              { key: "materi_pokok", label: "Materi Pokok", type: "textarea", width: 150 },
+              { key: "metode", label: "Metode", type: "text", width: 100 },
+              { key: "absensi", label: "Absensi", type: "attendance", width: 100 },
+              { key: "refleksi", label: "Refleksi", type: "textarea", width: 150 }
+            ])),
+            // Template 3: Minimalis
+            env.DB.prepare(`
+              INSERT INTO journal_templates (name, is_default, template_config) VALUES (?, 1, ?)
+            `).bind("Minimalis", JSON.stringify([
+              { key: "materi", label: "Materi", type: "textarea", width: 200 },
+              { key: "kegiatan", label: "Kegiatan Pembelajaran", type: "textarea", width: 250 },
+              { key: "absensi", label: "Absensi", type: "attendance", width: 100 },
+              { key: "catatan", label: "Catatan", type: "text", width: 150 }
+            ]))
+          ]);
+        }
+
+        return jsonResponse({
+          message: "Migrasi Jurnal Mengajar Berhasil: Tabel teaching_journals, journal_templates, journal_settings siap.",
+          templates_inserted: existingTemplates.count === 0 ? 3 : 0
+        });
+      } catch (e) {
+        return jsonResponse({ error: "Migrate Journals Error: " + e.message }, 500);
+      }
+    }
+
     return null;
   } catch (err) {
     return jsonResponse({ error: "Migration Error: " + err.message }, 500);
