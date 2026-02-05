@@ -42,6 +42,11 @@ export default {
       const url = new URL(request.url);
       const pathname = url.pathname;
 
+      // DEBUG: Trace migration route
+      if (pathname.includes("migrate")) {
+        console.log("DEBUG WORKER: Migration Route Hit:", pathname);
+      }
+
       // 2. ROUTING DISPATCHER
 
       // A. JIKA REQUEST KE API (DATA) - Backend Logic

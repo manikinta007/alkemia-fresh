@@ -21,61 +21,74 @@ export async function handleJournalRequest(request, env) {
                 const periodId = url.searchParams.get("period_id");
                 const month = url.searchParams.get("month"); // Format: YYYY-MM
 
-                // DEBUG: Restoring JOINs with EXPLICIT columns to be safe
-                let query = `
-                  SELECT 
-                    j.id, j.period_id, j.class_id, j.date, j.start_time, j.end_time, j.custom_data, j.created_at,
-                    c.name as class_name,
-                    p.name as period_name
-                  FROM teaching_journals j
-                  LEFT JOIN classes c ON j.class_id = c.id
-                  LEFT JOIN academic_periods p ON j.period_id = p.id
-                  WHERE 1=1
-                `;
+                // 1. Fetch Journals (Single Table)
+                let query = "SELECT * FROM teaching_journals WHERE 1=1";
                 const params = [];
 
                 if (classId) {
-                    query += " AND j.class_id = ?";
+                    query += " AND class_id = ?";
                     params.push(classId);
                 }
                 if (periodId) {
-                    query += " AND j.period_id = ?";
+                    query += " AND period_id = ?";
                     params.push(periodId);
                 }
                 if (month) {
-                    query += " AND j.date LIKE ?";
+                    query += " AND date LIKE ?";
                     params.push(`${month}%`);
                 }
 
-                query += " ORDER BY j.date DESC, j.start_time ASC";
-
-                // DEBUG LOG
-                console.log("DEBUG: Executing query:", query, "Params:", params);
+                query += " ORDER BY date DESC, start_time ASC";
 
                 const stmt = env.DB.prepare(query);
                 const result = params.length > 0
                     ? await stmt.bind(...params).all()
                     : await stmt.all();
 
-                const results = result.results || [];
+                const rawJournals = result.results || [];
 
-                // Parse custom_data JSON with error handling
-                const journals = results.map(j => {
+                // 2. Collect unique IDs for relations
+                const classIds = [...new Set(rawJournals.map(j => j.class_id).filter(Boolean))];
+                const periodIds = [...new Set(rawJournals.map(j => j.period_id).filter(Boolean))];
+
+                // 3. Fetch Relations (App-Side Join)
+                let classesMap = {};
+                let periodsMap = {};
+
+                if (classIds.length > 0) {
+                    // D1 doesn't support WHERE IN array efficiently in binding, so we loop or query all if small
+                    // Optimization: Query all relevant classes manually or just simple lookup
+                    // Since lists are small, we can fetch specific IDs dynamically
+                    const placeholders = classIds.map(() => '?').join(',');
+                    const classRes = await env.DB.prepare(`SELECT id, name FROM classes WHERE id IN (${placeholders})`)
+                        .bind(...classIds).all();
+                    (classRes.results || []).forEach(c => classesMap[c.id] = c.name);
+                }
+
+                if (periodIds.length > 0) {
+                    const placeholders = periodIds.map(() => '?').join(',');
+                    const periodRes = await env.DB.prepare(`SELECT id, name FROM academic_periods WHERE id IN (${placeholders})`)
+                        .bind(...periodIds).all();
+                    (periodRes.results || []).forEach(p => periodsMap[p.id] = p.name);
+                }
+
+                // 4. Map Data & Parse JSON
+                const journals = rawJournals.map(j => {
                     let customData = {};
                     try {
-                        // Handle potential null or string formats
                         if (typeof j.custom_data === 'string') {
                             customData = JSON.parse(j.custom_data);
                         } else if (typeof j.custom_data === 'object' && j.custom_data !== null) {
                             customData = j.custom_data;
                         }
                     } catch (e) {
-                        console.error("Failed to parse custom_data for journal", j.id, e);
+                        // silent fail for json parse
                     }
+
                     return {
                         ...j,
-                        class_name: j.class_name || "Kelas Dihapus",
-                        period_name: j.period_name || "-",
+                        class_name: classesMap[j.class_id] || "Kelas Tidak Ditemukan",
+                        period_name: periodsMap[j.period_id] || "-",
                         custom_data: customData
                     };
                 });
