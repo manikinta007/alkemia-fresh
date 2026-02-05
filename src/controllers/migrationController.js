@@ -251,6 +251,14 @@ export async function handleMigrationRequest(request, env) {
           env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_journals_date ON teaching_journals(date DESC)`)
         ]);
 
+        // Add active_template_id column if not exists (for existing tables)
+        try {
+          await env.DB.prepare(`ALTER TABLE journal_settings ADD COLUMN active_template_id INTEGER`).run();
+        } catch (e) {
+          // Column might already exist, ignore error
+          console.log('active_template_id column may already exist:', e.message);
+        }
+
         // Insert 3 Default Templates (jika belum ada)
         const existingTemplates = await env.DB.prepare("SELECT COUNT(*) as count FROM journal_templates").first();
         if (existingTemplates.count === 0) {
