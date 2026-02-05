@@ -469,7 +469,7 @@ export default function Journal() {
             const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || 'Semua Bulan';
 
             // Generate PDF
-            generateJournalPDF({
+            await generateJournalPDF({
                 journals,
                 settings,
                 template: selectedTemplate,

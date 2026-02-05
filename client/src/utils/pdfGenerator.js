@@ -2,6 +2,25 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 /**
+ * Convert image URL to base64 data URL
+ */
+const imageToBase64 = async (url) => {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (e) {
+        console.error('Failed to load image:', e);
+        return null;
+    }
+};
+
+/**
  * Generate PDF for Journal Export
  * @param {Object} params
  * @param {Array} params.journals - Array of journal entries
@@ -10,7 +29,7 @@ import autoTable from 'jspdf-autotable';
  * @param {string} params.className - Name of the class
  * @param {string} params.monthLabel - Month label for filename
  */
-export const generateJournalPDF = ({ journals, settings, template, className, monthLabel }) => {
+export const generateJournalPDF = async ({ journals, settings, template, className, monthLabel }) => {
     // Create PDF document
     const orientation = settings?.pdf_orientation || 'landscape';
     const doc = new jsPDF({
@@ -28,22 +47,54 @@ export const generateJournalPDF = ({ journals, settings, template, className, mo
     // ==========================================
     let currentY = margin;
 
-    // School Name (Bold, Centered)
+    // School Logo (if exists)
+    let logoWidth = 0;
+    if (settings?.school_logo_url) {
+        try {
+            const logoBase64 = await imageToBase64(settings.school_logo_url);
+            if (logoBase64) {
+                const logoSize = 20; // 20mm square
+                doc.addImage(logoBase64, 'PNG', margin, currentY, logoSize, logoSize);
+                logoWidth = logoSize + 5; // Add some spacing
+            }
+        } catch (e) {
+            console.error('Failed to add logo to PDF:', e);
+        }
+    }
+
+    // School Name (Bold, Centered or next to logo)
     if (settings?.school_name) {
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        const schoolNameWidth = doc.getTextWidth(settings.school_name);
-        doc.text(settings.school_name, (pageWidth - schoolNameWidth) / 2, currentY);
+        if (logoWidth > 0) {
+            // Text next to logo
+            doc.text(settings.school_name, margin + logoWidth, currentY + 8);
+        } else {
+            // Centered text
+            const schoolNameWidth = doc.getTextWidth(settings.school_name);
+            doc.text(settings.school_name, (pageWidth - schoolNameWidth) / 2, currentY);
+        }
         currentY += 7;
     }
 
-    // School Address (Normal, Centered)
+    // School Address (Normal, Centered or next to logo)
     if (settings?.school_address) {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        const addressWidth = doc.getTextWidth(settings.school_address);
-        doc.text(settings.school_address, (pageWidth - addressWidth) / 2, currentY);
+        if (logoWidth > 0) {
+            // Text next to logo
+            doc.text(settings.school_address, margin + logoWidth, currentY + 8);
+        } else {
+            // Centered text
+            const addressWidth = doc.getTextWidth(settings.school_address);
+            doc.text(settings.school_address, (pageWidth - addressWidth) / 2, currentY);
+        }
         currentY += 5;
+    }
+
+    // Adjust Y if logo was taller
+    if (logoWidth > 0) {
+        currentY = margin + 25; // Logo height + spacing
     }
 
     // Horizontal Line

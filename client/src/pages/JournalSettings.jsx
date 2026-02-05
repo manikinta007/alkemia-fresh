@@ -323,17 +323,33 @@ export default function JournalSettings() {
                                 <label className="block text-xs font-bold text-zinc-500 uppercase mb-2">
                                     Logo Sekolah
                                 </label>
-                                <label className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-lg font-medium hover:bg-zinc-200 cursor-pointer transition">
-                                    <Upload size={16} />
-                                    {uploadingLogo ? 'Mengupload...' : 'Upload Logo'}
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={handleUploadLogo}
-                                        disabled={uploadingLogo}
-                                    />
-                                </label>
+                                <div className="flex items-center gap-2">
+                                    <label className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-600 rounded-lg font-medium hover:bg-zinc-200 cursor-pointer transition">
+                                        <Upload size={16} />
+                                        {uploadingLogo ? 'Mengupload...' : 'Upload Logo'}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleUploadLogo}
+                                            disabled={uploadingLogo}
+                                        />
+                                    </label>
+                                    {settings.school_logo_url && (
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                const confirmed = await showConfirm('Hapus logo sekolah?');
+                                                if (confirmed) {
+                                                    setSettings(prev => ({ ...prev, school_logo_url: '' }));
+                                                }
+                                            }}
+                                            className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg font-medium transition"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
                                 <p className="text-xs text-zinc-400 mt-1">Format: JPG, PNG. Maks 2MB.</p>
                             </div>
                         </div>
