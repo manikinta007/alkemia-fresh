@@ -10,6 +10,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      // Exclude /api/* from navigation fallback to prevent service worker
+      // from serving cached index.html for API requests
+      workbox: {
+        navigateFallbackDenylist: [/^\/api/]
+      },
       manifest: {
         name: 'Portal Siswa - AlkeMia',
         short_name: 'AlkeMia',
