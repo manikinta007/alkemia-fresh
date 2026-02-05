@@ -5,6 +5,8 @@ import { GridSkeleton } from '../components/Skeleton';
 import { useAlertContext } from '../components/Alert';
 import { BookOpen, Plus, Trash2, X, Edit2, Calendar, Clock, FileText, ChevronDown, Settings, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { generateJournalPDF } from '../utils/pdfGenerator';
+import { fetchApi } from '../utils/api';
 
 // Format date helper
 const formatDate = (dateStr) => {
@@ -421,6 +423,42 @@ export default function Journal() {
         showAlert('CSV berhasil didownload!', 'success');
     };
 
+    // PDF Export Function
+    const exportPDF = async () => {
+        if (journals.length === 0) {
+            showAlert('Tidak ada data untuk di-export.', 'error');
+            return;
+        }
+
+        try {
+            // Fetch journal settings for KOP
+            const res = await fetchApi('/api/journal-settings');
+            let settings = {};
+            if (res.ok) {
+                const data = await res.json();
+                settings = data.settings || {};
+            }
+
+            const className = classes.find(c => c.id === parseInt(selectedClassId))?.name || 'Semua Kelas';
+            const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || 'Semua Bulan';
+
+            // Generate PDF
+            generateJournalPDF({
+                journals,
+                settings,
+                template: selectedTemplate,
+                className,
+                monthLabel
+            });
+
+            showAlert('PDF berhasil didownload!', 'success');
+        } catch (e) {
+            console.error('PDF Generation Error:', e);
+            showAlert('Gagal generate PDF.', 'error');
+        }
+    };
+
+
     const handleEdit = (journal) => {
         setEditData(journal);
         setShowModal(true);
@@ -464,6 +502,15 @@ export default function Journal() {
                     >
                         <Download size={18} />
                         <span className="hidden md:inline">CSV</span>
+                    </button>
+                    <button
+                        onClick={exportPDF}
+                        disabled={!selectedClassId || journals.length === 0}
+                        className="px-4 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        title="Download PDF"
+                    >
+                        <FileText size={18} />
+                        <span className="hidden md:inline">PDF</span>
                     </button>
                     <Link
                         to="/journal/settings"
