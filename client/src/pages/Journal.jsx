@@ -150,20 +150,29 @@ const JournalFormModal = ({
             if (formData.class_id && formData.date) {
                 const data = await fetchAttendance(formData.class_id, formData.date);
                 setAttendanceData(data);
-                // Auto-fill attendance field
-                if (data?.formatted) {
-                    setFormData(prev => ({
-                        ...prev,
-                        custom_data: {
-                            ...prev.custom_data,
-                            absensi: data.formatted
-                        }
-                    }));
+                // Auto-fill attendance field using the correct key from template config
+                if (data?.formatted && selectedTemplate?.template_config) {
+                    // Find the attendance_summary field to get its key
+                    const templateConfig = typeof selectedTemplate.template_config === 'string'
+                        ? JSON.parse(selectedTemplate.template_config)
+                        : selectedTemplate.template_config;
+                    const attendanceField = templateConfig.find(f =>
+                        f.type === 'attendance_summary' || f.type === 'attendance'
+                    );
+                    if (attendanceField) {
+                        setFormData(prev => ({
+                            ...prev,
+                            custom_data: {
+                                ...prev.custom_data,
+                                [attendanceField.key]: data.formatted
+                            }
+                        }));
+                    }
                 }
             }
         };
         loadAttendance();
-    }, [formData.class_id, formData.date]);
+    }, [formData.class_id, formData.date, selectedTemplate]);
 
     const handleCustomDataChange = (key, value) => {
         setFormData(prev => ({

@@ -285,9 +285,17 @@ export default function TemplateEditor() {
             if (res.ok) {
                 const data = await res.json();
                 setTemplateName(data.template.name);
-                setColumns(JSON.parse(data.template.template_config || '[]'));
+                // Backend may return parsed array or string
+                let config = data.template.template_config || [];
+                if (typeof config === 'string') {
+                    config = JSON.parse(config);
+                }
+                setColumns(config);
+            } else {
+                showAlert('Gagal memuat template.', 'error');
             }
         } catch (e) {
+            console.error('Load template error:', e);
             showAlert('Gagal memuat template.', 'error');
         } finally {
             setLoading(false);
