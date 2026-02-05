@@ -40,13 +40,35 @@ export const useJournalData = (showAlert, showConfirm) => {
 
                 // 3. Fetch Templates
                 const templatesRes = await fetchApi('/api/journal-templates');
+                let templatesData = [];
                 if (templatesRes.ok) {
                     const data = await templatesRes.json();
-                    setTemplates(data.templates || []);
-                    // Set default template (first one)
-                    if (data.templates && data.templates.length > 0) {
-                        setSelectedTemplate(data.templates[0]);
+                    templatesData = data.templates || [];
+                    setTemplates(templatesData);
+                }
+
+                // 4. Fetch Settings to get active_template_id
+                const settingsRes = await fetchApi('/api/journal-settings');
+                if (settingsRes.ok) {
+                    const settingsData = await settingsRes.json();
+                    const activeTemplateId = settingsData.settings?.active_template_id;
+
+                    if (activeTemplateId && templatesData.length > 0) {
+                        // Find and set active template
+                        const activeTemplate = templatesData.find(t => t.id === activeTemplateId);
+                        if (activeTemplate) {
+                            setSelectedTemplate(activeTemplate);
+                        } else {
+                            // Fallback to first template if active not found
+                            setSelectedTemplate(templatesData[0]);
+                        }
+                    } else if (templatesData.length > 0) {
+                        // No active set, use first template as default
+                        setSelectedTemplate(templatesData[0]);
                     }
+                } else if (templatesData.length > 0) {
+                    // Settings fetch failed, fallback to first template
+                    setSelectedTemplate(templatesData[0]);
                 }
             } catch (err) {
                 console.error("Error loading journal data:", err);

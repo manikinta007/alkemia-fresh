@@ -104,9 +104,7 @@ const JournalFormModal = ({
     isOpen,
     onClose,
     classes,
-    templates,
     selectedTemplate,
-    onSelectTemplate,
     onSave,
     submitting,
     editData,
@@ -204,23 +202,24 @@ const JournalFormModal = ({
                 </div>
 
                 <div className="space-y-5">
-                    {/* Template Selector */}
+                    {/* Template Info (Read-only) */}
                     <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
-                        <label className="block text-xs font-bold text-orange-600 uppercase mb-2">
-                            Template Jurnal
-                        </label>
-                        <select
-                            className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none bg-white transition"
-                            value={selectedTemplate?.id || ''}
-                            onChange={e => {
-                                const tmpl = templates.find(t => t.id === parseInt(e.target.value));
-                                if (tmpl) onSelectTemplate(tmpl);
-                            }}
-                        >
-                            {templates.map(t => (
-                                <option key={t.id} value={t.id}>{t.name}</option>
-                            ))}
-                        </select>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <label className="block text-xs font-bold text-orange-600 uppercase mb-1">
+                                    Template Aktif
+                                </label>
+                                <p className="font-medium text-zinc-800">
+                                    {selectedTemplate?.name || 'Belum ada template aktif'}
+                                </p>
+                            </div>
+                            <a
+                                href="/journal/settings"
+                                className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                            >
+                                Ubah di Pengaturan →
+                            </a>
+                        </div>
                     </div>
 
                     {/* Basic Info Row */}
@@ -638,9 +637,7 @@ export default function Journal() {
                     setEditData(null);
                 }}
                 classes={classes}
-                templates={templates}
                 selectedTemplate={selectedTemplate}
-                onSelectTemplate={setSelectedTemplate}
                 onSave={handleSave}
                 submitting={submitting}
                 editData={editData}

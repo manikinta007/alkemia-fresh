@@ -241,7 +241,9 @@ export async function handleMigrationRequest(request, env) {
               signature_name TEXT,
               signature_nip TEXT,
               signature_image_url TEXT,
-              created_at TEXT DEFAULT CURRENT_TIMESTAMP
+              active_template_id INTEGER,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (active_template_id) REFERENCES journal_templates(id)
             )
           `),
           // Index untuk performa query

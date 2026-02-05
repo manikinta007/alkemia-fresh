@@ -329,6 +329,34 @@ export async function handleJournalRequest(request, env) {
             return jsonResponse({ message: "Template berhasil dihapus" });
         }
 
+        // PUT /api/journal-templates/set-active - Set active template
+        if (pathname === "/api/journal-templates/set-active" && method === "PUT") {
+            const body = await request.json();
+            const { template_id } = body;
+
+            if (!template_id) {
+                return jsonResponse({ error: "template_id wajib diisi" }, 400);
+            }
+
+            // Check if template exists
+            const template = await env.DB.prepare("SELECT id FROM journal_templates WHERE id = ?").bind(template_id).first();
+            if (!template) {
+                return jsonResponse({ error: "Template tidak ditemukan" }, 404);
+            }
+
+            // Update or create settings with active_template_id
+            const existing = await env.DB.prepare("SELECT id FROM journal_settings LIMIT 1").first();
+            if (existing) {
+                await env.DB.prepare("UPDATE journal_settings SET active_template_id = ? WHERE id = ?")
+                    .bind(template_id, existing.id).run();
+            } else {
+                await env.DB.prepare("INSERT INTO journal_settings (active_template_id) VALUES (?)")
+                    .bind(template_id).run();
+            }
+
+            return jsonResponse({ message: "Template aktif berhasil diatur" });
+        }
+
         // ============================================
         // 3. JOURNAL SETTINGS
         // ============================================
@@ -359,7 +387,8 @@ export async function handleJournalRequest(request, env) {
                 pdf_orientation,
                 signature_name,
                 signature_nip,
-                signature_image_url
+                signature_image_url,
+                active_template_id
             } = body;
 
             // Check if settings exist
@@ -374,7 +403,8 @@ export async function handleJournalRequest(request, env) {
             pdf_orientation = ?,
             signature_name = ?,
             signature_nip = ?,
-            signature_image_url = ?
+            signature_image_url = ?,
+            active_template_id = ?
           WHERE id = ?
         `).bind(
                     school_name || null,
@@ -384,14 +414,15 @@ export async function handleJournalRequest(request, env) {
                     signature_name || null,
                     signature_nip || null,
                     signature_image_url || null,
+                    active_template_id || null,
                     existing.id
                 ).run();
             } else {
                 await env.DB.prepare(`
           INSERT INTO journal_settings (
             school_name, school_address, school_logo_url, pdf_orientation,
-            signature_name, signature_nip, signature_image_url
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            signature_name, signature_nip, signature_image_url, active_template_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
                     school_name || null,
                     school_address || null,
@@ -399,7 +430,8 @@ export async function handleJournalRequest(request, env) {
                     pdf_orientation || 'landscape',
                     signature_name || null,
                     signature_nip || null,
-                    signature_image_url || null
+                    signature_image_url || null,
+                    active_template_id || null
                 ).run();
             }
 

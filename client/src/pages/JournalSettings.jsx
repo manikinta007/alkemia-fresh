@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchApi } from '../hooks/../utils/api';
 import { Spinner } from '../components/UI';
 import { useAlertContext } from '../components/Alert';
-import { Settings, Image as ImageIcon, Upload, User, Building, FileText, ArrowLeft, Save, Settings as SettingsIcon, Trash2, Edit } from 'lucide-react';
+import { Settings, Image as ImageIcon, Upload, User, Building, FileText, ArrowLeft, Save, Settings as SettingsIcon, Trash2, Edit, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function JournalSettings() {
@@ -19,12 +19,14 @@ export default function JournalSettings() {
         pdf_orientation: 'landscape',
         signature_name: '',
         signature_nip: '',
-        signature_image_url: ''
+        signature_image_url: '',
+        active_template_id: null
     });
 
     // Templates state
     const [templates, setTemplates] = useState([]);
     const [deletingTemplateId, setDeletingTemplateId] = useState(null);
+    const [activatingTemplateId, setActivatingTemplateId] = useState(null);
 
     // Fetch settings and templates on mount
     useEffect(() => {
@@ -74,6 +76,28 @@ export default function JournalSettings() {
             showAlert('Terjadi kesalahan.', 'error');
         } finally {
             setDeletingTemplateId(null);
+        }
+    };
+
+    // Set active template
+    const handleSetActiveTemplate = async (templateId) => {
+        setActivatingTemplateId(templateId);
+        try {
+            const res = await fetchApi('/api/journal-templates/set-active', {
+                method: 'PUT',
+                body: JSON.stringify({ template_id: templateId })
+            });
+            if (res.ok) {
+                setSettings(prev => ({ ...prev, active_template_id: templateId }));
+                showAlert('Template aktif berhasil diatur.', 'success');
+            } else {
+                const err = await res.json();
+                showAlert(err.error || 'Gagal mengatur template aktif.', 'error');
+            }
+        } catch (e) {
+            showAlert('Terjadi kesalahan.', 'error');
+        } finally {
+            setActivatingTemplateId(null);
         }
     };
 
@@ -218,15 +242,34 @@ export default function JournalSettings() {
                                     className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg border border-zinc-100 hover:bg-zinc-100 transition"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <FileText size={18} className="text-zinc-400" />
+                                        <FileText size={18} className={settings.active_template_id === template.id ? 'text-orange-500' : 'text-zinc-400'} />
                                         <div>
-                                            <p className="font-medium text-zinc-800">{template.name}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className={`font-medium ${settings.active_template_id === template.id ? 'text-orange-600' : 'text-zinc-800'}`}>{template.name}</p>
+                                                {settings.active_template_id === template.id && (
+                                                    <span className="px-2 py-0.5 bg-orange-100 text-orange-600 text-xs font-bold rounded-full">AKTIF</span>
+                                                )}
+                                            </div>
                                             {template.is_default === 1 && (
-                                                <span className="text-xs text-orange-600 font-medium">Default</span>
+                                                <span className="text-xs text-zinc-400 font-medium">Template Bawaan</span>
                                             )}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
+                                        {settings.active_template_id !== template.id && (
+                                            <button
+                                                onClick={() => handleSetActiveTemplate(template.id)}
+                                                disabled={activatingTemplateId === template.id}
+                                                className="px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg transition disabled:opacity-50"
+                                                title="Aktifkan Template"
+                                            >
+                                                {activatingTemplateId === template.id ? (
+                                                    <Spinner size="sm" />
+                                                ) : (
+                                                    'Aktifkan'
+                                                )}
+                                            </button>
+                                        )}
                                         <Link
                                             to={`/journal/template-editor/${template.id}`}
                                             className="p-2 hover:bg-zinc-200 rounded-lg transition"
@@ -234,7 +277,7 @@ export default function JournalSettings() {
                                         >
                                             <Edit size={16} className="text-zinc-500" />
                                         </Link>
-                                        {template.is_default !== 1 && (
+                                        {template.is_default !== 1 && settings.active_template_id !== template.id && (
                                             <button
                                                 onClick={() => handleDeleteTemplate(template.id, template.name)}
                                                 disabled={deletingTemplateId === template.id}
