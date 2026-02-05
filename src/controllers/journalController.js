@@ -21,32 +21,28 @@ export async function handleJournalRequest(request, env) {
                 const periodId = url.searchParams.get("period_id");
                 const month = url.searchParams.get("month"); // Format: YYYY-MM
 
+                // DEBUG: Simplified query without JOINS to isolate error
                 let query = `
-                  SELECT 
-                    j.*,
-                    c.name as class_name,
-                    p.name as period_name
-                  FROM teaching_journals j
-                  LEFT JOIN classes c ON j.class_id = c.id
-                  LEFT JOIN academic_periods p ON j.period_id = p.id
+                  SELECT *
+                  FROM teaching_journals
                   WHERE 1=1
                 `;
                 const params = [];
 
                 if (classId) {
-                    query += " AND j.class_id = ?";
+                    query += " AND class_id = ?";
                     params.push(classId);
                 }
                 if (periodId) {
-                    query += " AND j.period_id = ?";
+                    query += " AND period_id = ?";
                     params.push(periodId);
                 }
                 if (month) {
-                    query += " AND j.date LIKE ?";
+                    query += " AND date LIKE ?";
                     params.push(`${month}%`);
                 }
 
-                query += " ORDER BY j.date DESC, j.start_time ASC";
+                query += " ORDER BY date DESC, start_time ASC";
 
                 // DEBUG LOG
                 console.log("DEBUG: Executing query:", query, "Params:", params);
@@ -73,6 +69,8 @@ export async function handleJournalRequest(request, env) {
                     }
                     return {
                         ...j,
+                        class_name: j.class_name || "Class Info unavailable",
+                        period_name: j.period_name || "Period Info unavailable",
                         custom_data: customData
                     };
                 });
