@@ -233,9 +233,32 @@ export async function handleJournalRequest(request, env) {
         SELECT * FROM journal_templates ORDER BY is_default DESC, name ASC
       `).all();
 
+            // Safe parse helper: handles double-stringify and ensures key property
+            const safeParseConfig = (configStr) => {
+                if (!configStr) return [];
+                try {
+                    let parsed = JSON.parse(configStr);
+                    // Handle double-stringify case
+                    if (typeof parsed === 'string') {
+                        parsed = JSON.parse(parsed);
+                    }
+                    // Ensure each column has 'key' property
+                    if (Array.isArray(parsed)) {
+                        return parsed.map(col => ({
+                            ...col,
+                            key: col.key || col.id || `col_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`
+                        }));
+                    }
+                    return [];
+                } catch (e) {
+                    console.error('Error parsing template_config:', e);
+                    return [];
+                }
+            };
+
             const templates = results.map(t => ({
                 ...t,
-                template_config: t.template_config ? JSON.parse(t.template_config) : []
+                template_config: safeParseConfig(t.template_config)
             }));
 
             return jsonResponse({ templates });
