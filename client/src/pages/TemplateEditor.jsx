@@ -62,7 +62,7 @@ function SortableColumnItem({ column, onEdit, onDelete }) {
         opacity: isDragging ? 0.5 : 1
     };
 
-    const typeInfo = COLUMN_TYPES.find(t => t.type === column.type) || COLUMN_TYPES[0];
+    const typeInfo = COLUMN_TYPES.find(t => t.id === column.type) || COLUMN_TYPES[0];
     const Icon = typeInfo.icon;
 
     return (
@@ -313,8 +313,10 @@ export default function TemplateEditor() {
     };
 
     const handleAddColumn = (type) => {
+        const columnId = `col_${Date.now()}`;
         const newColumn = {
-            id: `col_${Date.now()}`,
+            id: columnId,
+            key: columnId, // Add key property for Journal.jsx compatibility
             type: type.id,
             label: type.label,
             required: false,
@@ -364,7 +366,7 @@ export default function TemplateEditor() {
             const payload = {
                 id: id ? parseInt(id) : undefined,
                 name: templateName,
-                template_config: JSON.stringify(columns)
+                template_config: columns // Send array directly, backend handles JSON.stringify
             };
 
             const res = await fetchApi('/api/journal-templates', {

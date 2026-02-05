@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchApi } from '../hooks/../utils/api';
 import { Spinner } from '../components/UI';
 import { useAlertContext } from '../components/Alert';
-import { Settings, Image as ImageIcon, Upload, User, Building, FileText, ArrowLeft, Save, Settings as SettingsIcon } from 'lucide-react';
+import { Settings, Image as ImageIcon, Upload, User, Building, FileText, ArrowLeft, Save, Settings as SettingsIcon, Trash2, Edit } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function JournalSettings() {
@@ -22,16 +22,28 @@ export default function JournalSettings() {
         signature_image_url: ''
     });
 
-    // Fetch settings on mount
+    // Templates state
+    const [templates, setTemplates] = useState([]);
+    const [deletingTemplateId, setDeletingTemplateId] = useState(null);
+
+    // Fetch settings and templates on mount
     useEffect(() => {
-        const fetchSettings = async () => {
+        const fetchData = async () => {
             try {
-                const res = await fetchApi('/api/journal-settings');
-                if (res.ok) {
-                    const data = await res.json();
+                // Fetch settings
+                const settingsRes = await fetchApi('/api/journal-settings');
+                if (settingsRes.ok) {
+                    const data = await settingsRes.json();
                     if (data.settings) {
                         setSettings(data.settings);
                     }
+                }
+
+                // Fetch templates
+                const templatesRes = await fetchApi('/api/journal-templates');
+                if (templatesRes.ok) {
+                    const data = await templatesRes.json();
+                    setTemplates(data.templates || []);
                 }
             } catch (e) {
                 console.error(e);
@@ -39,8 +51,31 @@ export default function JournalSettings() {
                 setLoading(false);
             }
         };
-        fetchSettings();
+        fetchData();
     }, []);
+
+    // Delete template
+    const handleDeleteTemplate = async (id, name) => {
+        if (!confirm(`Hapus template "${name}"?`)) return;
+
+        setDeletingTemplateId(id);
+        try {
+            const res = await fetchApi(`/api/journal-templates?id=${id}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                setTemplates(prev => prev.filter(t => t.id !== id));
+                showAlert('Template berhasil dihapus.', 'success');
+            } else {
+                const err = await res.json();
+                showAlert(err.error || 'Gagal menghapus template.', 'error');
+            }
+        } catch (e) {
+            showAlert('Terjadi kesalahan.', 'error');
+        } finally {
+            setDeletingTemplateId(null);
+        }
+    };
 
     // Handle input change
     const handleChange = (field, value) => {
@@ -158,20 +193,66 @@ export default function JournalSettings() {
             <div className="space-y-6">
                 {/* Template Management Section */}
                 <div className="bg-white rounded-xl border border-zinc-200 p-6 shadow-sm">
-                    <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2 mb-4">
-                        <FileText size={20} className="text-orange-500" />
-                        Template Jurnal
-                    </h3>
-                    <p className="text-sm text-zinc-500 mb-4">
-                        Atur kolom-kolom yang akan muncul di form jurnal mengajar.
-                    </p>
-                    <Link
-                        to="/journal/template-editor"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white font-bold rounded-xl hover:bg-zinc-800 transition"
-                    >
-                        <SettingsIcon size={18} />
-                        Atur Template
-                    </Link>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
+                            <FileText size={20} className="text-orange-500" />
+                            Template Jurnal
+                        </h3>
+                        <Link
+                            to="/journal/template-editor"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white text-sm font-bold rounded-lg hover:bg-orange-700 transition"
+                        >
+                            <SettingsIcon size={16} />
+                            Buat Baru
+                        </Link>
+                    </div>
+
+                    {/* Template List */}
+                    <div className="space-y-2">
+                        {templates.length === 0 ? (
+                            <p className="text-sm text-zinc-400 py-4 text-center">Belum ada template.</p>
+                        ) : (
+                            templates.map(template => (
+                                <div
+                                    key={template.id}
+                                    className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg border border-zinc-100 hover:bg-zinc-100 transition"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <FileText size={18} className="text-zinc-400" />
+                                        <div>
+                                            <p className="font-medium text-zinc-800">{template.name}</p>
+                                            {template.is_default === 1 && (
+                                                <span className="text-xs text-orange-600 font-medium">Default</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Link
+                                            to={`/journal/template-editor/${template.id}`}
+                                            className="p-2 hover:bg-zinc-200 rounded-lg transition"
+                                            title="Edit"
+                                        >
+                                            <Edit size={16} className="text-zinc-500" />
+                                        </Link>
+                                        {template.is_default !== 1 && (
+                                            <button
+                                                onClick={() => handleDeleteTemplate(template.id, template.name)}
+                                                disabled={deletingTemplateId === template.id}
+                                                className="p-2 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                                                title="Hapus"
+                                            >
+                                                {deletingTemplateId === template.id ? (
+                                                    <Spinner size="sm" />
+                                                ) : (
+                                                    <Trash2 size={16} className="text-red-500" />
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
 
                 {/* School Info Section */}
