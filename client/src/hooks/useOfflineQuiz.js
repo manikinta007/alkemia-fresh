@@ -125,6 +125,17 @@ export const useOfflineQuiz = (quizId, duration) => {
         return violationCountRef.current;
     }, [durationSeconds]);
 
+    // Log violation WITHOUT incrementing auto-submit counter (for warnings only)
+    const logViolation = useCallback((type) => {
+        const newViolation = {
+            type,
+            count: 0, // Not counted towards auto-submit
+            atSecond: durationSeconds,
+            timestamp: new Date().toISOString()
+        };
+        setViolations(prev => [...prev, newViolation]);
+    }, [durationSeconds]);
+
     // ========== CLEANUP ==========
     const clearData = useCallback(async () => {
         try {
@@ -162,6 +173,7 @@ export const useOfflineQuiz = (quizId, duration) => {
         violations,
         violationCount: violationCountRef.current,
         addViolation,
+        logViolation,
 
         // Cleanup
         clearData

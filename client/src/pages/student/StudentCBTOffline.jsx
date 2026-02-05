@@ -147,6 +147,7 @@ export const StudentCBTOffline = ({ quiz, onFinish }) => {
         getFormattedAnswers,
         violations,
         addViolation,
+        logViolation,
         clearData
     } = useOfflineQuiz(quiz.id, quiz.duration);
 
@@ -255,11 +256,11 @@ export const StudentCBTOffline = ({ quiz, onFinish }) => {
             return;
         }
 
-        // Only add violation when transitioning from offline to online
+        // Only log violation when transitioning from offline to online
         if (isOnline && !wasOnlineRef.current) {
-            // Just log it, don't add to counter that triggers auto-submit
-            console.log('Connection detected during exam');
-            // Note: We still show the overlay but don't count towards auto-submit
+            // Log it but don't count towards auto-submit
+            logViolation('CONNECTION_DETECTED');
+            console.log('Connection detected during exam - logged but not counted');
         }
 
         wasOnlineRef.current = isOnline;
