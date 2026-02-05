@@ -61,6 +61,36 @@ export async function handleJournalRequest(request, env) {
             return jsonResponse({ journals });
         }
 
+        // GET /api/journals/attendance - Get attendance summary for journal
+        // NOTE: This must come BEFORE /api/journals/:id to avoid route conflict
+        if (pathname === "/api/journals/attendance" && method === "GET") {
+            const classId = url.searchParams.get("class_id");
+            const date = url.searchParams.get("date");
+
+            if (!classId || !date) {
+                return jsonResponse({ error: "class_id dan date wajib diisi" }, 400);
+            }
+
+            // Get attendance summary for the class on given date
+            const { results } = await env.DB.prepare(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN status = 'H' THEN 1 ELSE 0 END) as hadir,
+          SUM(CASE WHEN status = 'S' THEN 1 ELSE 0 END) as sakit,
+          SUM(CASE WHEN status = 'I' THEN 1 ELSE 0 END) as izin,
+          SUM(CASE WHEN status = 'A' THEN 1 ELSE 0 END) as alpa
+        FROM attendance
+        WHERE class_id = ? AND date = ?
+      `).bind(classId, date).all();
+
+            const summary = results[0] || { total: 0, hadir: 0, sakit: 0, izin: 0, alpa: 0 };
+
+            return jsonResponse({
+                attendance: summary,
+                formatted: `H: ${summary.hadir} | S: ${summary.sakit} | I: ${summary.izin} | A: ${summary.alpa}`
+            });
+        }
+
         // GET /api/journals/:id - Get single journal
         if (pathname.match(/^\/api\/journals\/\d+$/) && method === "GET") {
             const id = pathname.split("/").pop();
@@ -369,38 +399,7 @@ export async function handleJournalRequest(request, env) {
             });
         }
 
-        // ============================================
-        // 4. ATTENDANCE DATA FOR JOURNAL (Read-only)
-        // ============================================
-
-        // GET /api/journals/attendance - Get attendance summary for journal
-        if (pathname === "/api/journals/attendance" && method === "GET") {
-            const classId = url.searchParams.get("class_id");
-            const date = url.searchParams.get("date");
-
-            if (!classId || !date) {
-                return jsonResponse({ error: "class_id dan date wajib diisi" }, 400);
-            }
-
-            // Get attendance summary for the class on given date
-            const { results } = await env.DB.prepare(`
-        SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN status = 'H' THEN 1 ELSE 0 END) as hadir,
-          SUM(CASE WHEN status = 'S' THEN 1 ELSE 0 END) as sakit,
-          SUM(CASE WHEN status = 'I' THEN 1 ELSE 0 END) as izin,
-          SUM(CASE WHEN status = 'A' THEN 1 ELSE 0 END) as alpa
-        FROM attendance
-        WHERE class_id = ? AND date = ?
-      `).bind(classId, date).all();
-
-            const summary = results[0] || { total: 0, hadir: 0, sakit: 0, izin: 0, alpa: 0 };
-
-            return jsonResponse({
-                attendance: summary,
-                formatted: `H: ${summary.hadir} | S: ${summary.sakit} | I: ${summary.izin} | A: ${summary.alpa}`
-            });
-        }
+        // NOTE: Attendance endpoint moved to line 64-93 for correct route priority
 
         return null;
 
