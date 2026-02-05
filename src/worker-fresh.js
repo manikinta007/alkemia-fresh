@@ -10,7 +10,6 @@ import { handlePageRequest } from './routes/pages.js';
 
 // --- SPECIFIC CONTROLLERS (New Features) ---
 import { handleTaskRequest } from './controllers/taskController.js';
-import { handleMigrationRequest } from './controllers/migrationController.js';
 import { handleOfflineQuizRequest } from './controllers/offlineQuizController.js';
 
 // --- CONFIG & HEADERS ---
@@ -48,12 +47,7 @@ export default {
       // A. JIKA REQUEST KE API (DATA) - Backend Logic
       if (pathname.startsWith("/api/")) {
 
-        // [JALUR KHUSUS 1] Migrasi Database
-        if (pathname.startsWith("/api/migrate/")) {
-          return await handleMigrationRequest(request, env);
-        }
-
-        // [JALUR KHUSUS 2] Modul Tugas & Remedial (Guru & Siswa)
+        // [JALUR KHUSUS 1] Modul Tugas & Remedial (Guru & Siswa)
         if (pathname.startsWith("/api/tasks") ||
           pathname === "/api/student/tasks" ||
           pathname === "/api/student/task-detail" ||
@@ -63,7 +57,7 @@ export default {
           return await handleTaskRequest(request, env);
         }
 
-        // [JALUR KHUSUS 3] Offline Quiz (CBT Mode Offline)
+        // [JALUR KHUSUS 2] Offline Quiz (CBT Mode Offline)
         if (pathname.match(/^\/api\/quiz\/\d+\/offline-/) ||
           pathname.startsWith("/api/quiz/offline/")) {
           return await handleOfflineQuizRequest(request, env);

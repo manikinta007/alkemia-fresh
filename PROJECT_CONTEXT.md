@@ -79,9 +79,6 @@ main ──────────────────────●──
 - [x] **Dashboard Refactor**:
     - [x] Fixed Legacy Links (SPA Navigation).
     - [x] **Deep Linking**: implemented `class_id` auto-selection for Attendance & Materials.
-
-### ⏳ Pending / Next Steps
-- [ ] **DB Initialization (Fresh)**: Run `/api/init` on the fresh production deployment.
 - [x] **Grades (Nilai)**: Migrate `grades.js` -> `Grades.jsx`.
 - [x] **Attendance**: Migrate `Attendance.jsx`.
 - [x] **Schedule**: Migrate `schedule.js` -> `Schedule.jsx`.
