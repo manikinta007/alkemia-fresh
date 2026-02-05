@@ -3,7 +3,7 @@ import { useJournalData } from '../hooks/useJournalData';
 import { Spinner } from '../components/UI';
 import { GridSkeleton } from '../components/Skeleton';
 import { useAlertContext } from '../components/Alert';
-import { BookOpen, Plus, Trash2, X, Edit2, Calendar, Clock, FileText, ChevronDown, Settings } from 'lucide-react';
+import { BookOpen, Plus, Trash2, X, Edit2, Calendar, Clock, FileText, ChevronDown, Settings, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 // Format date helper
@@ -366,6 +366,61 @@ export default function Journal() {
     const [showModal, setShowModal] = useState(false);
     const [editData, setEditData] = useState(null);
 
+    // CSV Export Function
+    const exportCSV = () => {
+        if (journals.length === 0) {
+            showAlert('Tidak ada data untuk di-export.', 'error');
+            return;
+        }
+
+        const className = classes.find(c => c.id === parseInt(selectedClassId))?.name || 'AllClasses';
+        const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label.replace(/ /g, '_') || 'AllMonths';
+
+        // Get template columns
+        const templateConfig = selectedTemplate?.template_config || [];
+
+        // CSV Headers: Basic + Template Columns
+        const headers = [
+            'Tanggal',
+            'Kelas',
+            'Jam Mulai',
+            'Jam Selesai',
+            ...templateConfig.map(f => f.label)
+        ];
+
+        // CSV Rows
+        const rows = journals.map(j => {
+            const customData = j.custom_data || {};
+            return [
+                j.date,
+                j.class_name,
+                j.start_time || '-',
+                j.end_time || '-',
+                ...templateConfig.map(f => {
+                    const value = customData[f.key] || '-';
+                    // Escape commas and quotes in CSV
+                    return `"${String(value).replace(/"/g, '""')}"`;
+                })
+            ];
+        });
+
+        // Build CSV Content
+        const csvContent = [
+            headers.map(h => `"${h}"`).join(','),
+            ...rows.map(r => r.join(','))
+        ].join('\n');
+
+        // Download CSV
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `jurnal_${className}_${monthLabel}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        showAlert('CSV berhasil didownload!', 'success');
+    };
+
     const handleEdit = (journal) => {
         setEditData(journal);
         setShowModal(true);
@@ -401,6 +456,15 @@ export default function Journal() {
                 </div>
 
                 <div className="flex gap-2">
+                    <button
+                        onClick={exportCSV}
+                        disabled={!selectedClassId || journals.length === 0}
+                        className="px-4 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        title="Download CSV"
+                    >
+                        <Download size={18} />
+                        <span className="hidden md:inline">CSV</span>
+                    </button>
                     <Link
                         to="/journal/settings"
                         className="px-4 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-bold hover:bg-zinc-200 transition flex items-center gap-2"
