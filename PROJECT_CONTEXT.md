@@ -352,14 +352,118 @@ Reorganized sidebar menu to follow the teaching workflow:
 
 ## 10. Future Roadmap (Planned)
 
-### 🗓️ Phase 1: Teaching Journal (Jurnal Mengajar) - **NEXT PRIORITY**
-- **Objective**: Digitalize daily teaching logs required for school administration.
-- **Integration**: Embedded within **Attendance (Presensi)** menu for seamless workflow.
-- **Components**:
-  - **Input**: Topic (Materi), Activities (Kegiatan), Notes (Catatan/Kendala).
-  - **Storage**: New table `teaching_journals` linked to `class_id` + `date`.
-  - **Output**: Exportable PDF Report (Agenda Guru) per semester/month.
-  - **UX**: "Copy from Previous Class" feature for parallel classes.
+### 🗓️ Phase 1: Teaching Journal (Jurnal Mengajar) - **IN PLANNING**
+
+#### **Objective**
+Digitalize daily teaching logs required for school administration with dynamic template support, auto-attendance integration, and professional PDF export.
+
+#### **Key Features**
+1.  **Dynamic Templates**: Guru can customize journal columns via drag-n-drop editor
+2.  **3 Default Templates**: Kurikulum Merdeka, K13 (Kurikulum 2013), Minimalis
+3.  **Auto-Attendance**: Special column type fetches S/I/A data from existing `attendance` table
+4.  **PDF Export**: Generate professional reports with custom KOP (letterhead) and signature
+5.  **Customizable Settings**: Upload school logo, configure KOP, add digital signature
+
+#### **Database Schema**
+
+**Table 1: `teaching_journals`**
+```sql
+CREATE TABLE teaching_journals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  period_id INTEGER,
+  class_id INTEGER NOT NULL,
+  date TEXT NOT NULL,
+  start_time TEXT,
+  end_time TEXT,
+  custom_data TEXT, -- JSON: {"jp": "2", "tujuan": "...", "iktp": "..."}
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (period_id) REFERENCES academic_periods(id),
+  FOREIGN KEY (class_id) REFERENCES classes(id)
+)
+```
+
+**Table 2: `journal_templates`**
+```sql
+CREATE TABLE journal_templates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  is_default INTEGER DEFAULT 0,
+  template_config TEXT, -- JSON Array of column definitions
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+**Table 3: `journal_settings`**
+```sql
+CREATE TABLE journal_settings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  school_name TEXT,
+  school_address TEXT,
+  school_logo_url TEXT,
+  pdf_orientation TEXT DEFAULT 'landscape',
+  signature_name TEXT,
+  signature_nip TEXT,
+  signature_image_url TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+#### **Backend API**
+
+**New Controller**: `src/controllers/journalController.js`
+
+**Endpoints**:
+- `GET /api/journals?class_id=X&date=Y` - List journals
+- `POST /api/journals` - Create journal
+- `PUT /api/journals` - Update journal
+- `DELETE /api/journals?id=X` - Delete journal
+- `GET /api/journal-templates` - List templates
+- `GET /api/journal-templates/:id` - Get template detail
+- `POST /api/journal-templates` - Save/update template
+- `GET /api/journal-settings` - Get settings (KOP, signature)
+- `PUT /api/journal-settings` - Update settings
+- `POST /api/journal-settings/upload-logo` - Upload logo to R2
+- `POST /api/journal-settings/upload-signature` - Upload signature to R2
+- `GET /api/journals/export-pdf?class_id=X&month=Y&orientation=Z` - Export PDF
+
+#### **Frontend Components**
+
+**New Pages**:
+- `client/src/pages/Journal.jsx` - Main list page with filters
+- `client/src/pages/JournalForm.jsx` - Dynamic form (renders based on template)
+- `client/src/pages/TemplateEditor.jsx` - Drag-n-drop column editor
+- `client/src/pages/JournalSettings.jsx` - Configure KOP, logo, signature
+
+**Custom Hooks**:
+- `client/src/hooks/useJournalData.js` - CRUD operations
+- `client/src/hooks/useJournalTemplates.js` - Template management
+
+**Dependencies**:
+- `@dnd-kit/core` - Drag-and-drop utilities
+- `@dnd-kit/sortable` - Sortable list components
+
+#### **Default Templates**
+
+**1. Kurikulum Merdeka**
+Columns: JP, Temu Ke-, Tujuan Pembelajaran, IKTP, Materi, Capaian KKTP, Absensi, Keterangan
+
+**2. Kurikulum 2013**
+Columns: Kompetensi Dasar, Indikator, Materi Pokok, Metode, Absensi, Refleksi
+
+**3. Minimalis**
+Columns: Materi, Kegiatan Pembelajaran, Absensi, Catatan
+
+#### **PDF Export Features**
+- Custom KOP with school name, address, logo
+- Table with dynamic columns (based on template)
+- Footer with signature (name, NIP, signature image)
+- Orientation: Landscape or Portrait (user choice)
+
+#### **Implementation Strategy**
+- **Zero Regression**: All new files, no modification to existing features
+- **Migration Endpoint**: `/api/migrate/journals` (One-time setup)
+- **Menu Location**: Sidebar → KBM → Jurnal Mengajar
+- **Settings**: Accessible via submenu "Pengaturan Jurnal"
 
 ### 📊 Phase 2: Grade Integration (Integrasi Nilai)
 - **Objective**: Auto-sync scores from Quizzes/Tasks to the Gradebook (Buku Nilai).
