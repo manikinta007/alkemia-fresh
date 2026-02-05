@@ -230,7 +230,7 @@ export const StudentCBTOffline = ({ quiz, onFinish }) => {
         if (phase !== 'IN_EXAM' || hasFinishedRef.current) return;
 
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'hidden') {
+            if (document.visibilityState === 'hidden' && !hasFinishedRef.current) {
                 const level = addViolation('TAB_SWITCH');
                 violationLevel.current = level;
 
@@ -246,7 +246,7 @@ export const StudentCBTOffline = ({ quiz, onFinish }) => {
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-    }, [phase, addViolation]);
+    }, [phase]); // Removed addViolation from deps to prevent re-registration
 
     // ========== CONNECTION DURING EXAM (only on transition offline→online) ==========
     useEffect(() => {

@@ -251,11 +251,25 @@ export async function handleOfflineQuizRequest(request, env) {
           s.name ASC
       `).bind(quizId, quiz.class_id).all();
 
-            // Parse violations count
-            const studentsWithViolations = results.map(s => ({
-                ...s,
-                violationCount: s.offline_violations ? JSON.parse(s.offline_violations).length : 0
-            }));
+            // Parse violations by type
+            const studentsWithViolations = results.map(s => {
+                let tabSwitchCount = 0;
+                let connectionCount = 0;
+
+                if (s.offline_violations) {
+                    try {
+                        const violations = JSON.parse(s.offline_violations);
+                        tabSwitchCount = violations.filter(v => v.type === 'TAB_SWITCH').length;
+                        connectionCount = violations.filter(v => v.type === 'CONNECTION_DETECTED').length;
+                    } catch (e) { }
+                }
+
+                return {
+                    ...s,
+                    tabSwitchCount,
+                    connectionCount
+                };
+            });
 
             return jsonResponse({
                 students: studentsWithViolations,

@@ -60,9 +60,14 @@ const OfflineMonitorPanel = ({ quizId }) => {
                             <span className="font-medium text-sm text-zinc-800">{s.student_name}</span>
                             <div className="flex items-center gap-2">
                                 {getStatusBadge(s.offline_status)}
-                                {s.violationCount > 0 && (
-                                    <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                                        <AlertTriangle size={10} /> {s.violationCount}
+                                {s.tabSwitchCount > 0 && (
+                                    <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold">
+                                        📱 {s.tabSwitchCount}
+                                    </span>
+                                )}
+                                {s.connectionCount > 0 && (
+                                    <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">
+                                        📡 {s.connectionCount}
                                     </span>
                                 )}
                                 {s.score !== null && s.offline_status === 'submitted' && (
