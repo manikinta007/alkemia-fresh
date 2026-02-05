@@ -1,2 +1,5 @@
+# Exclude API routes from SPA fallback
+/api/*  /api/:splat  200
+
 # SPA Catch-all (Must be last)
 /*  /index.html  200
