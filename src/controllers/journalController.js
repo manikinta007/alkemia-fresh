@@ -67,9 +67,10 @@ export async function handleJournalRequest(request, env) {
 
                 if (periodIds.length > 0) {
                     const placeholders = periodIds.map(() => '?').join(',');
-                    const periodRes = await env.DB.prepare(`SELECT id, name FROM academic_periods WHERE id IN (${placeholders})`)
+                    // Note: academic_periods has 'year' and 'semester', not 'name'
+                    const periodRes = await env.DB.prepare(`SELECT id, year, semester FROM academic_periods WHERE id IN (${placeholders})`)
                         .bind(...periodIds).all();
-                    (periodRes.results || []).forEach(p => periodsMap[p.id] = p.name);
+                    (periodRes.results || []).forEach(p => periodsMap[p.id] = `${p.year} - ${p.semester}`);
                 }
 
                 // 4. Map Data & Parse JSON
