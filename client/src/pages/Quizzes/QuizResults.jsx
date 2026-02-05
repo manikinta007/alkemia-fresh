@@ -1,31 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, RefreshCcw, MonitorPlay, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
+import { Trophy, RefreshCcw, WifiOff } from 'lucide-react';
 import { LiveLeaderboard } from './LiveLeaderboard';
 import { fetchApi } from '../../utils/api';
 
-// Offline Monitoring Panel Component
-const OfflineMonitorPanel = ({ quizId }) => {
-    const [students, setStudents] = useState([]);
-    const [loading, setLoading] = useState(true);
+export const QuizResults = ({ activeQuiz, results, fetchResults, onReset, onBack }) => {
+    const [showLeaderboard, setShowLeaderboard] = useState(false);
+    const [offlineData, setOfflineData] = useState([]);
     const [lastUpdate, setLastUpdate] = useState(null);
 
-    const fetchMonitor = async () => {
-        try {
-            const res = await fetchApi(`/api/quiz/${quizId}/offline-monitor`);
-            const data = await res.json();
-            setStudents(data.students || []);
-            setLastUpdate(new Date());
-            setLoading(false);
-        } catch (e) {
-            console.error('Offline monitor fetch error:', e);
-        }
-    };
+    const isOfflineMode = activeQuiz.is_offline_mode === 1;
 
+    // Poll for offline monitoring data (if offline mode)
     useEffect(() => {
-        fetchMonitor();
-        const interval = setInterval(fetchMonitor, 10000); // Auto-refresh 10 detik
+        if (!isOfflineMode) {
+            // Online mode: use existing results polling
+            fetchResults(activeQuiz.id);
+            const interval = setInterval(() => { fetchResults(activeQuiz.id); }, 5000);
+            return () => clearInterval(interval);
+        }
+
+        // Offline mode: use offline-monitor endpoint
+        const fetchOffline = async () => {
+            try {
+                const res = await fetchApi(`/api/quiz/${activeQuiz.id}/offline-monitor`);
+                const data = await res.json();
+                setOfflineData(data.students || []);
+                setLastUpdate(new Date());
+            } catch (e) {
+                console.error('Offline monitor error:', e);
+            }
+        };
+        fetchOffline();
+        const interval = setInterval(fetchOffline, 10000);
         return () => clearInterval(interval);
-    }, [quizId]);
+    }, [activeQuiz, isOfflineMode]);
 
     const getStatusBadge = (status) => {
         switch (status) {
@@ -37,68 +45,14 @@ const OfflineMonitorPanel = ({ quizId }) => {
         }
     };
 
-    return (
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                    <WifiOff className="text-purple-600" size={20} />
-                    <h3 className="font-bold text-purple-900">Monitoring Mode Offline</h3>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-purple-600">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    Auto-refresh 10 detik
-                    {lastUpdate && <span className="text-purple-400 ml-2">{lastUpdate.toLocaleTimeString('id-ID')}</span>}
-                </div>
-            </div>
-
-            {loading ? (
-                <div className="text-center py-4 text-purple-500">Memuat...</div>
-            ) : (
-                <div className="grid gap-2 max-h-40 overflow-y-auto">
-                    {students.map(s => (
-                        <div key={s.student_id} className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-purple-100">
-                            <span className="font-medium text-sm text-zinc-800">{s.student_name}</span>
-                            <div className="flex items-center gap-2">
-                                {getStatusBadge(s.offline_status)}
-                                {s.tabSwitchCount > 0 && (
-                                    <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold">
-                                        📱 {s.tabSwitchCount}
-                                    </span>
-                                )}
-                                {s.connectionCount > 0 && (
-                                    <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">
-                                        📡 {s.connectionCount}
-                                    </span>
-                                )}
-                                {s.score !== null && s.offline_status === 'submitted' && (
-                                    <span className="text-xs font-bold text-zinc-600">{s.score}</span>
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                    {students.length === 0 && <div className="text-center py-2 text-purple-400 text-sm">Belum ada siswa.</div>}
-                </div>
-            )}
-        </div>
-    );
-};
-
-export const QuizResults = ({ activeQuiz, results, fetchResults, onReset, onBack }) => {
-    const [showLeaderboard, setShowLeaderboard] = useState(false);
-
-    // Poll Results
-    useEffect(() => {
-        fetchResults(activeQuiz.id);
-        const interval = setInterval(() => { fetchResults(activeQuiz.id); }, 5000);
-        return () => clearInterval(interval);
-    }, [activeQuiz]);
+    // Data to display (offline or online)
+    const displayData = isOfflineMode ? offlineData : results;
 
     return (
         <div className="max-w-4xl mx-auto animate-in fade-in pb-20">
-            {/* GIMMICK LEADERBOARD */}
             {showLeaderboard && (
                 <LiveLeaderboard
-                    results={results.filter(r => r.finish_time)}
+                    results={(isOfflineMode ? offlineData : results).filter(r => r.finish_time || r.offline_status === 'submitted')}
                     onClose={() => setShowLeaderboard(false)}
                 />
             )}
@@ -118,12 +72,16 @@ export const QuizResults = ({ activeQuiz, results, fetchResults, onReset, onBack
                 </div>
             </div>
 
-            <h2 className="text-2xl font-bold mb-6">Hasil: {activeQuiz.title}</h2>
-
-            {/* Offline Monitoring Panel - Show only for offline mode quizzes */}
-            {activeQuiz.is_offline_mode === 1 && (
-                <OfflineMonitorPanel quizId={activeQuiz.id} />
-            )}
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Hasil: {activeQuiz.title}</h2>
+                {isOfflineMode && (
+                    <div className="flex items-center gap-2 text-xs text-purple-600">
+                        <WifiOff size={14} />
+                        <span className="font-bold">MODE OFFLINE</span>
+                        {lastUpdate && <span className="text-purple-400">| Update: {lastUpdate.toLocaleTimeString('id-ID')}</span>}
+                    </div>
+                )}
+            </div>
 
             <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
                 <table className="w-full text-sm text-left">
@@ -131,29 +89,61 @@ export const QuizResults = ({ activeQuiz, results, fetchResults, onReset, onBack
                         <tr>
                             <th className="p-4">Rank</th>
                             <th className="p-4">Nama Siswa</th>
+                            {isOfflineMode && <th className="p-4">Status</th>}
+                            {isOfflineMode && <th className="p-4 text-center">📱</th>}
+                            {isOfflineMode && <th className="p-4 text-center">📡</th>}
                             <th className="p-4">Nilai</th>
                             <th className="p-4">Waktu Selesai</th>
                             <th className="p-4 text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-100">
-                        {results.map((r, i) => {
-                            const scoreClass = r.score >= 75 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                        {displayData.map((r, i) => {
+                            const isFinished = r.finish_time || r.offline_status === 'submitted';
+                            const scoreClass = (r.score || 0) >= 75 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                            const studentId = r.student_id;
+                            const studentName = r.student_name || r.name;
+
                             return (
-                                <tr key={i} className="hover:bg-zinc-50 transition">
-                                    <td className="p-4 text-zinc-500">{r.finish_time ? ('#' + (i + 1)) : '-'}</td>
-                                    <td className="p-4 font-bold text-zinc-800">{r.student_name}</td>
-                                    <td className="p-4">{r.finish_time ? (<span className={'px-2 py-1 rounded text-xs font-bold ' + scoreClass}>{r.score}</span>) : (<span className="text-xs font-bold text-red-500 bg-red-100 px-2 py-1 rounded">0</span>)}</td>
-                                    <td className="p-4 text-zinc-500 font-mono text-xs">{r.finish_time ? new Date(r.finish_time).toLocaleString('id-ID') : (<span className="text-red-500 font-bold text-xs uppercase">BELUM / ABSEN</span>)}</td>
+                                <tr key={studentId || i} className="hover:bg-zinc-50 transition">
+                                    <td className="p-4 text-zinc-500">{isFinished ? ('#' + (i + 1)) : '-'}</td>
+                                    <td className="p-4 font-bold text-zinc-800">{studentName}</td>
+                                    {isOfflineMode && <td className="p-4">{getStatusBadge(r.offline_status)}</td>}
+                                    {isOfflineMode && (
+                                        <td className="p-4 text-center">
+                                            {(r.tabSwitchCount || 0) > 0 ? (
+                                                <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold">{r.tabSwitchCount}</span>
+                                            ) : <span className="text-zinc-300">0</span>}
+                                        </td>
+                                    )}
+                                    {isOfflineMode && (
+                                        <td className="p-4 text-center">
+                                            {(r.connectionCount || 0) > 0 ? (
+                                                <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">{r.connectionCount}</span>
+                                            ) : <span className="text-zinc-300">0</span>}
+                                        </td>
+                                    )}
+                                    <td className="p-4">
+                                        {isFinished ? (
+                                            <span className={'px-2 py-1 rounded text-xs font-bold ' + scoreClass}>{r.score ?? 0}</span>
+                                        ) : (
+                                            <span className="text-xs text-zinc-400">-</span>
+                                        )}
+                                    </td>
+                                    <td className="p-4 text-zinc-500 font-mono text-xs">
+                                        {r.finish_time ? new Date(r.finish_time).toLocaleString('id-ID') : (
+                                            <span className="text-red-500 font-bold text-xs uppercase">BELUM</span>
+                                        )}
+                                    </td>
                                     <td className="p-4 text-center">
-                                        <button onClick={() => onReset(activeQuiz.id, r.student_id)} className="text-zinc-400 hover:text-red-600 p-1 transition" title="Reset Ujian Siswa Ini">
+                                        <button onClick={() => onReset(activeQuiz.id, studentId)} className="text-zinc-400 hover:text-red-600 p-1 transition" title="Reset Ujian Siswa Ini">
                                             <RefreshCcw size={16} />
                                         </button>
                                     </td>
                                 </tr>
                             );
                         })}
-                        {results.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-zinc-400">Belum ada siswa di kelas ini.</td></tr>}
+                        {displayData.length === 0 && <tr><td colSpan={isOfflineMode ? 8 : 5} className="p-8 text-center text-zinc-400">Belum ada siswa di kelas ini.</td></tr>}
                     </tbody>
                 </table>
             </div>
