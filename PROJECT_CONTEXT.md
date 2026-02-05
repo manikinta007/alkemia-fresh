@@ -170,6 +170,25 @@ main ──────────────────────●──
     - **PG Score Sync Fix**: Backend now automatically recalculates and updates PG `task_answers.score` when teacher saves grades. Fixes issue where students saw 0.0 points for correct answers if weight was changed after submission.
     - Files modified: `taskController.js`, `TaskGrading.jsx`, `Tasks.jsx`
 
+### ✅ Completed (Feb 5, 2026)
+24. ✅ **Attendance Save/Delete Not Working**:
+    - **Issue**: Confirmation modal callback pattern mismatch.
+    - **Root Cause**: `showConfirm()` in `Alert.jsx` returned Promise but was called with callback pattern.
+    - **Fix**: Modified `showConfirm()` to support BOTH callback and Promise patterns.
+    - Files modified: `Alert.jsx`
+
+25. ✅ **Class Delete 500 Error** (Complete Cascade Delete):
+    - **Issue**: Deleting class with attendance/schedules/tasks data caused FK constraint error.
+    - **Fix**: Added cascade delete for all FK tables in `classController.js`:
+      - `attendance`, `class_schedules`, `tasks` (+ child tables)
+    - Files modified: `classController.js`
+
+26. ✅ **Short Tokens for iOS PWA Manual Entry**:
+    - New QR codes now use 8-char alphanumeric (e.g., `A7B3C9XY`) instead of UUID.
+    - Teacher QR page displays `CLASSID-TOKEN` shortcode for easy sharing.
+    - `ManualCodeEntry` component in `StudentLanding.jsx` for iOS PWA data recovery.
+    - Files modified: `qrController.js`, `QRCodes.jsx`, `StudentLanding.jsx`
+
 ## 6. Future Improvement Plans (Backlog)
 
 ### ✅ Empty Answer Handling (Fixed - Feb 4, 2026)
@@ -215,50 +234,85 @@ main ──────────────────────●──
 
   - **UI**: Displayed as a thumbnail gallery with X button.
 
-## 6. Future Development Plan: Offline Mode CBT (Semi-Offline)
+## 6. ✅ Offline Mode CBT (Semi-Offline) - IMPLEMENTED (Feb 2026)
 
-### **Objective**
-Create a cheating-resistant quiz mode where students download questions, activate airplane mode to disconnect, answer locally, and reconnect to submit.
+### **Status**: FULLY IMPLEMENTED AND DEPLOYED
 
-### **Architecture Strategy**
-- **Unified Database**: Use existing `quizzes` table with new flag `is_offline_mode` (BOOLEAN).
-- **Unified Student Entry**: Students still use "Quiz" menu. Backend logic redirects to appropriate flow based on flag.
-- **Fail-Safe**: Implement as `StudentCBTOffline.jsx` (separate file) to guarantee zero regression on existing online quizzes.
+### **Architecture**
+- **Unified Database**: Added `is_offline_mode` column to `quizzes` table.
+- **Unified Entry**: Students use same "Quiz" menu; backend branches to appropriate flow.
+- **Separate Component**: `StudentCBTOffline.jsx` ensures zero regression on online quizzes.
 
-### **Component Breakdown**
-1.  **Database**:
-    - Add `is_offline_mode` column to `quizzes`.
-2.  **Teacher Side**:
-    - Add toggle "Wajib Mode Offline" in Quiz Editor / Settings.
-3.  **Student Side (Logic Branching)**:
-    - If `offline=0` -> Load `StudentCBT.jsx` (Legacy/Online).
-    - If `offline=1` -> Load `StudentCBTOffline.jsx` (New).
+### **Completed Features**
 
-### **Offline Flow (New Component)**
-1.  **Preparation (Online)**:
-    - Download 20 questions JSON.
-    - **Asset Caching**: Convert all `<img>` src URLs to Base64/Blob strings and store in IndexedDB/LocalStorage.
-2.  **Lockdown (Gate)**:
-    - Prompt: "Matikan Data / Hidupkan Mode Pesawat".
-    - Button "Mulai" disabled until `navigator.onLine === false`.
-3.  **Execution (Offline)**:
-    - Timer starts LOCALLY (`performance.now`) at click.
-    - Anti-cheat logic (visibility API) runs locally.
-    - Answers saved to `localStorage`.
-    - If connection detected (`online`), show warning/blocker.
-4.  **Submission (Re-connect)**:
-    - Prompt: "Hidupkan Data untuk Mengirim".
-    - Button "Kirim" disabled until `navigator.onLine === true`.
-    - Batch upload answers + total duration validity check.
+#### 1. **Offline Flow (Teacher Side)**
+- Toggle "Mode Offline" in Quiz Editor.
+- Real-time monitoring via `/api/quiz/:id/offline-monitor` endpoint.
+- Unified results table shows STATUS, 📱 (tab switches), and 📡 (connection detections).
 
-### **Risk Mitigation**
-- **Fallback**: Defaults to Online mode if flag is missing.
-- **Device Support**: Compatible with Android 5.0+ (using standard Blob/IndexedDB).
-- **Code Safety**: Development in separate file (`StudentCBTOffline.jsx`) ensures main logic remains untouched.
+#### 2. **Offline Flow (Student Side)**
+- **Download Phase**: Questions + images cached to IndexedDB.
+- **Image Caching**: All `<img>` src URLs converted to Base64 data URIs for offline display.
+- **Lockdown Gate**: "MULAI UJIAN" disabled until `navigator.onLine === false`.
+- **Execution**: Timer uses `performance.now()` (tamper-resistant). Answers saved locally.
+- **Violation Tracking**:
+  - `TAB_SWITCH`: Increments counter → auto-submit on 2nd offense.
+  - `CONNECTION_DETECTED`: Logged but does NOT trigger auto-submit.
+- **Submission**: Answers batch-uploaded when reconnected.
 
-- **Code Safety**: Development in separate file (`StudentCBTOffline.jsx`) ensures main logic remains untouched.
+#### 3. **PWA Enforcement & iOS Compatibility**
+- **Mandatory PWA Access**: Entire `/student/portal` blocked from browser. Must use installed PWA.
+- **iOS localStorage Issue**: Safari ↔ PWA standalone have separate storage.
+- **Solution**: Added `ManualCodeEntry` component for re-login when data lost.
+  - Teacher sees shortcode on QR page: `CLASSID-TOKEN` (e.g., `1-A7B3C9XY`).
+  - Student inputs code manually in PWA if localStorage empty.
+- **Short Tokens**: New QR codes use 8-char alphanumeric (not UUID) for easy manual entry.
 
-## 7. Future Development Plan: SaaS Transformation (Multi-Tenant)
+#### 4. **Files Modified**
+| File | Changes |
+|------|---------|
+| `quizController.js` | Added offline endpoints: download, update-status, submit |
+| `offlineQuizController.js` | Offline monitoring + violation parsing |
+| `StudentCBTOffline.jsx` | New component for offline quiz flow |
+| `useOfflineQuiz.js` | Custom hook for timer, answers, violations |
+| `imageUtils.js` | Functions for Base64 image caching |
+| `StudentPortal.jsx` | PWA enforcement block |
+| `StudentLanding.jsx` | ManualCodeEntry component for iOS |
+| `qrController.js` | Short token generation |
+| `QRCodes.jsx` | Display shortcode for teachers |
+| `QuizResults.jsx` | Unified table with offline columns |
+
+---
+
+## 7. ⚠️ Development Guidelines
+
+### **Cascade Delete for FK Tables**
+> [!IMPORTANT]
+> When adding a new feature with a table that references `classes(id)` via Foreign Key, 
+> you **MUST** add cascade delete logic in `classController.js` DELETE handler.
+
+**Currently Handled Tables:**
+- `students` (+ child: `grades`, `student_sessions`, `quiz_attempts`)
+- `quizzes` (+ child: `quiz_questions`, `quiz_attempts`)
+- `tasks` (+ child: `task_questions`, `task_submissions`, `task_answers`)
+- `attendance`
+- `class_schedules`
+- `materials`
+- `class_qr_codes`
+
+**Pattern for New Tables:**
+```javascript
+// In classController.js DELETE handler:
+// 1. If table has child FKs, delete children first (loop or subquery)
+// 2. Add to batch delete array
+await env.DB.batch([
+  env.DB.prepare("DELETE FROM your_new_table WHERE class_id = ?").bind(id),
+  // ... existing deletes
+]);
+```
+
+
+## 8. Future Development Plan: SaaS Transformation (Multi-Tenant)
 
 ### **Objective**
 Transform the single-school system into a SaaS platform where 1 Account = 1 Teacher/School, with centralized Super Admin management.
@@ -289,7 +343,7 @@ Transform the single-school system into a SaaS platform where 1 Account = 1 Teac
 - **Goal**: Lock premium features (e.g., Offline Mode) for PRO plans.
 - **Action**: Middleware checks `plan_type` before allowing access to specific API routes (e.g., `/api/quiz/offline`).
 
-## 8. Completed Features (Historical)
+## 9. Completed Features (Historical)
 ### ✅ Sidebar Restructure (Academic Flow)
 Reorganized sidebar menu to follow the teaching workflow:
 1.  **Dashboard**
@@ -299,5 +353,5 @@ Reorganized sidebar menu to follow the teaching workflow:
 5.  **Tools** (QR Code, dll)
 6.  **Pengaturan**
 
-## 7. Future Roadmap
+## 10. Future Roadmap
 - (No active roadmap items)
