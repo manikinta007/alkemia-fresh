@@ -21,28 +21,33 @@ export async function handleJournalRequest(request, env) {
                 const periodId = url.searchParams.get("period_id");
                 const month = url.searchParams.get("month"); // Format: YYYY-MM
 
-                // DEBUG: Simplified query without JOINS to isolate error
+                // DEBUG: Restoring JOINs with EXPLICIT columns to be safe
                 let query = `
-                  SELECT *
-                  FROM teaching_journals
+                  SELECT 
+                    j.id, j.period_id, j.class_id, j.date, j.start_time, j.end_time, j.custom_data, j.created_at,
+                    c.name as class_name,
+                    p.name as period_name
+                  FROM teaching_journals j
+                  LEFT JOIN classes c ON j.class_id = c.id
+                  LEFT JOIN academic_periods p ON j.period_id = p.id
                   WHERE 1=1
                 `;
                 const params = [];
 
                 if (classId) {
-                    query += " AND class_id = ?";
+                    query += " AND j.class_id = ?";
                     params.push(classId);
                 }
                 if (periodId) {
-                    query += " AND period_id = ?";
+                    query += " AND j.period_id = ?";
                     params.push(periodId);
                 }
                 if (month) {
-                    query += " AND date LIKE ?";
+                    query += " AND j.date LIKE ?";
                     params.push(`${month}%`);
                 }
 
-                query += " ORDER BY date DESC, start_time ASC";
+                query += " ORDER BY j.date DESC, j.start_time ASC";
 
                 // DEBUG LOG
                 console.log("DEBUG: Executing query:", query, "Params:", params);
@@ -69,8 +74,8 @@ export async function handleJournalRequest(request, env) {
                     }
                     return {
                         ...j,
-                        class_name: j.class_name || "Class Info unavailable",
-                        period_name: j.period_name || "Period Info unavailable",
+                        class_name: j.class_name || "Kelas Dihapus",
+                        period_name: j.period_name || "-",
                         custom_data: customData
                     };
                 });
