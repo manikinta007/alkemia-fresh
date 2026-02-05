@@ -350,5 +350,21 @@ Reorganized sidebar menu to follow the teaching workflow:
 5.  **Tools** (QR Code, dll)
 6.  **Pengaturan**
 
-## 10. Future Roadmap
-- (No active roadmap items)
+## 10. Future Roadmap (Planned)
+
+### 🗓️ Phase 1: Teaching Journal (Jurnal Mengajar) - **NEXT PRIORITY**
+- **Objective**: Digitalize daily teaching logs required for school administration.
+- **Integration**: Embedded within **Attendance (Presensi)** menu for seamless workflow.
+- **Components**:
+  - **Input**: Topic (Materi), Activities (Kegiatan), Notes (Catatan/Kendala).
+  - **Storage**: New table `teaching_journals` linked to `class_id` + `date`.
+  - **Output**: Exportable PDF Report (Agenda Guru) per semester/month.
+  - **UX**: "Copy from Previous Class" feature for parallel classes.
+
+### 📊 Phase 2: Grade Integration (Integrasi Nilai)
+- **Objective**: Auto-sync scores from Quizzes/Tasks to the Gradebook (Buku Nilai).
+- **Current Issue**: Manual double-entry required (Quiz Result → Gradebook).
+- **Plan**:
+  - **One-Click Sync**: Button "Export to Gradebook" in Quiz/Task result page.
+  - **Destination Selection**: Teacher chooses target column (UH/Tugas/UTS/UAS).
+  - **Long-term**: Dynamic columns in Gradebook (e.g., UH 1, UH 2, Tugas 1, Tugas 2) instead of fixed columns.
