@@ -48,7 +48,21 @@ export const useAlert = () => {
         setAlertState({ isOpen: true, type, message: msg });
     };
 
-    const showConfirm = (msg) => {
+    const showConfirm = (msg, onConfirmCallback) => {
+        // Support BOTH callback pattern and promise pattern
+        if (typeof onConfirmCallback === 'function') {
+            // Callback pattern: showConfirm('msg', () => { ... })
+            setConfirmState({
+                isOpen: true,
+                message: msg,
+                resolve: (result) => {
+                    if (result) onConfirmCallback();
+                }
+            });
+            return; // No promise returned in callback mode
+        }
+
+        // Promise pattern: const result = await showConfirm('msg')
         return new Promise((resolve) => {
             setConfirmState({ isOpen: true, message: msg, resolve });
         });
