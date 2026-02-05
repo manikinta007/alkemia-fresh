@@ -116,12 +116,13 @@ export async function handleClassRequest(request, env) {
           await env.DB.prepare(`DELETE FROM tasks WHERE id = ?`).bind(task.id).run();
         }
 
-        // 4. Hapus Data Lain (Materials, QR Codes, Attendance, Schedules, Kelas itu sendiri)
+        // 4. Hapus Data Lain (Materials, QR Codes, Attendance, Schedules, Journals, Kelas itu sendiri)
         await env.DB.batch([
           env.DB.prepare("DELETE FROM attendance WHERE class_id = ?").bind(id),
           env.DB.prepare("DELETE FROM class_schedules WHERE class_id = ?").bind(id),
           env.DB.prepare("DELETE FROM materials WHERE class_id = ?").bind(id),
           env.DB.prepare("DELETE FROM class_qr_codes WHERE class_id = ?").bind(id),
+          env.DB.prepare("DELETE FROM teaching_journals WHERE class_id = ?").bind(id),
           env.DB.prepare("DELETE FROM classes WHERE id = ?").bind(id)
         ]);
 

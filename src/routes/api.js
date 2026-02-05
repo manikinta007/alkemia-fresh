@@ -20,6 +20,7 @@ import { handleMigrationRequest } from '../controllers/migrationController.js'; 
 import { handleTaskRequest } from '../controllers/taskController.js'; // [NEW] Task & Remedial
 import { handleDashboardRequest } from '../controllers/dashboardController.js'; // [NEW] Dashboard Stats
 import { handleImageRequest } from '../controllers/imageController.js'; // [NEW] Gudang Gambar
+import { handleJournalRequest } from '../controllers/journalController.js'; // [NEW] Jurnal Mengajar
 
 // --- CONFIG & HEADERS ---
 // [PENTING] Ganti URL ini dengan domain Worker Anda sendiri!
@@ -216,6 +217,9 @@ export async function handleApiRequest(request, env) {
 
     // [NEW] Gudang Gambar API
     if (!apiResponse) apiResponse = await handleImageRequest(request, env);
+
+    // [NEW] Journal API (Jurnal Mengajar)
+    if (!apiResponse) apiResponse = await handleJournalRequest(request, env);
 
     // [NEW] Migration Route
     if (!apiResponse) apiResponse = await handleMigrationRequest(request, env);

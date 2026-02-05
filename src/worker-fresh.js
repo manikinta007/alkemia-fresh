@@ -88,7 +88,8 @@ export default {
             '/schedule',
             '/materials',
             '/tasks',
-            '/quizzes'
+            '/quizzes',
+            '/journal'
           ];
 
           const isSpaRoute = spaRoutes.some(r => pathname === r || pathname.startsWith(r + '/'));

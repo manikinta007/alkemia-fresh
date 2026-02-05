@@ -19,7 +19,8 @@ import {
     School,
     GraduationCap,
     MoreHorizontal,
-    Image as ImageIcon
+    Image as ImageIcon,
+    FileEdit
 } from 'lucide-react';
 import { fetchApi } from '../utils/api';
 
@@ -159,6 +160,7 @@ export default function Layout() {
                         <SidebarItem to="/schedule" icon={Calendar} label="Jadwal" />
                         <SidebarItem to="/attendance" icon={ClipboardList} label="Presensi" />
                         <SidebarItem to="/materials" icon={BookOpen} label="Bahan Ajar" />
+                        <SidebarItem to="/journal" icon={FileEdit} label="Jurnal Mengajar" />
                     </SidebarGroup>
 
                     {/* EVALUASI */}
