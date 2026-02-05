@@ -52,11 +52,19 @@ export async function handleJournalRequest(request, env) {
                 ? await stmt.bind(...params).all()
                 : await stmt.all();
 
-            // Parse custom_data JSON
-            const journals = results.map(j => ({
-                ...j,
-                custom_data: j.custom_data ? JSON.parse(j.custom_data) : {}
-            }));
+            // Parse custom_data JSON with error handling
+            const journals = (results || []).map(j => {
+                let customData = {};
+                try {
+                    customData = j.custom_data ? JSON.parse(j.custom_data) : {};
+                } catch (e) {
+                    console.error("Failed to parse custom_data for journal", j.id, e);
+                }
+                return {
+                    ...j,
+                    custom_data: customData
+                };
+            });
 
             return jsonResponse({ journals });
         }
