@@ -42,8 +42,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8788', // Updated to match running Wrangler instance
+        target: 'https://alkemia-fresh2.pages.dev', // Proxy to staging server
         changeOrigin: true,
+        secure: true,
       }
     }
   }

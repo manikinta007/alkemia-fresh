@@ -421,9 +421,9 @@ export default function StudentTasks({ student, onBack }) {
 
                     {/* Instruksi */}
                     {activeTask.description && (
-                        <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-sm text-zinc-300">
-                            <p className="font-bold text-white mb-1">Instruksi:</p>
-                            {activeTask.description}
+                        <div className="bg-zinc-900 border border-zinc-800 p-5 rounded-xl text-base text-zinc-300">
+                            <p className="font-bold text-white mb-2 text-lg">Instruksi:</p>
+                            <div className="leading-relaxed">{activeTask.description}</div>
                         </div>
                     )}
 
@@ -431,8 +431,8 @@ export default function StudentTasks({ student, onBack }) {
                         <div key={q.id} className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 shadow-sm">
                             {/* Header Soal */}
                             <div className="mb-4">
-                                <div className="flex justify-between items-start mb-2">
-                                    <span className="bg-zinc-800 text-zinc-400 px-2 py-1 rounded text-[10px] font-bold">NO {idx + 1}</span>
+                                <div className="flex justify-between items-start mb-3">
+                                    <span className="bg-orange-900/30 border border-orange-800/50 text-orange-500 px-3 py-1.5 rounded-lg text-sm font-black tracking-wide">NO {idx + 1}</span>
                                     {/* [TRANSPARANSI POIN] - Tampilkan Bobot + Poin dengan warna */}
                                     {isReadOnly && (
                                         <span className="text-[10px] font-bold">
@@ -459,7 +459,7 @@ export default function StudentTasks({ student, onBack }) {
                                         </span>
                                     )}
                                 </div>
-                                <div className="prose prose-sm prose-invert max-w-none font-medium" dangerouslySetInnerHTML={{ __html: processContentForDisplay(q.questionText) }}></div>
+                                <div className="prose prose-lg prose-invert max-w-none font-medium text-zinc-100 leading-relaxed" dangerouslySetInnerHTML={{ __html: processContentForDisplay(q.questionText) }}></div>
                                 {q.questionImageUrl && <img src={q.questionImageUrl} className="mt-3 rounded-lg border border-zinc-700 max-h-60 object-contain bg-black" />}
                             </div>
 
@@ -507,11 +507,11 @@ export default function StudentTasks({ student, onBack }) {
 
                                             return (
                                                 <div key={oIdx} onClick={() => !isReadOnly && !isExpired && handleAnswerChange(q.id, 'answerText', char)}
-                                                    className={`flex items-center gap-3 p-3 rounded-xl border transition ${itemClass}`}>
-                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border ${badgeClass}`}>
+                                                    className={`flex items-center gap-4 p-4 rounded-xl border transition ${itemClass}`}>
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${badgeClass}`}>
                                                         {char}
                                                     </div>
-                                                    <span className="text-sm font-medium">{opt}</span>
+                                                    <span className="text-base font-medium">{opt}</span>
                                                 </div>
                                             );
                                         })}
@@ -541,18 +541,18 @@ export default function StudentTasks({ student, onBack }) {
                                 {q.type === 'essay_text' && (
                                     <div>
                                         <textarea
-                                            className="w-full p-3 bg-black border border-zinc-700 rounded-xl focus:ring-1 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-sm min-h-[120px] text-zinc-100 placeholder-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="w-full p-4 bg-black border border-zinc-700 rounded-xl focus:ring-1 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-base min-h-[120px] text-zinc-100 placeholder-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed"
                                             placeholder={isReadOnly ? "Tidak ada jawaban" : "Ketik jawaban Anda di sini..."}
                                             maxLength={q.charLimit || 500}
                                             value={answers[q.id]?.answerText || ''}
                                             onChange={(e) => handleAnswerChange(q.id, 'answerText', e.target.value)}
                                             disabled={isReadOnly || isExpired}
                                         />
-                                        {/* [TRANSPARANSI NILAI ESSAY] */}
-                                        {isReadOnly && (
+                                        {/* [TRANSPARANSI NILAI ESSAY] - Hanya tampil jika BELUM dinilai */}
+                                        {isReadOnly && answers[q.id]?.earnedScore === undefined && (
                                             <div className="mt-2 text-right">
-                                                <span className="text-[10px] text-zinc-500">
-                                                    {activeTask.feedback ? "Cek Feedback Global di atas" : "Menunggu penilaian guru"}
+                                                <span className="text-xs text-zinc-500 animate-pulse">
+                                                    ⏳ Menunggu penilaian guru...
                                                 </span>
                                             </div>
                                         )}

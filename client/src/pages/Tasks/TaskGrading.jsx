@@ -449,7 +449,7 @@ export const TaskGrading = ({
                                                         <div className="flex gap-2">
                                                             <input
                                                                 type="number" min="0" max="100"
-                                                                className="text-center text-3xl font-black p-2 rounded-xl border border-blue-200 focus:border-blue-500 outline-none w-full shadow-inner bg-white text-blue-900"
+                                                                className="text-center text-3xl font-black p-2 rounded-xl border border-blue-200 focus:border-blue-500 outline-none w-full shadow-inner bg-white text-blue-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                 placeholder="-"
                                                                 value={gradeInput.essayScores[ans.answer_id] ?? ''}
                                                                 onChange={e => {

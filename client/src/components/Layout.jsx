@@ -20,7 +20,8 @@ import {
     GraduationCap,
     MoreHorizontal,
     Image as ImageIcon,
-    FileEdit
+    FileEdit,
+    Dices
 } from 'lucide-react';
 import { fetchApi } from '../utils/api';
 
@@ -174,6 +175,7 @@ export default function Layout() {
                     <SidebarGroup label="Lainnya" icon={MoreHorizontal} currentPath={location.pathname}>
                         <SidebarItem to="/gudang-gambar" icon={ImageIcon} label="Bank Gambar" />
                         <SidebarItem to="/qrcodes" icon={QrCode} label="QR Codes" />
+                        <SidebarItem to="/random-picker" icon={Dices} label="Random Picker" />
                         <SidebarItem to="/settings" icon={Settings} label="Pengaturan" />
                     </SidebarGroup>
                 </nav>
