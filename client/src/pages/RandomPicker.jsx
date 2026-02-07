@@ -179,7 +179,7 @@ export default function RandomPicker() {
     // RENDER
     // ========================================
     return (
-        <div className="max-w-4xl mx-auto">
+        <div className="w-full">
             {/* Header */}
             <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center shadow-sm">
@@ -377,6 +377,6 @@ export default function RandomPicker() {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
