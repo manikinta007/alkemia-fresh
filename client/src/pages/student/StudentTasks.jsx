@@ -385,7 +385,7 @@ export default function StudentTasks({ student, onBack }) {
                 </div>
 
                 {/* Content Scroll */}
-                <div className="flex-1 overflow-y-auto p-5 pb-40 space-y-6">
+                <div className="flex-1 overflow-y-auto px-3 py-4 pb-40 space-y-4">
 
                     {/* SCORE CARD (Review Mode Only) */}
                     {isReadOnly && activeTask.my_grade !== null && (
@@ -419,16 +419,15 @@ export default function StudentTasks({ student, onBack }) {
                         </div>
                     )}
 
-                    {/* Instruksi */}
                     {activeTask.description && (
-                        <div className="bg-zinc-900 border border-zinc-800 p-5 rounded-xl text-base text-zinc-300">
+                        <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-base text-zinc-300">
                             <p className="font-bold text-white mb-2 text-lg">Instruksi:</p>
                             <div className="leading-relaxed">{activeTask.description}</div>
                         </div>
                     )}
 
                     {questions.map((q, idx) => (
-                        <div key={q.id} className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 shadow-sm">
+                        <div key={q.id} className="bg-zinc-900 p-4 rounded-2xl border border-zinc-800 shadow-sm">
                             {/* Header Soal */}
                             <div className="mb-4">
                                 <div className="flex justify-between items-start mb-3">

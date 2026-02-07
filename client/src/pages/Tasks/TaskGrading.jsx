@@ -452,6 +452,7 @@ export const TaskGrading = ({
                                                                 className="text-center text-3xl font-black p-2 rounded-xl border border-blue-200 focus:border-blue-500 outline-none w-full shadow-inner bg-white text-blue-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                 placeholder="-"
                                                                 value={gradeInput.essayScores[ans.answer_id] ?? ''}
+                                                                onWheel={(e) => e.target.blur()}
                                                                 onChange={e => {
                                                                     const rawVal = e.target.value;
                                                                     const val = rawVal === '' ? '' : Math.min(100, Math.max(0, parseInt(rawVal) || 0));
