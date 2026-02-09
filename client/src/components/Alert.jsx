@@ -39,10 +39,57 @@ export const CustomConfirm = ({ isOpen, message, onConfirm, onCancel }) => {
     );
 };
 
+// --- KOMPONEN GLOBAL: PROMPT ---
+export const CustomPrompt = ({ isOpen, message, type = 'text', defaultValue = '', onConfirm, onCancel }) => {
+    const [value, setValue] = useState(defaultValue);
+
+    // Reset value when opening
+    useEffect(() => {
+        if (isOpen) setValue(defaultValue);
+    }, [isOpen, defaultValue]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center transform transition-all scale-100 animate-in zoom-in-95 duration-200">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-zinc-100 text-zinc-600">
+                    <span className="text-3xl">✎</span>
+                </div>
+                <h3 className="text-lg font-bold text-zinc-900 mb-2">Input Data</h3>
+                <p className="text-zinc-500 text-sm mb-4">{message}</p>
+
+                <input
+                    type={type}
+                    className="w-full px-4 py-3 rounded-lg border border-zinc-200 bg-zinc-50 mb-6 focus:ring-2 focus:ring-zinc-800 focus:border-zinc-800 font-medium transition-all"
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    autoFocus
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') onConfirm(value);
+                        if (e.key === 'Escape') onCancel();
+                    }}
+                />
+
+                <div className="flex gap-3">
+                    <button onClick={onCancel} className="flex-1 py-3 border border-zinc-200 text-zinc-600 rounded-lg font-bold hover:bg-zinc-50 transition active:scale-95">BATAL</button>
+                    <button
+                        onClick={() => onConfirm(value)}
+                        className="flex-1 py-3 bg-zinc-900 text-white rounded-lg font-bold hover:bg-black transition active:scale-95 shadow-lg shadow-zinc-900/20"
+                    >
+                        SIMPAN
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- KOMPONEN HELPER: USE ALERT (HOOK) ---
 export const useAlert = () => {
     const [alertState, setAlertState] = useState({ isOpen: false, type: 'success', message: '' });
     const [confirmState, setConfirmState] = useState({ isOpen: false, message: '', resolve: null });
+    const [promptState, setPromptState] = useState({ isOpen: false, message: '', defaultValue: '', type: 'text', resolve: null });
 
     const showAlert = (msg, type = 'success') => {
         setAlertState({ isOpen: true, type, message: msg });
@@ -68,8 +115,21 @@ export const useAlert = () => {
         });
     };
 
+    const showPrompt = (msg, defaultValue = '', type = 'text') => {
+        return new Promise((resolve) => {
+            setPromptState({
+                isOpen: true,
+                message: msg,
+                defaultValue,
+                type,
+                resolve
+            });
+        });
+    };
+
     const closeAlert = () => setAlertState(prev => ({ ...prev, isOpen: false }));
     const closeConfirm = () => setConfirmState(prev => ({ ...prev, isOpen: false, resolve: null }));
+    const closePrompt = () => setPromptState(prev => ({ ...prev, isOpen: false, resolve: null }));
 
     const handleConfirm = () => {
         if (confirmState.resolve) confirmState.resolve(true);
@@ -80,6 +140,17 @@ export const useAlert = () => {
         if (confirmState.resolve) confirmState.resolve(false);
         closeConfirm();
     };
+
+    const handlePromptConfirm = (val) => {
+        if (promptState.resolve) promptState.resolve(val);
+        closePrompt();
+    };
+
+    const handlePromptCancel = () => {
+        if (promptState.resolve) promptState.resolve(null);
+        closePrompt();
+    };
+
 
     const AlertComponent = () => (
         <>
@@ -95,19 +166,27 @@ export const useAlert = () => {
                 onConfirm={handleConfirm}
                 onCancel={handleCancel}
             />
+            <CustomPrompt
+                isOpen={promptState.isOpen}
+                message={promptState.message}
+                defaultValue={promptState.defaultValue}
+                type={promptState.type}
+                onConfirm={handlePromptConfirm}
+                onCancel={handlePromptCancel}
+            />
         </>
     );
 
-    return { showAlert, showConfirm, AlertComponent };
+    return { showAlert, showConfirm, showPrompt, AlertComponent };
 };
 // --- CONTEXT & PROVIDER FOR GLOBAL USAGE ---
 const AlertContext = React.createContext();
 
 export const AlertProvider = ({ children }) => {
-    const { showAlert, showConfirm, AlertComponent } = useAlert();
+    const { showAlert, showConfirm, showPrompt, AlertComponent } = useAlert();
 
     return (
-        <AlertContext.Provider value={{ showAlert, showConfirm }}>
+        <AlertContext.Provider value={{ showAlert, showConfirm, showPrompt }}>
             {children}
             <AlertComponent />
         </AlertContext.Provider>

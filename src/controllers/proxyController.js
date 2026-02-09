@@ -3,6 +3,10 @@
 
 export async function handleProxyRequest(request, env) {
     const url = new URL(request.url);
+
+    // [SECURITY NOTE] Auth check temporarily disabled 
+    // to support legacy student app which opens links in new tab without token
+
     let targetUrl = url.searchParams.get("url");
 
     if (!targetUrl) {
@@ -81,6 +85,7 @@ export async function handleProxyRequest(request, env) {
 }
 
 // Helper to build the proxied response with proper headers
+// Helper to build the proxied response with proper headers
 function buildImageResponse(response) {
     const newHeaders = new Headers(response.headers);
 
@@ -92,6 +97,14 @@ function buildImageResponse(response) {
     // Add permissive CORS headers
     newHeaders.set("Access-Control-Allow-Origin", "*");
     newHeaders.set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+
+    // Force Inline Display (prevent download prompt)
+    const existingDisposition = newHeaders.get("Content-Disposition");
+    if (existingDisposition) {
+        newHeaders.set("Content-Disposition", existingDisposition.replace("attachment", "inline"));
+    } else {
+        newHeaders.set("Content-Disposition", "inline");
+    }
 
     // Add caching headers (cache for 1 hour)
     newHeaders.set("Cache-Control", "public, max-age=3600, s-maxage=3600");

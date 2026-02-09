@@ -32,7 +32,8 @@ export async function handleClassRequest(request, env) {
         }
 
         const { results } = await env.DB.prepare(`
-          SELECT c.*, p.year, p.semester 
+          SELECT c.*, p.year, p.semester,
+          (SELECT COUNT(*) FROM students s WHERE s.class_id = c.id) as student_count 
           FROM classes c
           JOIN academic_periods p ON c.period_id = p.id
           WHERE c.period_id = ?
@@ -137,6 +138,45 @@ export async function handleClassRequest(request, env) {
       const val = showGrades ? 1 : 0;
       await env.DB.prepare(`UPDATE classes SET show_grades = ? WHERE id = ?`).bind(val, classId).run();
       return jsonResponse({ message: "Status tampilan nilai diperbarui." });
+    }
+
+    // 6. UPDATE CLASS SETTINGS (e.g. Base Score & Point Config)
+    if (pathname === "/api/classes/settings" && method === "POST") {
+      const body = await request.json();
+      const { classId, participationBaseScore, pointAsk, pointAnswer, pointVolunteer, pointSanction } = body;
+
+      if (!classId) return jsonResponse({ error: "Class ID required" }, 400);
+
+      const updates = [];
+      const params = [];
+
+      if (participationBaseScore !== undefined) {
+        updates.push("participation_base_score = ?");
+        params.push(participationBaseScore);
+      }
+      if (pointAsk !== undefined) {
+        updates.push("point_ask = ?");
+        params.push(pointAsk);
+      }
+      if (pointAnswer !== undefined) {
+        updates.push("point_answer = ?");
+        params.push(pointAnswer);
+      }
+      if (pointVolunteer !== undefined) {
+        updates.push("point_volunteer = ?");
+        params.push(pointVolunteer);
+      }
+      if (pointSanction !== undefined) {
+        updates.push("point_sanction = ?");
+        params.push(pointSanction);
+      }
+
+      if (updates.length > 0) {
+        params.push(classId);
+        await env.DB.prepare(`UPDATE classes SET ${updates.join(', ')} WHERE id = ?`).bind(...params).run();
+      }
+
+      return jsonResponse({ message: "Pengaturan kelas diperbarui." });
     }
 
     // ========================================

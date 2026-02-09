@@ -271,7 +271,7 @@ export default function QRCodes() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
                     <h2 className="text-3xl font-bold text-zinc-900 flex items-center gap-3 tracking-tight">
-                        <QrCode className="text-blue-600" size={32} />
+                        <QrCode className="text-orange-600" size={32} />
                         QR Codes
                     </h2>
                     <p className="text-zinc-500 mt-1">Pilih kelas untuk menampilkan QR Code akses siswa.</p>
@@ -286,14 +286,14 @@ export default function QRCodes() {
                         <div
                             key={cls.id}
                             onClick={() => setActiveClass(cls)}
-                            className="bg-white border border-zinc-200 p-6 rounded-2xl cursor-pointer hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 group relative overflow-hidden"
+                            className="bg-white border border-zinc-200 p-6 rounded-2xl cursor-pointer hover:border-orange-500 hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300 group relative overflow-hidden"
                         >
-                            <div className="absolute -right-6 -bottom-6 text-zinc-50 opacity-50 group-hover:opacity-100 group-hover:text-blue-50 transition duration-500 rotate-12">
+                            <div className="absolute -right-6 -bottom-6 text-zinc-50 opacity-50 group-hover:opacity-100 group-hover:text-orange-50 transition duration-500 rotate-12">
                                 <QrCode size={120} />
                             </div>
 
                             <div className="relative z-10">
-                                <h3 className="text-2xl font-bold text-zinc-900 mb-1 group-hover:text-blue-700 transition">
+                                <h3 className="text-2xl font-bold text-zinc-900 mb-1 group-hover:text-orange-700 transition">
                                     {cls.name}
                                 </h3>
                                 <div className="flex items-center gap-2 mt-4">

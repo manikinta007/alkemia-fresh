@@ -21,7 +21,13 @@ const getEmbedUrl = (url) => {
         return `https://www.youtube.com/embed/${cleanId}?autoplay=0`;
     }
 
-    // 3. General Files (R2/External) -> Use Proxy to bypass CORS/X-Frame
+    // 3. PDF Files (Use Google Docs Viewer for better mobile support)
+    // Checks for .pdf extension (case insensitive)
+    if (url.toLowerCase().endsWith('.pdf')) {
+        return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+
+    // 4. General Files (R2/External) -> Use Proxy to bypass CORS/X-Frame
     return `/api/proxy?url=${encodeURIComponent(url)}`;
 };
 

@@ -11,6 +11,7 @@ import Materials from './pages/Materials';
 import Tasks from './pages/Tasks';
 import Quizzes from './pages/Quizzes';
 import Grades from './pages/Grades';
+import Participation from './pages/Participation';
 
 import QRCodes from './pages/QRCodes';
 import GudangGambar from './pages/GudangGambar';
@@ -61,6 +62,7 @@ function AppContent() {
         <Route path="tasks" element={<Tasks />} />
         <Route path="quizzes" element={<Quizzes />} />
         <Route path="grades" element={<Grades />} />
+        <Route path="participation" element={<Participation />} />
         <Route path="qrcodes" element={<QRCodes />} />
         <Route path="qrcodes" element={<QRCodes />} />
         <Route path="settings" element={<Settings />} />

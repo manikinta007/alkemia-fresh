@@ -21,7 +21,8 @@ import {
     MoreHorizontal,
     Image as ImageIcon,
     FileEdit,
-    Dices
+    Dices,
+    MessageSquare
 } from 'lucide-react';
 import { fetchApi } from '../utils/api';
 
@@ -90,10 +91,31 @@ const SidebarGroup = ({ label, icon: Icon, children, initialOpen = false, curren
 
 export default function Layout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [activePeriod, setActivePeriod] = useState(null);
     const location = useLocation();
 
     // Get user from localStorage (synced by api.js) or default
     const user = JSON.parse(localStorage.getItem('user') || '{"name": "Guru", "username": "guru"}');
+
+    useEffect(() => {
+        // 1. Try LocalStorage
+        const stored = localStorage.getItem('activePeriod');
+        if (stored) {
+            setActivePeriod(JSON.parse(stored));
+        }
+
+        // 2. Always validate/update with API (in case it changed elsewhere)
+        fetchApi('/api/periods').then(async res => {
+            if (res.ok) {
+                const periods = await res.json();
+                const active = periods.find(p => p.is_active);
+                if (active) {
+                    setActivePeriod(active);
+                    localStorage.setItem('activePeriod', JSON.stringify(active));
+                }
+            }
+        }).catch(err => console.error("Failed to fetch periods sidebar", err));
+    }, []);
 
     const handleLogout = async () => {
         try {
@@ -102,6 +124,7 @@ export default function Layout() {
             console.error("Logout failed on server", e);
         }
         localStorage.removeItem('user');
+        localStorage.removeItem('activePeriod');
         window.location.href = '/login';
     };
 
@@ -137,8 +160,12 @@ export default function Layout() {
                     <div className="flex items-center gap-2">
                         <Calendar size={14} className="text-orange-500" />
                         <div>
-                            <p className="text-sm font-bold text-white leading-tight">2024/2025</p>
-                            <p className="text-xs text-zinc-400">Ganjil</p>
+                            <p className="text-sm font-bold text-white leading-tight">
+                                {activePeriod ? activePeriod.year : <span className="animate-pulse bg-zinc-800 text-transparent rounded">Loading...</span>}
+                            </p>
+                            <p className="text-xs text-zinc-400">
+                                {activePeriod ? `Semester ${activePeriod.semester}` : <span className="animate-pulse bg-zinc-800 text-transparent rounded">Sem...</span>}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -169,6 +196,7 @@ export default function Layout() {
                         <SidebarItem to="/tasks" icon={ListTodo} label="Tugas" />
                         <SidebarItem to="/quizzes" icon={Award} label="Kuis & Ujian" />
                         <SidebarItem to="/grades" icon={Award} label="Nilai" />
+                        <SidebarItem to="/participation" icon={MessageSquare} label="Keaktifan" />
                     </SidebarGroup>
 
                     {/* LAINNYA */}

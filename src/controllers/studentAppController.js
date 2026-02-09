@@ -102,8 +102,12 @@ export async function handleStudentAppRequest(request, env) {
             const school = await env.DB.prepare(`SELECT * FROM school_profile WHERE id = 1`).first();
 
             const { results: materials } = await env.DB.prepare(`
-         SELECT * FROM materials WHERE class_id = ? AND is_visible = 1 ORDER BY created_at DESC
-      `).bind(student.class_id).all();
+              SELECT mb.id, mb.title, mb.description, mb.file_url, mb.file_type, md.is_visible
+              FROM material_distribution md
+              JOIN material_bank mb ON md.material_id = mb.id
+              WHERE md.class_id = ? AND md.is_visible = 1
+              ORDER BY md.distributed_at DESC
+            `).bind(student.class_id).all();
 
             const grade = await env.DB.prepare(`SELECT * FROM grades WHERE student_id = ?`).bind(student.id).first();
 

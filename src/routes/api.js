@@ -17,10 +17,14 @@ import { handleSettingRequest } from '../controllers/settingController.js';
 import { handleAttendanceRequest } from '../controllers/attendanceController.js';
 import { handleScheduleRequest } from '../controllers/scheduleController.js';
 import { handleMigrationRequest } from '../controllers/migrationController.js'; // [NEW] Database Migration
+import { handleGroupRequest } from '../controllers/groupController.js'; // [NEW] Database Migration
 import { handleTaskRequest } from '../controllers/taskController.js'; // [NEW] Task & Remedial
 import { handleDashboardRequest } from '../controllers/dashboardController.js'; // [NEW] Dashboard Stats
 import { handleImageRequest } from '../controllers/imageController.js'; // [NEW] Gudang Gambar
 import { handleJournalRequest } from '../controllers/journalController.js'; // [NEW] Jurnal Mengajar
+import { handleMaterialBankRequest } from '../controllers/materialBankController.js'; // [NEW] Bank Bahan Ajar
+import { handleProxyRequest } from '../controllers/proxyController.js'; // [NEW] Proxy Gambar & File
+import { handleParticipationRequest } from '../controllers/participationController.js'; // [NEW] Nilai Keaktifan
 
 // --- CONFIG & HEADERS ---
 // [PENTING] Ganti URL ini dengan domain Worker Anda sendiri!
@@ -51,19 +55,33 @@ async function verifyApiProtection(request, env) {
 
   // 2. CSRF Check (Hanya untuk POST, PUT, DELETE)
   if (method === "POST" || method === "PUT" || method === "DELETE") {
-    const csrfHeader = request.headers.get("X-CSRF-Token");
+    // Skip CSRF for multipart/form-data (file uploads) - still requires valid session
+    const contentType = request.headers.get("Content-Type") || "";
+    const isFileUpload = contentType.includes("multipart/form-data");
 
-    if (!csrfHeader) {
-      return { valid: false, status: 403, error: "Forbidden: Missing CSRF Token" };
-    }
+    if (!isFileUpload) {
+      const csrfHeader = request.headers.get("X-CSRF-Token");
 
-    const validSession = await env.DB.prepare(`
-      SELECT * FROM admin_sessions 
-      WHERE session_token = ? AND csrf_token = ? AND expires_at > CURRENT_TIMESTAMP
-    `).bind(sessionToken, csrfHeader).first();
+      if (!csrfHeader) {
+        return { valid: false, status: 403, error: "Forbidden: Missing CSRF Token" };
+      }
 
-    if (!validSession) {
-      return { valid: false, status: 403, error: "Forbidden: Invalid CSRF Token" };
+      const validSession = await env.DB.prepare(`
+        SELECT * FROM admin_sessions 
+        WHERE session_token = ? AND csrf_token = ? AND expires_at > CURRENT_TIMESTAMP
+      `).bind(sessionToken, csrfHeader).first();
+
+      if (!validSession) {
+        return { valid: false, status: 403, error: "Forbidden: Invalid CSRF Token" };
+      }
+    } else {
+      // For file uploads, just verify session is valid
+      const validSession = await env.DB.prepare(`
+        SELECT * FROM admin_sessions 
+        WHERE session_token = ? AND expires_at > CURRENT_TIMESTAMP
+      `).bind(sessionToken).first();
+
+      if (!validSession) return { valid: false, status: 401, error: "Unauthorized: Session Expired" };
     }
   } else {
     // Untuk GET API, cukup cek Session saja
@@ -149,6 +167,12 @@ export async function handleApiRequest(request, env) {
     pathname === "/api/init" ||
     pathname.startsWith("/api/migrate") || // Allow migration
     pathname.startsWith("/api/student") ||
+    pathname.startsWith("/api/proxy") || // Allow proxy (Security handled in controller)
+    pathname.startsWith("/api/participation/debug") || // [DEBUG] Allow schema fix
+    pathname.startsWith("/api/migrate/participation-points") || // [MIGRATION] Poin Keaktifan
+    pathname.startsWith("/api/migrate/participation-settings") || // [MIGRATION] Setting Poin Dasar
+    pathname.startsWith("/api/migrate/participation-config") || // [MIGRATION] Config Poin
+    pathname.startsWith("/api/migrate/groups-table") || // [MIGRATION] Tabel Kelompok
     pathname.startsWith("/api/images/file/"); // Allow public image access for student app
 
   if (!isPublicApi) {
@@ -220,6 +244,18 @@ export async function handleApiRequest(request, env) {
 
     // [NEW] Journal API (Jurnal Mengajar)
     if (!apiResponse) apiResponse = await handleJournalRequest(request, env);
+
+    // [NEW] Material Bank API (Bank Bahan Ajar)
+    if (!apiResponse) apiResponse = await handleMaterialBankRequest(request, env);
+
+    // [NEW] Participation API (Nilai Keaktifan)
+    if (!apiResponse) apiResponse = await handleParticipationRequest(request, env);
+
+    // [NEW] Groups API
+    if (!apiResponse && pathname.startsWith("/api/groups")) apiResponse = await handleGroupRequest(request, env);
+
+    // [NEW] Proxy Route
+    if (!apiResponse && pathname.startsWith("/api/proxy")) apiResponse = await handleProxyRequest(request, env);
 
     // [NEW] Migration Route
     if (!apiResponse) apiResponse = await handleMigrationRequest(request, env);

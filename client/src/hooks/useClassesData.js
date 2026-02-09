@@ -7,20 +7,24 @@ export const useClassesData = (showAlert) => {
     const [selectedClass, setSelectedClass] = useState(null);
     const [students, setStudents] = useState([]);
     const [loadingStudents, setLoadingStudents] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     // Initial Fetch
     const fetchActivePeriod = useCallback(async () => {
+        setLoading(true);
         try {
             const res = await fetchApi('/api/dashboard');
             if (res.ok) {
                 const data = await res.json();
                 if (data.activePeriod) {
                     setActivePeriod(data.activePeriod);
-                    fetchClasses(data.activePeriod.id);
+                    await fetchClasses(data.activePeriod.id);
                 }
             }
         } catch (e) {
             console.error("Failed to fetch active period", e);
+        } finally {
+            setLoading(false);
         }
     }, []);
 
@@ -198,6 +202,7 @@ export const useClassesData = (showAlert) => {
     };
 
     return {
+        loading,
         activePeriod,
         classes,
         selectedClass,
