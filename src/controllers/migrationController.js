@@ -321,6 +321,56 @@ export async function handleMigrationRequest(request, env) {
       }
     }
 
+    // MIGRATION: Participation Points (Nilai Keaktifan)
+    if (pathname === "/api/migrate/participation" && method === "GET") {
+      try {
+        await env.DB.batch([
+          // Drop existing tables
+          env.DB.prepare("DROP TABLE IF EXISTS participation_logs"),
+          env.DB.prepare("DROP TABLE IF EXISTS participation_settings"),
+
+          // Create participation_settings table
+          env.DB.prepare(`
+            CREATE TABLE participation_settings (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              class_id INTEGER NOT NULL,
+              base_score INTEGER DEFAULT 50,
+              ask_points INTEGER DEFAULT 2,
+              answer_points INTEGER DEFAULT 3,
+              present_points INTEGER DEFAULT 5,
+              penalty_points INTEGER DEFAULT -2,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+            )
+          `),
+
+          // Create participation_logs table
+          env.DB.prepare(`
+            CREATE TABLE participation_logs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              class_id INTEGER NOT NULL,
+              student_id INTEGER NOT NULL,
+              activity_type TEXT NOT NULL,
+              points INTEGER NOT NULL,
+              timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+              teacher_id INTEGER NOT NULL,
+              is_undone INTEGER DEFAULT 0,
+              FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+              FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+              FOREIGN KEY (teacher_id) REFERENCES users(id)
+            )
+          `)
+        ]);
+
+        return jsonResponse({
+          message: "Migrasi Participation Points Berhasil: Tabel participation_settings dan participation_logs siap."
+        });
+      } catch (e) {
+        return jsonResponse({ error: "Migrate Participation Error: " + e.message }, 500);
+      }
+    }
+
     return null;
   } catch (err) {
     return jsonResponse({ error: "Migration Error: " + err.message }, 500);

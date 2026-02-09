@@ -19,6 +19,7 @@ import JournalSettings from './pages/JournalSettings';
 import TemplateEditor from './pages/TemplateEditor';
 
 import Settings from './pages/Settings';
+import Participation from './pages/Participation';
 import StudentLanding from './pages/student/StudentLanding';
 // Wrapper for protected routes
 import StudentPortal from './pages/student/StudentPortal';
@@ -49,6 +50,10 @@ function AppContent() {
       <Route path="/student" element={<StudentLanding />} />
       <Route path="/student/portal" element={<StudentPortal />} />
 
+      <Route path="/grades" element={<ProtectedRoute><Layout><Grades /></Layout></ProtectedRoute>} />
+      <Route path="/participation" element={<ProtectedRoute><Layout><Participation /></Layout></ProtectedRoute>} />
+
+      <Route path="/qrcodes" element={<ProtectedRoute><Layout><QRCodes /></Layout></ProtectedRoute>} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Navigate to="/" replace />} />

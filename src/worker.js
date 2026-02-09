@@ -12,6 +12,7 @@ import { handlePageRequest } from './routes/pages.js';
 import { handleTaskRequest } from './controllers/taskController.js';
 import { handleMigrationRequest } from './controllers/migrationController.js';
 import { handleOfflineQuizRequest } from './controllers/offlineQuizController.js';
+import { handleParticipationRequest } from './controllers/participationController.js';
 
 // --- CONFIG & HEADERS ---
 // [PENTING] Ganti URL ini dengan domain Worker Anda sendiri jika sudah production!
@@ -61,6 +62,11 @@ export default {
         if (pathname.match(/^\/api\/quiz\/\d+\/offline-/) ||
           pathname.startsWith("/api/quiz/offline/")) {
           return await handleOfflineQuizRequest(request, env);
+        }
+
+        // [JALUR KHUSUS 4] Participation Points (Nilai Keaktifan)
+        if (pathname.startsWith("/api/participation")) {
+          return await handleParticipationRequest(request, env);
         }
 
         // [JALUR UMUM] Sisa request lainnya (Auth, Dashboard, Absensi, dll)

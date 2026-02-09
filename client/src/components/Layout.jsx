@@ -20,7 +20,8 @@ import {
     GraduationCap,
     MoreHorizontal,
     Image as ImageIcon,
-    FileEdit
+    FileEdit,
+    MessageSquare
 } from 'lucide-react';
 import { fetchApi } from '../utils/api';
 
@@ -168,6 +169,7 @@ export default function Layout() {
                         <SidebarItem to="/tasks" icon={ListTodo} label="Tugas" />
                         <SidebarItem to="/quizzes" icon={Award} label="Kuis & Ujian" />
                         <SidebarItem to="/grades" icon={Award} label="Nilai" />
+                        <SidebarItem to="/participation" icon={MessageSquare} label="Keaktifan" />
                     </SidebarGroup>
 
                     {/* LAINNYA */}
