@@ -137,6 +137,6 @@ export async function handleGroupRequest(request, env) {
 
         return null; // Not handled
     } catch (e) {
-        return jsonResponse({ error: "Group Controller Error: " + e.message }, 500);
+        return jsonResponse({ error: "Group Controller Error: " + e.message, stack: e.stack }, 500);
     }
 }
