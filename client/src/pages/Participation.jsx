@@ -40,8 +40,7 @@ export default function Participation() {
     const [historyLogs, setHistoryLogs] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
 
-    // Date Filter State
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Default Today (YYYY-MM-DD)
+    // Date Filter State removed
 
     const { showAlert, showConfirm } = useAlertContext();
 
@@ -53,12 +52,12 @@ export default function Participation() {
         if (selectedClass && activePeriod) {
             fetchParticipationData(selectedClass.id);
         }
-    }, [selectedClass, activePeriod, selectedDate]); // Trigger on date change
+    }, [selectedClass, activePeriod]);
 
     const fetchParticipationData = async (classId) => {
         setLoadingData(true);
         try {
-            const res = await fetchApi(`/api/participation?class_id=${classId}&period_id=${activePeriod.id}&date=${selectedDate}`);
+            const res = await fetchApi(`/api/participation?class_id=${classId}&period_id=${activePeriod.id}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.students) {
@@ -274,21 +273,7 @@ export default function Participation() {
             </div>
 
 
-            {/* Date Filter */}
-            <div className="mb-6 flex items-center gap-4 bg-white p-4 rounded-xl border border-zinc-200 shadow-sm">
-                <label className="text-sm font-bold text-zinc-600 flex items-center gap-2">
-                    <Calculator className="w-4 h-4" /> Filter Tanggal:
-                </label>
-                <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="border border-zinc-300 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <span className="text-xs text-zinc-400 italic ml-auto">
-                    Menampilkan poin yang diperoleh pada tanggal ini.
-                </span>
-            </div>
+
 
             {
                 loadingData ? (
@@ -306,7 +291,7 @@ export default function Participation() {
                                         key={student.id}
                                         student={student}
                                         config={config}
-                                        selectedDate={selectedDate} // Pass date filter
+                                        config={config}
                                         onAddPoint={handleAddPoint}
                                         onReset={handleResetStudent}
                                         onViewHistory={handleViewHistory}
@@ -685,26 +670,7 @@ function TabSavedGroups({ classId }) {
     );
 }
 
-function StudentPointCard({ student, config, selectedDate, onAddPoint, onReset, onViewHistory }) {
-    // Parse History to calculate daily points
-    const dailyPoints = React.useMemo(() => {
-        if (!student.history) return 0;
-        // history format in API is just type:points string, not containing date. 
-        // We need the FULL history logs to filter by date client-side? 
-        // WAIT. The endpoint `GET /participation` returns aggregated data.
-        // It does NOT return date-specific logs for all students.
-        // STRATEGY CHANGE: 
-        // We can't filter server-side yet because controller only returns total.
-        // BUT user asked to "see per day".
-        // OPTION: We fetch ALL logs or modify controller. 
-        // FOR NOW: I will just pass the prop, but I realize the data is missing.
-        // I need to modify the controller to return 'daily_points' based on query param?
-        // OR return a list of logs for everyone?
-        // Let's rely on the requested "Date Filter" implementation plan which implies backend support.
-        // I will MODIFY the controller next. specific logic here will be added after controller update.
-        return 0;
-    }, [student.history, selectedDate]);
-
+function StudentPointCard({ student, config, onAddPoint, onReset, onViewHistory }) {
     // Score Color Logic
     const scoreColor = student.participation >= 95 ? 'text-green-600' :
         student.participation >= 85 ? 'text-blue-600' :
@@ -724,17 +690,10 @@ function StudentPointCard({ student, config, selectedDate, onAddPoint, onReset, 
 
                 <div className="flex items-center justify-between text-xs font-medium">
                     <span className="text-zinc-400 bg-zinc-50 px-2 py-1 rounded">Base: {config.base_score}</span>
-                    <div className="flex gap-2">
-                        {student.daily_points > 0 && (
-                            <span className="bg-green-50 text-green-700 px-2 py-1 rounded border border-green-100 flex items-center gap-1 font-bold">
-                                +{student.daily_points} Hari Ini
-                            </span>
-                        )}
-                        <span className="bg-yellow-50 text-yellow-700 px-2 py-1 rounded border border-yellow-100 flex items-center gap-1">
-                            <Trophy className="w-3 h-3" />
-                            Total: {student.total_points || 0}
-                        </span>
-                    </div>
+                    <span className="bg-yellow-50 text-yellow-700 px-2 py-1 rounded border border-yellow-100 flex items-center gap-1">
+                        <Trophy className="w-3 h-3" />
+                        +{student.total_points || 0} Poin
+                    </span>
                 </div>
             </div>
 
@@ -892,7 +851,7 @@ function HistoryModal({ student, logs, loading, onClose }) {
                                     <div>
                                         <p className="font-bold text-sm text-zinc-800">{log.type}</p>
                                         <p className="text-xs text-zinc-400">
-                                            {new Date(log.created_at).toLocaleString('id-ID', {
+                                            {new Date(log.created_at.endsWith('Z') ? log.created_at : log.created_at + 'Z').toLocaleString('id-ID', {
                                                 timeZone: 'Asia/Jakarta',
                                                 day: 'numeric', month: 'long', year: 'numeric',
                                                 hour: '2-digit', minute: '2-digit'
