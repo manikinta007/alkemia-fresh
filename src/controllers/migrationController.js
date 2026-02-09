@@ -517,8 +517,13 @@ export async function handleMigrationRequest(request, env) {
     if (pathname === "/api/migrate/groups-table") {
       try {
         await env.DB.batch([
+          // Drop old tables first (reverse order for FK safety)
+          env.DB.prepare("DROP TABLE IF EXISTS group_members"),
+          env.DB.prepare("DROP TABLE IF EXISTS groups"),
+          env.DB.prepare("DROP TABLE IF EXISTS group_sets"),
+          // Recreate with correct schema
           env.DB.prepare(`
-            CREATE TABLE IF NOT EXISTS group_sets (
+            CREATE TABLE group_sets (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               class_id INTEGER NOT NULL,
               name TEXT NOT NULL,
@@ -527,7 +532,7 @@ export async function handleMigrationRequest(request, env) {
             )
           `),
           env.DB.prepare(`
-            CREATE TABLE IF NOT EXISTS groups (
+            CREATE TABLE groups (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               set_id INTEGER NOT NULL,
               name TEXT NOT NULL,
@@ -535,7 +540,7 @@ export async function handleMigrationRequest(request, env) {
             )
           `),
           env.DB.prepare(`
-            CREATE TABLE IF NOT EXISTS group_members (
+            CREATE TABLE group_members (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               group_id INTEGER NOT NULL,
               student_id INTEGER NOT NULL,
@@ -544,7 +549,7 @@ export async function handleMigrationRequest(request, env) {
             )
           `)
         ]);
-        return jsonResponse({ message: "Migration: Group tables created." });
+        return jsonResponse({ message: "Migration: Group tables recreated with correct schema." });
       } catch (err) {
         return jsonResponse({ error: "Migration Error: " + err.message }, 500);
       }
