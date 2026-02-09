@@ -43,6 +43,12 @@ main ──────────────────────●──
 7. **Rollback**: Revert merge commit atau re-deploy dari commit sebelumnya
 
 ### 🔗 Bindings (Cloudflare)
+
+> [!CRITICAL]
+> **BACKUP INTEGRITY**: Setiap commit (baik di branch `feature` maupun `main`) **HARUS** dipastikan dapat ditarik (pull) kembali ke local source code dengan sempurna.
+> - Pastikan tidak ada file yang tertinggal atau corrupt saat push.
+> - Lakukan test `git pull` atau `git fetch` di environment terpisah jika ragu.
+> - Tujuannya agar backup code selalu AMAN dan bisa dipulihkan kapan saja. Jangan sampai ada branch backup yang ternyata tidak bisa ditarik.
 | Binding | Type | Value |
 | :--- | :--- | :--- |
 | `DB` | D1 Database | `alkemiafresh2` |
