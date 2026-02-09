@@ -291,7 +291,6 @@ export default function Participation() {
                                         key={student.id}
                                         student={student}
                                         config={config}
-                                        config={config}
                                         onAddPoint={handleAddPoint}
                                         onReset={handleResetStudent}
                                         onViewHistory={handleViewHistory}
