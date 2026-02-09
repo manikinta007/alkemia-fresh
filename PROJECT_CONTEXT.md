@@ -45,10 +45,24 @@ main ──────────────────────●──
 ### 🔗 Bindings (Cloudflare)
 
 > [!CRITICAL]
-> **BACKUP INTEGRITY**: Setiap commit (baik di branch `feature` maupun `main`) **HARUS** dipastikan dapat ditarik (pull) kembali ke local source code dengan sempurna.
-> - Pastikan tidak ada file yang tertinggal atau corrupt saat push.
-> - Lakukan test `git pull` atau `git fetch` di environment terpisah jika ragu.
-> - Tujuannya agar backup code selalu AMAN dan bisa dipulihkan kapan saja. Jangan sampai ada branch backup yang ternyata tidak bisa ditarik.
+> [!CRITICAL]
+> **BACKUP INTEGRITY & GIT HEALTH PROTOCOLS**
+> 
+> **1. Mengapa "Tidak Bisa Ditarik"? (Divergent History)**
+> Jika Anda melihat pesan error saat `git pull`, kemungkinan besar status git Anda adalah **Divergent** (Cabang bercabang).
+> - Contoh: `Your branch is ahead of 'origin' by 3 commits, and behind 'origin' by 1 commit`.
+> - **Penyebab**: Ada commit baru di Remote (GitHub) yg belum Anda punya, TAPI Anda juga membuat commit baru di Local.
+> - **Solusi**: Gunakan command `git pull --rebase origin <branch_name>`. Ini akan menaruh commit lokal Anda *di atas* commit remote terupdate.
+> 
+> **2. Arti Cloudflare Build Log (Ceklis)**
+> - **Status "Success"** adalah indikator utama.
+> - Jika langkah "Cloning git repository" berhasil, berarti **Code AMAN di GitHub**. Cloudflare berhasil menariknya.
+> - Ceklis yang hilang di langkah lain (misal "Building") bisa terjadi karena caching atau optimasi. **Selama Status = Success, backup aman.**
+> 
+> **3. SOP Wajib Setiap Sesi Coding**
+> - **AWAL**: `git pull origin <branch>` (atau `git pull --rebase` jika error).
+> - **AKHIR**: `git push origin <branch>`. Pastikan tidak ada error di terminal.
+> - **VERIFIKASI**: Lakukan `git status` setelah push. Harus bersih & up-to-date.
 | Binding | Type | Value |
 | :--- | :--- | :--- |
 | `DB` | D1 Database | `alkemiafresh2` |
