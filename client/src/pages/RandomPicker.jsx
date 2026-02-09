@@ -239,7 +239,7 @@ export default function RandomPicker() {
             const res = await fetchApi('/api/groups/sets', {
                 method: 'POST',
                 body: JSON.stringify({
-                    classId: selectedClassId,
+                    classId: parseInt(selectedClassId),
                     name,
                     groups: groups
                 })
