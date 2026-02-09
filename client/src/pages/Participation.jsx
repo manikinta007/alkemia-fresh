@@ -40,6 +40,9 @@ export default function Participation() {
     const [historyLogs, setHistoryLogs] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
 
+    // Date Filter State
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Default Today (YYYY-MM-DD)
+
     const { showAlert, showConfirm } = useAlertContext();
 
     useEffect(() => {
@@ -50,12 +53,12 @@ export default function Participation() {
         if (selectedClass && activePeriod) {
             fetchParticipationData(selectedClass.id);
         }
-    }, [selectedClass, activePeriod]);
+    }, [selectedClass, activePeriod, selectedDate]); // Trigger on date change
 
     const fetchParticipationData = async (classId) => {
         setLoadingData(true);
         try {
-            const res = await fetchApi(`/api/participation?class_id=${classId}&period_id=${activePeriod.id}`);
+            const res = await fetchApi(`/api/participation?class_id=${classId}&period_id=${activePeriod.id}&date=${selectedDate}`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.students) {
@@ -270,95 +273,121 @@ export default function Participation() {
                 </div>
             </div>
 
-            {loadingData ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <GridSkeleton />
-                    <GridSkeleton />
-                    <GridSkeleton />
-                </div>
-            ) : (
-                <>
-                    {viewMode === 'cards' ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {students.map(student => (
-                                <StudentPointCard
-                                    key={student.id}
-                                    student={student}
-                                    config={config}
-                                    onAddPoint={handleAddPoint}
-                                    onReset={handleResetStudent}
-                                    onViewHistory={handleViewHistory}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-zinc-50 text-zinc-500 uppercase font-bold text-xs">
-                                    <tr>
-                                        <th className="px-6 py-4 w-12">No</th>
-                                        <th className="px-6 py-4">Nama Siswa</th>
-                                        <th className="px-6 py-4 text-center">Poin Aktivitas</th>
-                                        <th className="px-6 py-4 text-center">Nilai Akhir</th>
-                                        <th className="px-6 py-4 text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-zinc-100">
-                                    {students.map((student, idx) => (
-                                        <tr key={student.id} className="hover:bg-zinc-50">
-                                            <td className="px-6 py-4 text-center text-zinc-400">{idx + 1}</td>
-                                            <td className="px-6 py-4 font-medium text-zinc-900">{student.name}</td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded font-bold">
-                                                    +{student.total_points || 0}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center font-bold text-lg">
-                                                {student.participation}
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <button
-                                                    onClick={() => handleViewHistory(student)}
-                                                    className="text-indigo-600 hover:text-indigo-800 text-xs font-bold"
-                                                >
-                                                    Lihat Riwayat
-                                                </button>
-                                            </td>
+
+            {/* Date Filter */}
+            <div className="mb-6 flex items-center gap-4 bg-white p-4 rounded-xl border border-zinc-200 shadow-sm">
+                <label className="text-sm font-bold text-zinc-600 flex items-center gap-2">
+                    <Calculator className="w-4 h-4" /> Filter Tanggal:
+                </label>
+                <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="border border-zinc-300 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <span className="text-xs text-zinc-400 italic ml-auto">
+                    Menampilkan poin yang diperoleh pada tanggal ini.
+                </span>
+            </div>
+
+            {
+                loadingData ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <GridSkeleton />
+                        <GridSkeleton />
+                        <GridSkeleton />
+                    </div>
+                ) : (
+                    <>
+                        {viewMode === 'cards' ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                {students.map(student => (
+                                    <StudentPointCard
+                                        key={student.id}
+                                        student={student}
+                                        config={config}
+                                        selectedDate={selectedDate} // Pass date filter
+                                        onAddPoint={handleAddPoint}
+                                        onReset={handleResetStudent}
+                                        onViewHistory={handleViewHistory}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-zinc-50 text-zinc-500 uppercase font-bold text-xs">
+                                        <tr>
+                                            <th className="px-6 py-4 w-12">No</th>
+                                            <th className="px-6 py-4">Nama Siswa</th>
+                                            <th className="px-6 py-4 text-center">Poin Aktivitas</th>
+                                            <th className="px-6 py-4 text-center">Nilai Akhir</th>
+                                            <th className="px-6 py-4 text-center">Aksi</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </>
-            )}
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-100">
+                                        {students.map((student, idx) => (
+                                            <tr key={student.id} className="hover:bg-zinc-50">
+                                                <td className="px-6 py-4 text-center text-zinc-400">{idx + 1}</td>
+                                                <td className="px-6 py-4 font-medium text-zinc-900">{student.name}</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded font-bold">
+                                                        +{student.total_points || 0}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center font-bold text-lg">
+                                                    {student.participation}
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <button
+                                                        onClick={() => handleViewHistory(student)}
+                                                        className="text-indigo-600 hover:text-indigo-800 text-xs font-bold"
+                                                    >
+                                                        Lihat Riwayat
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </>
+                )
+            }
 
             {/* MODALS */}
-            {showRandomizer && (
-                <RandomizerModal
-                    students={students}
-                    classId={selectedClass.id}
-                    onClose={() => setShowRandomizer(false)}
-                />
-            )}
+            {
+                showRandomizer && (
+                    <RandomizerModal
+                        students={students}
+                        classId={selectedClass.id}
+                        onClose={() => setShowRandomizer(false)}
+                    />
+                )
+            }
 
-            {showSettings && (
-                <SettingsModal
-                    currentConfig={config}
-                    onClose={() => setShowSettings(false)}
-                    onSave={handleUpdateSettings}
-                />
-            )}
+            {
+                showSettings && (
+                    <SettingsModal
+                        currentConfig={config}
+                        onClose={() => setShowSettings(false)}
+                        onSave={handleUpdateSettings}
+                    />
+                )
+            }
 
-            {showHistory && selectedStudentHistory && (
-                <HistoryModal
-                    student={selectedStudentHistory}
-                    logs={historyLogs}
-                    loading={loadingHistory}
-                    onClose={() => setShowHistory(false)}
-                />
-            )}
-        </div>
+            {
+                showHistory && selectedStudentHistory && (
+                    <HistoryModal
+                        student={selectedStudentHistory}
+                        logs={historyLogs}
+                        loading={loadingHistory}
+                        onClose={() => setShowHistory(false)}
+                    />
+                )
+            }
+        </div >
     );
 }
 
@@ -656,7 +685,26 @@ function TabSavedGroups({ classId }) {
     );
 }
 
-function StudentPointCard({ student, config, onAddPoint, onReset, onViewHistory }) {
+function StudentPointCard({ student, config, selectedDate, onAddPoint, onReset, onViewHistory }) {
+    // Parse History to calculate daily points
+    const dailyPoints = React.useMemo(() => {
+        if (!student.history) return 0;
+        // history format in API is just type:points string, not containing date. 
+        // We need the FULL history logs to filter by date client-side? 
+        // WAIT. The endpoint `GET /participation` returns aggregated data.
+        // It does NOT return date-specific logs for all students.
+        // STRATEGY CHANGE: 
+        // We can't filter server-side yet because controller only returns total.
+        // BUT user asked to "see per day".
+        // OPTION: We fetch ALL logs or modify controller. 
+        // FOR NOW: I will just pass the prop, but I realize the data is missing.
+        // I need to modify the controller to return 'daily_points' based on query param?
+        // OR return a list of logs for everyone?
+        // Let's rely on the requested "Date Filter" implementation plan which implies backend support.
+        // I will MODIFY the controller next. specific logic here will be added after controller update.
+        return 0;
+    }, [student.history, selectedDate]);
+
     // Score Color Logic
     const scoreColor = student.participation >= 95 ? 'text-green-600' :
         student.participation >= 85 ? 'text-blue-600' :
@@ -676,10 +724,17 @@ function StudentPointCard({ student, config, onAddPoint, onReset, onViewHistory 
 
                 <div className="flex items-center justify-between text-xs font-medium">
                     <span className="text-zinc-400 bg-zinc-50 px-2 py-1 rounded">Base: {config.base_score}</span>
-                    <span className="bg-yellow-50 text-yellow-700 px-2 py-1 rounded border border-yellow-100 flex items-center gap-1">
-                        <Trophy className="w-3 h-3" />
-                        +{student.total_points || 0} Poin
-                    </span>
+                    <div className="flex gap-2">
+                        {student.daily_points > 0 && (
+                            <span className="bg-green-50 text-green-700 px-2 py-1 rounded border border-green-100 flex items-center gap-1 font-bold">
+                                +{student.daily_points} Hari Ini
+                            </span>
+                        )}
+                        <span className="bg-yellow-50 text-yellow-700 px-2 py-1 rounded border border-yellow-100 flex items-center gap-1">
+                            <Trophy className="w-3 h-3" />
+                            Total: {student.total_points || 0}
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -836,7 +891,13 @@ function HistoryModal({ student, logs, loading, onClose }) {
                                 <div key={log.id} className="flex justify-between items-center p-3 bg-zinc-50 rounded-lg border border-zinc-100">
                                     <div>
                                         <p className="font-bold text-sm text-zinc-800">{log.type}</p>
-                                        <p className="text-xs text-zinc-400">{new Date(log.created_at).toLocaleString('id-ID')}</p>
+                                        <p className="text-xs text-zinc-400">
+                                            {new Date(log.created_at).toLocaleString('id-ID', {
+                                                timeZone: 'Asia/Jakarta',
+                                                day: 'numeric', month: 'long', year: 'numeric',
+                                                hour: '2-digit', minute: '2-digit'
+                                            })} WIB
+                                        </p>
                                     </div>
                                     <span className={`font-bold ${log.points > 0 ? 'text-green-600' : 'text-red-500'}`}>
                                         {log.points > 0 ? '+' : ''}{log.points}

@@ -112,18 +112,20 @@ export async function handleParticipationRequest(request, env) {
 
                 // 3. Ambil Total Poin per Siswa
                 const { results: pointsData } = await env.DB.prepare(`
-            SELECT student_id, SUM(points) as total_points, GROUP_CONCAT(type || ':' || points) as history
+            SELECT student_id, SUM(points) as total_points, GROUP_CONCAT(type || ':' || points) as history,
+            SUM(CASE WHEN date(created_at) = ? THEN points ELSE 0 END) as daily_points
             FROM participation_logs
             WHERE class_id = ? AND period_id = ?
             GROUP BY student_id
-          `).bind(classId, periodId).all();
+          `).bind(url.searchParams.get("date") || new Date().toISOString().split('T')[0], classId, periodId).all();
 
                 // 4. Gabungkan Data
                 const pointsMap = {};
                 pointsData.forEach(p => {
                     pointsMap[p.student_id] = {
                         total: p.total_points,
-                        history: p.history
+                        history: p.history,
+                        daily: p.daily_points
                     };
                 });
 
@@ -137,6 +139,7 @@ export async function handleParticipationRequest(request, env) {
                         name: s.name,
                         participation: finalScore, // Untuk display nilai akhir
                         total_points: totalPoints, // Untuk display poin murni
+                        daily_points: p ? p.daily : 0, // Poin hari ini
                         base_score: config.base_score,
                         history: p ? p.history : "" // Raw history string
                     };
