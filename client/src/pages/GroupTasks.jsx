@@ -136,18 +136,8 @@ export default function GroupTasks() {
             const res = await fetchApi(`/api/group-tasks/submissions?taskId=${taskId}`);
             if (res.ok) {
                 const data = await res.json();
-                // Also fetch members for each group
-                const withMembers = await Promise.all(data.map(async (g) => {
-                    try {
-                        const mRes = await fetchApi(`/api/groups/members?groupId=${g.group_id}`);
-                        if (mRes.ok) {
-                            const members = await mRes.json();
-                            return { ...g, members };
-                        }
-                    } catch (e) { /* ignore */ }
-                    return { ...g, members: [] };
-                }));
-                setGroupSubmissions(withMembers);
+                // Members are now included directly in the response
+                setGroupSubmissions(data);
             }
         } catch (e) { console.error(e); }
     };

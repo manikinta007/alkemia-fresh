@@ -107,12 +107,17 @@ export const WeightModal = ({ isOpen, onClose, pgWeight, setPgWeight, questions,
     const pgCount = questions.filter(q => q.type === 'pg').length;
     const essayCount = questions.filter(q => q.type !== 'pg').length;
 
+    // [LOGIC] Auto-Lock Input — only adjusts once when modal opens or counts change
+    const lastApplied = React.useRef('');
     useEffect(() => {
-        if (isOpen) {
-            if (pgCount === 0 && pgWeight !== 0) setPgWeight(0);
-            else if (essayCount === 0 && pgWeight !== 100) setPgWeight(100);
-        }
-    }, [isOpen, pgCount, essayCount, pgWeight, setPgWeight]);
+        if (!isOpen) { lastApplied.current = ''; return; }
+        const key = `${pgCount}-${essayCount}`;
+        if (key === lastApplied.current) return;
+        lastApplied.current = key;
+
+        if (pgCount === 0) setPgWeight(0);
+        else if (essayCount === 0) setPgWeight(100);
+    }, [isOpen, pgCount, essayCount]);
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">

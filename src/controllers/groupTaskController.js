@@ -104,16 +104,34 @@ export async function handleGroupTaskRequest(request, env) {
         const { results: submissions } = await env.DB.prepare(`
             SELECT s.*, st.name as submitter_name 
             FROM group_task_submissions s
-            JOIN students st ON s.submitted_by = st.id
+            LEFT JOIN students st ON s.submitted_by = st.id
             WHERE s.group_task_id = ?
         `).bind(taskId).all();
 
-        // Merge logic: Show all groups, attach submission if exists
+        // Fetch all members for all groups in one query (avoid N+1)
+        const groupIds = groups.map(g => g.id);
+        let membersMap = {};
+        if (groupIds.length > 0) {
+            const { results: allMembers } = await env.DB.prepare(`
+                SELECT gm.group_id, s.id, s.name
+                FROM group_members gm
+                JOIN students s ON gm.student_id = s.id
+                WHERE gm.group_id IN (${groupIds.map(() => '?').join(',')})
+            `).bind(...groupIds).all();
+
+            allMembers.forEach(m => {
+                if (!membersMap[m.group_id]) membersMap[m.group_id] = [];
+                membersMap[m.group_id].push({ id: m.id, name: m.name });
+            });
+        }
+
+        // Merge logic: Show all groups, attach submission + members
         const data = groups.map(g => {
             const sub = submissions.find(s => s.group_id === g.id);
             return {
                 group_id: g.id,
                 group_name: g.name,
+                members: membersMap[g.id] || [],
                 submission: sub || null,
                 status: sub ? (sub.is_graded ? 'DINILAI' : 'MENUNGGU_NILAI') : 'BELUM_DIKERJAKAN'
             };

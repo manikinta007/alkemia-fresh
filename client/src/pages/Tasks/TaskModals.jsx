@@ -170,19 +170,23 @@ export const WeightModal = ({ isOpen, onClose, pgWeight, setPgWeight, questions,
     const pgCount = questions.filter(q => q.type === 'pg').length;
     const essayCount = questions.filter(q => q.type !== 'pg').length;
 
-    // [LOGIC] Auto-Lock Input menggunakan React.useEffect
+    // [LOGIC] Auto-Lock Input — only adjusts once when modal opens or counts change
+    const lastApplied = React.useRef('');
     useEffect(() => {
-        if (isOpen) {
-            // Jika tidak ada PG, bobot PG harus 0
-            if (pgCount === 0 && pgWeight !== 0) {
-                setPgWeight(0);
-            }
-            // Jika tidak ada Essay, bobot PG harus 100 (Otomatis Full PG)
-            else if (essayCount === 0 && pgWeight !== 100) {
-                setPgWeight(100);
-            }
+        if (!isOpen) { lastApplied.current = ''; return; }
+        const key = `${pgCount}-${essayCount}`;
+        if (key === lastApplied.current) return;
+        lastApplied.current = key;
+
+        // Jika tidak ada PG, bobot PG harus 0
+        if (pgCount === 0) {
+            setPgWeight(0);
         }
-    }, [isOpen, pgCount, essayCount, pgWeight, setPgWeight]);
+        // Jika tidak ada Essay, bobot PG harus 100 (Otomatis Full PG)
+        else if (essayCount === 0) {
+            setPgWeight(100);
+        }
+    }, [isOpen, pgCount, essayCount]);
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
