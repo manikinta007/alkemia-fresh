@@ -10,7 +10,10 @@ import { TaskEditor } from './Tasks/TaskEditor';
 import { TaskGrading } from './Tasks/TaskGrading';
 import ImagePickerModal from '../components/ImagePickerModal';
 
+import { useNavigate } from 'react-router-dom';
+
 export default function Tasks() {
+    const navigate = useNavigate();
     // --- GLOBAL VIEW STATE ---
     const [viewMode, setViewMode] = useState('LIST'); // LIST, EDITOR, GRADING
     const [classes, setClasses] = useState([]);
@@ -74,11 +77,34 @@ export default function Tasks() {
     };
 
     // --- API FETCHERS ---
+    // --- API FETCHERS ---
     const fetchTasks = async (classId) => {
         setLoading(true);
         try {
-            const res = await fetchApi(`/api/tasks?class_id=${classId}`);
-            if (res.ok) setTasks(await res.json());
+            const [resSolo, resGroup] = await Promise.all([
+                fetchApi(`/api/tasks?class_id=${classId}`),
+                fetchApi(`/api/group-tasks?classId=${classId}`)
+            ]);
+
+            let allTasks = [];
+            if (resSolo.ok) {
+                const solo = await resSolo.json();
+                allTasks = [...allTasks, ...solo.map(t => ({ ...t, type: 'INDIVIDUAL' }))];
+            }
+            if (resGroup.ok) {
+                const group = await resGroup.json();
+                allTasks = [...allTasks, ...group.map(t => ({
+                    ...t,
+                    type: 'GROUP',
+                    // Map group task fields to generic task fields for UI compatibility
+                    question_count: (t.questions || []).length, // Backend might not send this count in list view, check controller
+                    submission_count: t.graded_count || 0 // Check controller
+                }))];
+            }
+
+            // Sort by Created At Descending
+            allTasks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            setTasks(allTasks);
         } catch (e) { console.error(e); }
         setLoading(false);
     };
@@ -386,14 +412,28 @@ export default function Tasks() {
                     tasks={tasks}
                     loading={loading}
                     onBack={() => setSelectedClass(null)}
-                    onCreate={() => setCreateModal(true)}
-                    onEdit={(id) => fetchTaskDetail(id, 'EDITOR')}
-                    onGrade={(id) => fetchTaskDetail(id, 'GRADING')}
-                    onDelete={handleDeleteTask}
-                    onToggleStatus={handleToggleStatus}
+                    onCreate={() => {
+                        // [UPDATE] Choice Modal/Dropdown
+                        const choice = window.prompt("Ketik '1' untuk Tugas Individu, '2' untuk Tugas Kelompok");
+                        if (choice === '1') setCreateModal(true);
+                        if (choice === '2') navigate('/group-tasks/create');
+                    }}
+                    onEdit={(task) => {
+                        if (task.type === 'GROUP') navigate(`/group-tasks/edit/${task.id}`);
+                        else fetchTaskDetail(task.id, 'EDITOR');
+                    }}
+                    onGrade={(task) => {
+                        if (task.type === 'GROUP') navigate(`/group-tasks/grade/${task.id}`);
+                        else fetchTaskDetail(task.id, 'GRADING');
+                    }}
+                    onDelete={handleDeleteTask} // Need to update delete handler too
+                    onToggleStatus={handleToggleStatus} // Need to update toggle handler too
                     onDiscussion={(task) => {
-                        setActiveTask(task);
-                        setDiscussionModal(true);
+                        if (task.type === 'GROUP') showAlert('Fitur kunci jawaban belum tersedia untuk tugas kelompok', 'info');
+                        else {
+                            setActiveTask(task);
+                            setDiscussionModal(true);
+                        }
                     }}
                 />
             </>

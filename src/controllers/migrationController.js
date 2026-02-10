@@ -555,6 +555,79 @@ export async function handleMigrationRequest(request, env) {
       }
     }
 
+    // [New] MIGRATION: Group Tasks Feature
+    if (pathname === "/api/migrate/group-tasks") {
+      try {
+        await env.DB.batch([
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS group_tasks (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              period_id INTEGER,
+              class_id INTEGER NOT NULL,
+              group_set_id INTEGER NOT NULL,
+              title TEXT NOT NULL,
+              description TEXT,
+              deadline TEXT,
+              question_mode TEXT DEFAULT 'same',
+              is_active INTEGER DEFAULT 0,
+              grades_published INTEGER DEFAULT 0,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (class_id) REFERENCES classes(id),
+              FOREIGN KEY (group_set_id) REFERENCES group_sets(id)
+            )
+          `),
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS group_task_questions (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              group_task_id INTEGER NOT NULL,
+              group_id INTEGER,
+              type TEXT NOT NULL,
+              question_text TEXT,
+              question_image_url TEXT,
+              options TEXT, -- JSON string for PG options
+              correct_key TEXT, -- Answer key (text/option) or explanation
+              char_limit INTEGER DEFAULT 500,
+              weight REAL DEFAULT 0,
+              FOREIGN KEY (group_task_id) REFERENCES group_tasks(id) ON DELETE CASCADE,
+              FOREIGN KEY (group_id) REFERENCES groups(id)
+            )
+          `),
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS group_task_submissions (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              group_task_id INTEGER NOT NULL,
+              group_id INTEGER NOT NULL,
+              submitted_by INTEGER NOT NULL,
+              grade REAL DEFAULT 0,
+              feedback TEXT,
+              is_graded INTEGER DEFAULT 0, -- -1=draft, 0=waiting, 1=graded
+              is_published INTEGER DEFAULT 0,
+              submitted_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (group_task_id) REFERENCES group_tasks(id) ON DELETE CASCADE,
+              FOREIGN KEY (group_id) REFERENCES groups(id),
+              FOREIGN KEY (submitted_by) REFERENCES students(id)
+            )
+          `),
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS group_task_answers (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              submission_id INTEGER NOT NULL,
+              question_id INTEGER NOT NULL,
+              answer_text TEXT,
+              answer_image_url TEXT,
+              score REAL DEFAULT 0,
+              is_graded INTEGER DEFAULT 0,
+              FOREIGN KEY (submission_id) REFERENCES group_task_submissions(id) ON DELETE CASCADE,
+              FOREIGN KEY (question_id) REFERENCES group_task_questions(id)
+            )
+          `)
+        ]);
+        return jsonResponse({ message: "Migration: Group Task tables created." });
+      } catch (err) {
+        return jsonResponse({ error: "Migration Error: " + err.message }, 500);
+      }
+    }
+
     return null;
   } catch (err) {
     return jsonResponse({ error: "Migration Error: " + err.message }, 500);

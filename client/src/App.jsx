@@ -9,6 +9,7 @@ import Schedule from './pages/Schedule';
 import Login from './pages/Login';
 import Materials from './pages/Materials';
 import Tasks from './pages/Tasks';
+import GroupTasks from './pages/GroupTasks';
 import Quizzes from './pages/Quizzes';
 import Grades from './pages/Grades';
 import Participation from './pages/Participation';
@@ -60,6 +61,9 @@ function AppContent() {
         <Route path="schedule" element={<Schedule />} />
         <Route path="materials" element={<Materials />} />
         <Route path="tasks" element={<Tasks />} />
+        <Route path="group-tasks/create" element={<GroupTasks />} />
+        <Route path="group-tasks/edit/:id" element={<GroupTasks />} />
+        <Route path="group-tasks/grade/:id" element={<GroupTasks />} />
         <Route path="quizzes" element={<Quizzes />} />
         <Route path="grades" element={<Grades />} />
         <Route path="participation" element={<Participation />} />

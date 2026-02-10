@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Trash2, AlertTriangle, CheckCircle, Clock, Users } from 'lucide-react';
 import { GridSkeleton, ListSkeleton } from '../../components/Skeleton';
 
 // --- 1. TAMPILAN PILIH KELAS (Saat belum pilih kelas) ---
@@ -112,6 +112,13 @@ export const TaskList = ({
                             <div key={task.id} className={`card-mono p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white ${task.is_active ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-zinc-300 opacity-90'}`}>
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-2">
+                                        {/* [NEW] Badge Group/Individu */}
+                                        {task.type === 'GROUP' && (
+                                            <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-200 flex items-center gap-1">
+                                                <Users size={10} /> KELOMPOK
+                                            </span>
+                                        )}
+
                                         {task.is_active ?
                                             <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold border border-green-200 flex items-center gap-1"><CheckCircle size={10} /> TERBIT</span>
                                             :
@@ -131,8 +138,12 @@ export const TaskList = ({
                                     </div>
                                     <h3 className="font-bold text-lg text-zinc-900">{task.title}</h3>
                                     <div className="flex gap-4 text-xs text-zinc-500 mt-2 font-medium">
-                                        <span className="flex items-center gap-1">📝 <b>{task.question_count}</b> Soal</span>
-                                        <span className="flex items-center gap-1">👥 <b>{task.submission_count}</b> Submit</span>
+                                        {task.type === 'GROUP' ? (
+                                            <span className="flex items-center gap-1">👥 <b>{task.group_set_name || 'Group Set'}</b></span>
+                                        ) : (
+                                            <span className="flex items-center gap-1">📝 <b>{task.question_count}</b> Soal</span>
+                                        )}
+                                        <span className="flex items-center gap-1">📥 <b>{task.submission_count}</b> Submit</span>
                                         {/* [UPDATE] Tampilkan tanggal dan JAM agar guru sadar */}
                                         <span className="flex items-center gap-1 text-orange-600">
                                             <Clock size={12} />
@@ -162,10 +173,10 @@ export const TaskList = ({
 
                                         {/* [UPDATE V7] Tombol EDIT disabled jika status AKTIF/TERBIT */}
                                         <button
-                                            onClick={() => onEdit(task.id)}
-                                            disabled={task.is_active === 1}
+                                            onClick={() => onEdit(task)}
+                                            disabled={task.is_active === 1 && task.type !== 'GROUP'} // Group tasks might be editable? Assuming same rule.
                                             title={task.is_active === 1 ? "Tarik kembali tugas untuk mengedit soal" : "Edit Soal"}
-                                            className={`px-4 py-2 border rounded-lg text-xs font-bold transition flex-1 md:flex-none ${task.is_active === 1
+                                            className={`px-4 py-2 border rounded-lg text-xs font-bold transition flex-1 md:flex-none ${task.is_active === 1 && task.type !== 'GROUP'
                                                 ? 'bg-zinc-100 border-zinc-200 text-zinc-400 cursor-not-allowed'
                                                 : 'bg-white border-zinc-200 hover:border-black hover:text-black hover:bg-zinc-50'
                                                 }`}
@@ -174,7 +185,7 @@ export const TaskList = ({
                                         </button>
 
                                         <button
-                                            onClick={() => onGrade(task.id)}
+                                            onClick={() => onGrade(task)}
                                             className="px-5 py-2 bg-zinc-100 text-zinc-900 border border-zinc-200 rounded-lg text-xs font-bold hover:bg-zinc-200 transition flex-1 md:flex-none"
                                         >
                                             NILAI

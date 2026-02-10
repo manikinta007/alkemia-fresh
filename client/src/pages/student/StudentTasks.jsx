@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { processContentForDisplay } from '../../utils/imageUtils';
+import StudentGroupTaskDetail from './StudentGroupTaskDetail';
 
 // --- COLOR GRADING HELPER ---
 // 0-50: Red, 51-69: Yellow, 70-79: Blue, 80-100: Green
@@ -86,16 +87,41 @@ export default function StudentTasks({ student, onBack }) {
     const closeModal = () => setModal({ show: false, type: 'info', title: '', msg: '' });
 
     // --- DATA FETCHING ---
+    // --- DATA FETCHING ---
     const fetchTasks = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/student/tasks?class_id=${student.class_id}&student_id=${student.id}`, { headers: getHeaders() });
-            if (res.ok) setTasks(await res.json());
+            const [resSolo, resGroup] = await Promise.all([
+                fetch(`/api/student/tasks?class_id=${student.class_id}&student_id=${student.id}`, { headers: getHeaders() }),
+                fetch(`/api/student/group-tasks`, { headers: getHeaders() })
+            ]);
+
+            let allTasks = [];
+            if (resSolo.ok) allTasks = [...allTasks, ...(await resSolo.json()).map(t => ({ ...t, type: 'INDIVIDUAL' }))];
+            if (resGroup.ok) allTasks = [...allTasks, ...(await resGroup.json()).map(t => ({
+                ...t,
+                type: 'GROUP',
+                status: t.submission_id ? (t.is_graded ? 'DINILAI' : 'MENUNGGU_NILAI') : 'BELUM_DIKERJAKAN',
+                my_grade: t.grade, // Map grade
+                question_count: 5 // Default or fetch count
+            }))];
+
+            // Sort by Created
+            allTasks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            setTasks(allTasks);
         } catch (e) { console.error(e); }
         setLoading(false);
     };
 
-    const openTask = async (taskId, status) => {
+    const openTask = async (task, status) => {
+        // [NEW] Group Task Handler
+        if (task.type === 'GROUP') {
+            setActiveTask(task);
+            setViewMode('GROUP_DETAIL');
+            return;
+        }
+
+        const taskId = task.id; // Original logic uses ID
         const isDone = status !== 'BELUM_DIKERJAKAN';
         setIsReadOnly(isDone);
 
@@ -287,6 +313,21 @@ export default function StudentTasks({ student, onBack }) {
     };
 
     // --- COMPONENTS MOVED OUTSIDE ---
+
+    // 0. GROUP DETAIL VIEW
+    if (viewMode === 'GROUP_DETAIL') {
+        return (
+            <StudentGroupTaskDetail
+                student={student}
+                taskId={activeTask.id}
+                onBack={() => {
+                    setViewMode('LIST');
+                    fetchTasks(); // Refresh status
+                }}
+            />
+        );
+    }
+
     // (See External Definitions at bottom)
 
     // 1. LIST VIEW (DARK MODE)
@@ -319,11 +360,12 @@ export default function StudentTasks({ student, onBack }) {
                                         'bg-zinc-800 text-zinc-400 border-zinc-700';
 
                         return (
-                            <div key={t.id} onClick={() => !isLocked && openTask(t.id, t.status)} className={`p-4 rounded-xl border transition-all relative overflow-hidden group ${isLocked ? 'bg-zinc-900/50 border-zinc-800 opacity-60 cursor-not-allowed' : 'bg-zinc-900 border-zinc-800 hover:border-orange-900 cursor-pointer active:scale-[0.98]'}`}>
+                            <div key={t.id} onClick={() => !isLocked && openTask(t, t.status)} className={`p-4 rounded-xl border transition-all relative overflow-hidden group ${isLocked ? 'bg-zinc-900/50 border-zinc-800 opacity-60 cursor-not-allowed' : 'bg-zinc-900 border-zinc-800 hover:border-orange-900 cursor-pointer active:scale-[0.98]'}`}>
                                 <div className="flex justify-between items-start mb-2">
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${statusColor}`}>
                                         {t.status.replace('_', ' ')}
                                     </span>
+                                    {t.type === 'GROUP' && <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-purple-800 bg-purple-900/30 text-purple-400 uppercase tracking-wider ml-2">GROUP</span>}
                                     {t.my_grade !== null && <span className={`text-xl font-black ${getGradeColor(t.my_grade)}`}>{t.my_grade}</span>}
                                 </div>
                                 <h3 className="font-bold text-white mb-1 text-lg">{t.title}</h3>
