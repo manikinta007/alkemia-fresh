@@ -81,7 +81,7 @@ export default function GroupTasks() {
 
     const fetchGroupSets = async (classId) => {
         try {
-            const res = await fetchApi(`/api/groups/sets?classId=${classId}`);
+            const res = await fetchApi(`/api/groups/sets?class_id=${classId}`);
             if (res.ok) setGroupSets(await res.json());
         } catch (e) { console.error(e); }
     };
