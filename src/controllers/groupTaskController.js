@@ -1,4 +1,4 @@
-import { jsonResponse } from "../utils/response";
+import { jsonResponse } from "../utils.js";
 
 export async function handleGroupTaskRequest(request, env) {
     const url = new URL(request.url);
