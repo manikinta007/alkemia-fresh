@@ -11,6 +11,22 @@ export async function handleMigrationRequest(request, env) {
   const method = request.method;
 
   try {
+    // 1b. ROLLBACK GROUP TASKS (SAFE CLEANUP)
+    // Jalankan ini jika ingin menghapus fitur Group Tasks
+    if (pathname === "/api/migrate/rollback-group-tasks" && method === "GET") {
+      try {
+        await env.DB.batch([
+          env.DB.prepare("DROP TABLE IF EXISTS group_task_answers"),
+          env.DB.prepare("DROP TABLE IF EXISTS group_task_submissions"),
+          env.DB.prepare("DROP TABLE IF EXISTS group_task_questions"),
+          env.DB.prepare("DROP TABLE IF EXISTS group_tasks")
+        ]);
+        return jsonResponse({ message: "SUCCESS: Group Task tables have been removed." });
+      } catch (e) {
+        return jsonResponse({ error: "Rollback Failed: " + e.message }, 500);
+      }
+    }
+
     // 1. FULL RESET & INIT (Jalankan ini HANYA untuk instalasi baru atau jika ingin menghapus semua data tugas)
     // Endpoint: /api/migrate/tasks
     if (pathname === "/api/migrate/tasks" && method === "GET") {
