@@ -591,6 +591,94 @@ export async function handleMigrationRequest(request, env) {
       }
     }
 
+    // [NEW] MIGRATION: Group Tasks Tables (Tugas Kelompok)
+    // Endpoint: /api/migrate/group-tasks
+    if (pathname === "/api/migrate/group-tasks" && method === "GET") {
+      try {
+        await env.DB.batch([
+          // 1. Group Tasks (Header Tugas Kelompok)
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS group_tasks (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              period_id INTEGER,
+              class_id INTEGER NOT NULL,
+              group_set_id INTEGER NOT NULL,
+              title TEXT NOT NULL,
+              description TEXT,
+              deadline TEXT,
+              question_mode TEXT DEFAULT 'same',
+              is_active INTEGER DEFAULT 0,
+              pg_weight INTEGER DEFAULT 0,
+              grades_published INTEGER DEFAULT 0,
+              discussion_text TEXT,
+              discussion_url TEXT,
+              show_discussion INTEGER DEFAULT 0,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (period_id) REFERENCES academic_periods(id),
+              FOREIGN KEY (class_id) REFERENCES classes(id),
+              FOREIGN KEY (group_set_id) REFERENCES group_sets(id)
+            )
+          `),
+          // 2. Group Task Questions (Soal Tugas Kelompok)
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS group_task_questions (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              group_task_id INTEGER NOT NULL,
+              type TEXT NOT NULL,
+              question_text TEXT,
+              question_image_url TEXT,
+              options TEXT,
+              correct_key TEXT,
+              weight INTEGER DEFAULT 0,
+              FOREIGN KEY (group_task_id) REFERENCES group_tasks(id) ON DELETE CASCADE
+            )
+          `),
+          // 3. Group Task Submissions (Pengumpulan per Kelompok)
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS group_task_submissions (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              group_task_id INTEGER NOT NULL,
+              group_id INTEGER NOT NULL,
+              submitted_by INTEGER,
+              grade REAL DEFAULT 0,
+              feedback TEXT,
+              is_graded INTEGER DEFAULT 0,
+              is_published INTEGER DEFAULT 0,
+              submitted_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (group_task_id) REFERENCES group_tasks(id) ON DELETE CASCADE,
+              FOREIGN KEY (group_id) REFERENCES groups(id),
+              FOREIGN KEY (submitted_by) REFERENCES students(id)
+            )
+          `),
+          // 4. Group Task Answers (Jawaban per Soal per Kelompok)
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS group_task_answers (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              submission_id INTEGER NOT NULL,
+              question_id INTEGER NOT NULL,
+              answer_text TEXT,
+              answer_image_url TEXT,
+              score REAL DEFAULT 0,
+              is_graded INTEGER DEFAULT 0,
+              FOREIGN KEY (submission_id) REFERENCES group_task_submissions(id) ON DELETE CASCADE,
+              FOREIGN KEY (question_id) REFERENCES group_task_questions(id)
+            )
+          `),
+          // Indexes
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_group_tasks_class ON group_tasks(class_id)`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_group_task_q_task ON group_task_questions(group_task_id)`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_group_task_sub_task ON group_task_submissions(group_task_id)`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_group_task_ans_sub ON group_task_answers(submission_id)`)
+        ]);
+
+        return jsonResponse({
+          message: "Migrasi Group Tasks Berhasil: Tabel group_tasks, group_task_questions, group_task_submissions, group_task_answers siap."
+        });
+      } catch (e) {
+        return jsonResponse({ error: "Migrate Group Tasks Error: " + e.message }, 500);
+      }
+    }
+
     return null;
   } catch (err) {
     return jsonResponse({ error: "Migration Error: " + err.message }, 500);
