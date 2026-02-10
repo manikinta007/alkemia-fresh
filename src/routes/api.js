@@ -174,6 +174,7 @@ export async function handleApiRequest(request, env) {
     pathname.startsWith("/api/migrate/participation-settings") || // [MIGRATION] Setting Poin Dasar
     pathname.startsWith("/api/migrate/participation-config") || // [MIGRATION] Config Poin
     pathname.startsWith("/api/migrate/groups-table") || // [MIGRATION] Tabel Kelompok
+    pathname.match(/^\/api\/groups\/\d+\/leader$/) || // [PUBLIC] Student leader selection (auth handled in controller)
     pathname.startsWith("/api/images/file/"); // Allow public image access for student app
 
   if (!isPublicApi) {
@@ -252,8 +253,8 @@ export async function handleApiRequest(request, env) {
     // [NEW] Participation API (Nilai Keaktifan)
     if (!apiResponse) apiResponse = await handleParticipationRequest(request, env);
 
-    // [NEW] Group Tasks API
-    if (!apiResponse && pathname.startsWith("/api/group-tasks")) apiResponse = await handleGroupTaskRequest(request, env);
+    // [NEW] Group Tasks API (includes student endpoints /api/student/group-task*)
+    if (!apiResponse && (pathname.startsWith("/api/group-tasks") || pathname.startsWith("/api/student/group-task"))) apiResponse = await handleGroupTaskRequest(request, env);
 
     // [NEW] Groups API
     if (!apiResponse && pathname.startsWith("/api/groups")) apiResponse = await handleGroupRequest(request, env);

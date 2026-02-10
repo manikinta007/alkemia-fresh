@@ -50,10 +50,24 @@ const getHeaders = () => {
 };
 
 export default function StudentTasks({ student, onBack }) {
-    // VIEW MODES: 'LIST', 'DETAIL'
+    // VIEW MODES: 'LIST', 'DETAIL', 'GROUP_DETAIL'
     const [viewMode, setViewMode] = useState('LIST');
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // [NEW] TAB STATE
+    const [taskTab, setTaskTab] = useState('INDIVIDU'); // 'INDIVIDU' | 'KELOMPOK'
+    const [groupTasks, setGroupTasks] = useState([]);
+    const [loadingGroup, setLoadingGroup] = useState(false);
+
+    // [NEW] GROUP TASK DETAIL STATE
+    const [groupDetail, setGroupDetail] = useState(null);
+    const [groupQuestions, setGroupQuestions] = useState([]);
+    const [groupGroup, setGroupGroup] = useState(null);
+    const [groupSubmission, setGroupSubmission] = useState(null);
+    const [groupAnswers, setGroupAnswers] = useState({});
+    const [groupIsLeader, setGroupIsLeader] = useState(false);
+    const [groupLeaderName, setGroupLeaderName] = useState('');
 
     // DETAIL STATE
     const [activeTask, setActiveTask] = useState(null);
@@ -93,6 +107,109 @@ export default function StudentTasks({ student, onBack }) {
             if (res.ok) setTasks(await res.json());
         } catch (e) { console.error(e); }
         setLoading(false);
+    };
+
+    // [NEW] Fetch Group Tasks
+    const fetchGroupTasks = async () => {
+        setLoadingGroup(true);
+        try {
+            const res = await fetch('/api/student/group-tasks', { headers: getHeaders() });
+            if (res.ok) setGroupTasks(await res.json());
+        } catch (e) { console.error(e); }
+        setLoadingGroup(false);
+    };
+
+    // [NEW] Open Group Task Detail
+    const openGroupTask = async (taskId) => {
+        try {
+            const res = await fetch(`/api/student/group-task-detail?taskId=${taskId}`, { headers: getHeaders() });
+            if (res.ok) {
+                const data = await res.json();
+                setGroupDetail(data.task);
+                setGroupQuestions(data.questions);
+                setGroupGroup(data.group);
+                setGroupSubmission(data.submission);
+
+                // Leader logic
+                const myId = data.currentStudentId;
+                setGroupIsLeader(myId === data.group.leader_id);
+                if (data.group.leader_id) {
+                    const leader = data.group.members.find(m => m.id === data.group.leader_id);
+                    setGroupLeaderName(leader ? leader.name : 'Unknown');
+                } else {
+                    setGroupLeaderName('');
+                }
+
+                // Map answers
+                if (data.answers) {
+                    const mapped = {};
+                    data.answers.forEach(a => {
+                        mapped[a.question_id] = { text: a.answer_text, image: a.answer_image_url, option: a.answer_text };
+                    });
+                    setGroupAnswers(mapped);
+                } else {
+                    setGroupAnswers({});
+                }
+                setViewMode('GROUP_DETAIL');
+            } else {
+                const err = await res.json();
+                showAlert('Error', err.error || 'Gagal memuat tugas kelompok.');
+            }
+        } catch (e) { showAlert('Error', 'Gagal memuat tugas kelompok.'); }
+    };
+
+    // [NEW] Submit Group Task
+    const handleGroupSubmit = async (isDraft = false) => {
+        if (!isDraft && !groupIsLeader) {
+            return showAlert('Ditolak', 'Hanya Ketua Kelompok yang dapat mengirim tugas!', 'error');
+        }
+        showConfirm(
+            isDraft ? 'Simpan Draft' : 'Kirim Tugas',
+            isDraft ? 'Simpan jawaban sementara?' : 'Kirim jawaban final? Tidak bisa diubah lagi setelah ini.',
+            async () => {
+                setSubmitting(true);
+                try {
+                    const res = await fetch('/api/student/group-tasks/submit', {
+                        method: 'POST',
+                        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ taskId: groupDetail.id, responses: groupAnswers, isDraft })
+                    });
+                    if (res.ok) {
+                        showAlert('Berhasil', isDraft ? 'Draft tersimpan!' : 'Tugas berhasil dikirim!', 'success', () => {
+                            if (!isDraft) { setViewMode('LIST'); fetchGroupTasks(); }
+                            else { openGroupTask(groupDetail.id); }
+                            closeModal();
+                        });
+                    } else {
+                        const err = await res.json();
+                        showAlert('Gagal', err.error || 'Gagal mengirim tugas.', 'error');
+                    }
+                } catch (e) { showAlert('Error', 'Masalah koneksi.', 'error'); }
+                setSubmitting(false);
+            }
+        );
+    };
+
+    // [NEW] Select Leader
+    const handleSelectLeader = async (studentId) => {
+        showConfirm('Pilih Ketua', 'Yakin memilih anggota ini sebagai Ketua Kelompok?', async () => {
+            try {
+                const res = await fetch(`/api/groups/${groupGroup.id}/leader`, {
+                    method: 'POST',
+                    headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ studentId })
+                });
+                if (res.ok) {
+                    showAlert('Berhasil', 'Ketua kelompok berhasil dipilih!', 'success', () => {
+                        openGroupTask(groupDetail.id);
+                        closeModal();
+                    });
+                } else {
+                    const err = await res.json();
+                    showAlert('Gagal', err.error || 'Gagal memilih ketua.', 'error');
+                }
+            } catch (e) { showAlert('Error', 'Masalah koneksi.', 'error'); }
+        });
     };
 
     const openTask = async (taskId, status) => {
@@ -162,7 +279,7 @@ export default function StudentTasks({ student, onBack }) {
         }
     }, [answers, activeTask, isReadOnly, student.id]);
 
-    useEffect(() => { fetchTasks(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { fetchTasks(); fetchGroupTasks(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // --- HANDLERS ---
     const handleAnswerChange = (qId, field, value) => {
@@ -291,25 +408,41 @@ export default function StudentTasks({ student, onBack }) {
 
     // 1. LIST VIEW (DARK MODE)
     if (viewMode === 'LIST') {
+        const isIndividu = taskTab === 'INDIVIDU';
+        const currentLoading = isIndividu ? loading : loadingGroup;
+        const currentTasks = isIndividu ? tasks : groupTasks;
+
         return (
             <div className="flex flex-col h-full bg-zinc-950 text-white animate-in fade-in">
                 <CustomModal modal={modal} closeModal={closeModal} modalCallbackRef={modalCallbackRef} />
-                <div className="bg-zinc-900 border-b border-zinc-800 p-4 pt-safe sticky top-0 z-10 shadow-lg flex items-center gap-3">
-                    <button onClick={onBack} className="w-8 h-8 flex items-center justify-center bg-zinc-800 rounded-full font-bold text-zinc-400 hover:text-white hover:bg-zinc-700">←</button>
-                    <h2 className="font-bold text-lg text-white">Daftar Tugas</h2>
+                <div className="bg-zinc-900 border-b border-zinc-800 p-4 pt-safe sticky top-0 z-10 shadow-lg">
+                    <div className="flex items-center gap-3 mb-3">
+                        <button onClick={onBack} className="w-8 h-8 flex items-center justify-center bg-zinc-800 rounded-full font-bold text-zinc-400 hover:text-white hover:bg-zinc-700">←</button>
+                        <h2 className="font-bold text-lg text-white">Daftar Tugas</h2>
+                    </div>
+                    {/* TAB SWITCHER */}
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setTaskTab('INDIVIDU')}
+                            className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${taskTab === 'INDIVIDU' ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/30' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+                        >📝 Individu</button>
+                        <button
+                            onClick={() => { setTaskTab('KELOMPOK'); if (groupTasks.length === 0 && !loadingGroup) fetchGroupTasks(); }}
+                            className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${taskTab === 'KELOMPOK' ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/30' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+                        >👥 Kelompok</button>
+                    </div>
                 </div>
 
                 <div className="p-4 space-y-3 pb-24 overflow-y-auto flex-1">
-                    {loading && <div className="text-center p-8 text-zinc-500 animate-pulse">Memuat tugas...</div>}
-                    {!loading && tasks.length === 0 && <div className="text-center p-8 text-zinc-600 italic">Tidak ada tugas aktif.</div>}
+                    {currentLoading && <div className="text-center p-8 text-zinc-500 animate-pulse">Memuat tugas...</div>}
+                    {!currentLoading && currentTasks.length === 0 && <div className="text-center p-8 text-zinc-600 italic">{isIndividu ? 'Tidak ada tugas individu aktif.' : 'Tidak ada tugas kelompok aktif.'}</div>}
 
-                    {tasks.map(t => {
+                    {/* INDIVIDUAL TASKS */}
+                    {isIndividu && tasks.map(t => {
                         const isDone = t.status !== 'BELUM_DIKERJAKAN';
                         const deadlineDate = t.deadline ? new Date(t.deadline) : null;
                         const isExpiredList = deadlineDate && new Date() > deadlineDate;
                         const isLocked = isExpiredList && !isDone;
-
-                        // [UPDATE] Cek Local Draft untuk ubah tombol
                         const hasDraft = !isDone && localStorage.getItem(`draft_task_${student.id}_${t.id}`);
 
                         const statusColor = t.status === 'DINILAI' ? 'bg-green-900/30 text-green-400 border-green-800' :
@@ -331,17 +464,57 @@ export default function StudentTasks({ student, onBack }) {
                                     <span>📅 {deadlineDate ? deadlineDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Tanpa Deadline'}</span>
                                     <span>📝 {t.question_count} Soal</span>
                                 </div>
-
                                 <div className="mt-4">
                                     {isDone ? (
                                         <button className="w-full py-2 bg-zinc-800 text-zinc-300 rounded-lg font-bold text-xs border border-zinc-700">👁️ LIHAT HASIL / REVIEW</button>
                                     ) : isLocked ? (
                                         <button disabled className="w-full py-2 bg-red-900/20 text-red-500 rounded-lg font-bold text-xs border border-red-900/30 flex items-center justify-center gap-2">🔒 DITUTUP (WAKTU HABIS)</button>
                                     ) : hasDraft ? (
-                                        // [UPDATE] Tombol Lanjutkan jika ada draft
                                         <button className="w-full py-2 bg-blue-600 text-white rounded-lg font-bold text-xs shadow-lg shadow-blue-900/20 hover:bg-blue-500 transition border border-blue-500">➜ LANJUTKAN PENGERJAAN</button>
                                     ) : (
                                         <button className="w-full py-2 bg-orange-600 text-white rounded-lg font-bold text-xs shadow-lg shadow-orange-900/20 group-hover:bg-orange-500 transition">KERJAKAN SEKARANG →</button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {/* GROUP TASKS */}
+                    {!isIndividu && groupTasks.map(t => {
+                        const deadlineDate = t.deadline ? new Date(t.deadline) : null;
+                        const isExpiredList = deadlineDate && new Date() > deadlineDate;
+                        const hasSubmission = !!t.submission_id;
+                        const isGraded = t.is_graded === 1;
+                        const isLocked = isExpiredList && !hasSubmission;
+
+                        const statusText = isGraded ? 'DINILAI' : hasSubmission ? 'DIKUMPULKAN' : 'BELUM DIKERJAKAN';
+                        const statusColor = isGraded ? 'bg-green-900/30 text-green-400 border-green-800' :
+                            hasSubmission ? 'bg-yellow-900/30 text-yellow-400 border-yellow-800' :
+                                'bg-zinc-800 text-zinc-400 border-zinc-700';
+
+                        return (
+                            <div key={t.id} onClick={() => !isLocked && openGroupTask(t.id)} className={`p-4 rounded-xl border transition-all relative overflow-hidden group ${isLocked ? 'bg-zinc-900/50 border-zinc-800 opacity-60 cursor-not-allowed' : 'bg-zinc-900 border-zinc-800 hover:border-purple-900 cursor-pointer active:scale-[0.98]'}`}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${statusColor}`}>{statusText}</span>
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-900/30 text-purple-400 border border-purple-800">👥 {t.my_group_name}</span>
+                                    </div>
+                                    {isGraded && t.grade !== null && <span className={`text-xl font-black ${getGradeColor(t.grade)}`}>{t.grade}</span>}
+                                </div>
+                                <h3 className="font-bold text-white mb-1 text-lg">{t.title}</h3>
+                                <div className="flex gap-3 text-xs text-zinc-400">
+                                    <span>📅 {deadlineDate ? deadlineDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Tanpa Deadline'}</span>
+                                    <span>📎 {t.group_set_name}</span>
+                                </div>
+                                <div className="mt-4">
+                                    {isGraded ? (
+                                        <button className="w-full py-2 bg-zinc-800 text-zinc-300 rounded-lg font-bold text-xs border border-zinc-700">👁️ LIHAT HASIL</button>
+                                    ) : isLocked ? (
+                                        <button disabled className="w-full py-2 bg-red-900/20 text-red-500 rounded-lg font-bold text-xs border border-red-900/30">🔒 DITUTUP</button>
+                                    ) : hasSubmission ? (
+                                        <button className="w-full py-2 bg-zinc-800 text-zinc-300 rounded-lg font-bold text-xs border border-zinc-700">📋 LIHAT JAWABAN</button>
+                                    ) : (
+                                        <button className="w-full py-2 bg-purple-600 text-white rounded-lg font-bold text-xs shadow-lg shadow-purple-900/20 group-hover:bg-purple-500 transition">KERJAKAN BERSAMA →</button>
                                     )}
                                 </div>
                             </div>
@@ -668,6 +841,153 @@ export default function StudentTasks({ student, onBack }) {
                 {isReadOnly && (
                     <div className="p-4 bg-zinc-900 border-t border-zinc-800 sticky bottom-0 z-20 pb-safe">
                         <button onClick={() => setViewMode('LIST')} className="w-full py-3.5 bg-zinc-800 text-white rounded-xl font-bold text-sm hover:bg-zinc-700">
+                            KEMBALI KE DAFTAR
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // 3. GROUP TASK DETAIL VIEW (DARK MODE)
+    if (viewMode === 'GROUP_DETAIL' && groupDetail) {
+        const grpReadOnly = groupSubmission?.submitted_at && !groupSubmission?.is_draft;
+
+        return (
+            <div className="flex flex-col h-full bg-zinc-950 animate-in slide-in-from-bottom-4 duration-300 text-white">
+                <CustomModal modal={modal} closeModal={closeModal} modalCallbackRef={modalCallbackRef} />
+
+                {/* Header */}
+                <div className="bg-zinc-900 border-b border-zinc-800 p-3 pt-safe sticky top-0 z-20 shadow-lg flex justify-between items-center">
+                    <button onClick={() => { setViewMode('LIST'); setTaskTab('KELOMPOK'); }} className="text-zinc-400 font-bold text-sm hover:text-white px-2">← Kembali</button>
+                    <div className="text-center">
+                        <h3 className="font-bold text-sm max-w-[150px] truncate text-white">{groupDetail.title}</h3>
+                        <span className="text-[10px] text-purple-400 font-bold">👥 {groupGroup?.name}</span>
+                    </div>
+                    <div className="w-8"></div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto px-3 py-4 pb-40 space-y-4">
+
+                    {/* Score card if graded */}
+                    {groupSubmission?.is_graded === 1 && groupSubmission?.grade !== null && (
+                        <div className={`bg-zinc-900 border ${getGradeBorderColor(groupSubmission.grade)} p-5 rounded-2xl`}>
+                            <p className="text-xs font-bold text-zinc-500 uppercase mb-1">Nilai Kelompok</p>
+                            <p className={`text-4xl font-black ${getGradeColor(groupSubmission.grade)}`}>{groupSubmission.grade}<span className="text-lg text-zinc-600">/100</span></p>
+                        </div>
+                    )}
+
+                    {/* Group Members & Leader */}
+                    <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl">
+                        <p className="text-xs font-bold text-zinc-500 uppercase mb-3">👑 Ketua Kelompok</p>
+                        {groupGroup?.leader_id ? (
+                            <div className="bg-yellow-900/20 border border-yellow-800 rounded-lg p-3 text-sm">
+                                <span className="text-yellow-400 font-bold">{groupLeaderName} {groupIsLeader && '(Anda)'}</span>
+                            </div>
+                        ) : (
+                            <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
+                                <p className="text-red-400 text-xs font-bold mb-3">⚠️ Belum ada ketua! Pilih salah satu anggota:</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {groupGroup?.members?.map(m => (
+                                        <button key={m.id} onClick={() => handleSelectLeader(m.id)} className="text-xs bg-zinc-800 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-zinc-700 transition border border-zinc-700">
+                                            Pilih {m.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <div className="mt-3">
+                            <p className="text-xs font-bold text-zinc-500 uppercase mb-2">Anggota ({groupGroup?.members?.length || 0})</p>
+                            <div className="flex flex-wrap gap-2">
+                                {groupGroup?.members?.map(m => (
+                                    <span key={m.id} className="text-xs bg-zinc-800 text-zinc-300 px-2 py-1 rounded-lg border border-zinc-700">
+                                        {m.name} {m.id === groupGroup.leader_id && '👑'}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Description */}
+                    {groupDetail.description && (
+                        <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl">
+                            <p className="font-bold text-white mb-2">Instruksi:</p>
+                            <p className="text-sm text-zinc-300">{groupDetail.description}</p>
+                        </div>
+                    )}
+
+                    {/* Questions */}
+                    {groupQuestions.map((q, idx) => (
+                        <div key={q.id} className="bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
+                            <div className="flex justify-between items-start mb-3">
+                                <span className="bg-purple-900/30 border border-purple-800/50 text-purple-400 px-3 py-1.5 rounded-lg text-sm font-black">NO {idx + 1}</span>
+                                <span className="text-xs text-zinc-500">Bobot: {q.weight}</span>
+                            </div>
+                            <div className="text-zinc-100 font-medium mb-4" dangerouslySetInnerHTML={{ __html: q.question_text }}></div>
+                            {q.question_image_url && <img src={q.question_image_url} className="rounded-lg border border-zinc-700 max-h-60 object-contain bg-black mb-4" />}
+
+                            {/* Answer Input */}
+                            <div className="border-t border-zinc-800 pt-4">
+                                {q.type === 'pg' && q.options ? (
+                                    <div className="space-y-2">
+                                        {(typeof q.options === 'string' ? JSON.parse(q.options) : q.options).map((opt, oIdx) => {
+                                            if (!opt) return null;
+                                            const char = String.fromCharCode(65 + oIdx);
+                                            const isSelected = groupAnswers[q.id]?.option === char;
+                                            return (
+                                                <div key={oIdx}
+                                                    onClick={() => !grpReadOnly && setGroupAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], option: char, text: char } }))}
+                                                    className={`flex items-center gap-4 p-4 rounded-xl border transition cursor-pointer ${isSelected ? 'bg-purple-600 border-purple-500 text-white' : 'bg-black border-zinc-800 text-zinc-400 hover:bg-zinc-800'} ${grpReadOnly ? 'pointer-events-none' : ''}`}
+                                                >
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${isSelected ? 'border-white bg-white text-purple-600' : 'border-zinc-700 bg-zinc-900 text-zinc-500'}`}>{char}</div>
+                                                    <span className="text-base font-medium">{opt}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <textarea
+                                        className="w-full p-4 bg-black border border-zinc-700 rounded-xl focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none text-base min-h-[120px] text-zinc-100 placeholder-zinc-600 disabled:opacity-50"
+                                        placeholder={grpReadOnly ? 'Tidak ada jawaban' : 'Tulis jawaban kelompok...'}
+                                        value={groupAnswers[q.id]?.text || ''}
+                                        onChange={(e) => setGroupAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
+                                        disabled={grpReadOnly}
+                                    />
+                                )}
+                            </div>
+                        </div>
+                    ))}
+
+                    {/* Feedback */}
+                    {groupSubmission?.feedback && (
+                        <div className="bg-blue-900/20 border border-blue-800 rounded-xl p-4">
+                            <p className="text-xs font-bold text-blue-400 uppercase mb-2">Umpan Balik Guru</p>
+                            <p className="text-sm text-blue-300">{groupSubmission.feedback}</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer Actions */}
+                {!grpReadOnly && (
+                    <div className="p-4 bg-zinc-900 border-t border-zinc-800 sticky bottom-0 z-20 pb-safe flex gap-3">
+                        <button onClick={() => handleGroupSubmit(true)} disabled={submitting} className="flex-1 py-3.5 bg-zinc-800 text-zinc-300 rounded-xl font-bold text-sm hover:bg-zinc-700 disabled:opacity-50">
+                            💾 SIMPAN DRAFT
+                        </button>
+                        <button
+                            onClick={() => handleGroupSubmit(false)}
+                            disabled={submitting || !groupGroup?.leader_id || !groupIsLeader}
+                            className={`flex-[2] py-3.5 rounded-xl font-bold text-sm shadow-lg transition disabled:opacity-50 ${!groupGroup?.leader_id || !groupIsLeader ? 'bg-zinc-700 text-zinc-400' : 'bg-purple-600 text-white hover:bg-purple-500 active:scale-95'}`}
+                        >
+                            {submitting ? '⏳' : !groupGroup?.leader_id ? '⚠️ PILIH KETUA DULU' : !groupIsLeader ? '🔒 MENUNGGU KETUA' : '✈️ KIRIM FINAL'}
+                        </button>
+                    </div>
+                )}
+
+                {/* Footer Read Only */}
+                {grpReadOnly && (
+                    <div className="p-4 bg-zinc-900 border-t border-zinc-800 sticky bottom-0 z-20 pb-safe">
+                        <button onClick={() => { setViewMode('LIST'); setTaskTab('KELOMPOK'); }} className="w-full py-3.5 bg-zinc-800 text-white rounded-xl font-bold text-sm hover:bg-zinc-700">
                             KEMBALI KE DAFTAR
                         </button>
                     </div>
