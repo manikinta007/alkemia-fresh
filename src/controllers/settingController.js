@@ -190,6 +190,17 @@ export async function handleSettingRequest(request, env) {
           env.DB.prepare("DROP TABLE IF EXISTS teaching_journals"), // [Jurnal Mengajar]
           env.DB.prepare("DROP TABLE IF EXISTS journal_templates"), // [Jurnal Mengajar]
           env.DB.prepare("DROP TABLE IF EXISTS journal_settings"),  // [Jurnal Mengajar]
+          env.DB.prepare("DROP TABLE IF EXISTS participation_logs"), // [Keaktifan]
+          env.DB.prepare("DROP TABLE IF EXISTS material_distribution"), // [Bank Bahan Ajar]
+          env.DB.prepare("DROP TABLE IF EXISTS material_bank"),        // [Bank Bahan Ajar]
+          env.DB.prepare("DROP TABLE IF EXISTS material_folders"),     // [Bank Bahan Ajar]
+          env.DB.prepare("DROP TABLE IF EXISTS group_members"),   // [Kelompok]
+          env.DB.prepare("DROP TABLE IF EXISTS groups"),          // [Kelompok]
+          env.DB.prepare("DROP TABLE IF EXISTS group_sets"),      // [Kelompok]
+          env.DB.prepare("DROP TABLE IF EXISTS group_task_answers"),      // [Tugas Kelompok]
+          env.DB.prepare("DROP TABLE IF EXISTS group_task_submissions"), // [Tugas Kelompok]
+          env.DB.prepare("DROP TABLE IF EXISTS group_task_questions"),   // [Tugas Kelompok]
+          env.DB.prepare("DROP TABLE IF EXISTS group_tasks"),            // [Tugas Kelompok]
 
           // 2. Level Fitur Utama (Middle)
           env.DB.prepare("DROP TABLE IF EXISTS tasks"),            // [Modul Tasks]
@@ -261,13 +272,18 @@ export async function handleSettingRequest(request, env) {
             )
           `),
 
-          // Tabel Kelas
+          // Tabel Kelas (+ Kolom Participation Config)
           env.DB.prepare(`
             CREATE TABLE classes (
               id INTEGER PRIMARY KEY AUTOINCREMENT, 
               period_id INTEGER NOT NULL,
               name TEXT NOT NULL, 
-              show_grades INTEGER DEFAULT 0, 
+              show_grades INTEGER DEFAULT 0,
+              participation_base_score INTEGER DEFAULT 60,
+              point_ask INTEGER DEFAULT 1,
+              point_answer INTEGER DEFAULT 2,
+              point_volunteer INTEGER DEFAULT 3,
+              point_sanction INTEGER DEFAULT -1,
               FOREIGN KEY (period_id) REFERENCES academic_periods(id)
             )
           `),
@@ -315,7 +331,7 @@ export async function handleSettingRequest(request, env) {
             )
           `),
 
-          // Tabel Nilai
+          // Tabel Nilai (+ Kolom Participation)
           env.DB.prepare(`
             CREATE TABLE grades (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -325,6 +341,8 @@ export async function handleSettingRequest(request, env) {
               uts REAL DEFAULT 0,
               uas REAL DEFAULT 0,
               tugas REAL DEFAULT 0,
+              participation REAL DEFAULT 0,
+              participation_notes TEXT,
               final_grade REAL DEFAULT 0,
               created_at TEXT DEFAULT CURRENT_TIMESTAMP,
               updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -596,6 +614,108 @@ export async function handleSettingRequest(request, env) {
 
           env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_journals_class ON teaching_journals(class_id)`),
           env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_journals_date ON teaching_journals(date DESC)`),
+
+          // ========================================
+          // MODUL PARTICIPATION (Nilai Keaktifan)
+          // ========================================
+
+          env.DB.prepare(`
+            CREATE TABLE participation_logs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              period_id INTEGER,
+              class_id INTEGER,
+              student_id INTEGER,
+              type TEXT,
+              points INTEGER,
+              notes TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (period_id) REFERENCES academic_periods(id),
+              FOREIGN KEY (class_id) REFERENCES classes(id),
+              FOREIGN KEY (student_id) REFERENCES students(id)
+            )
+          `),
+
+          // ========================================
+          // MODUL BANK BAHAN AJAR (Material Bank)
+          // ========================================
+
+          env.DB.prepare(`
+            CREATE TABLE material_folders (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              period_id INTEGER NOT NULL,
+              name TEXT NOT NULL,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (period_id) REFERENCES academic_periods(id)
+            )
+          `),
+
+          env.DB.prepare(`
+            CREATE TABLE material_bank (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              period_id INTEGER NOT NULL,
+              folder_id INTEGER,
+              title TEXT NOT NULL,
+              description TEXT,
+              file_url TEXT,
+              file_type TEXT DEFAULT 'link',
+              file_size INTEGER DEFAULT 0,
+              r2_key TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (period_id) REFERENCES academic_periods(id),
+              FOREIGN KEY (folder_id) REFERENCES material_folders(id) ON DELETE SET NULL
+            )
+          `),
+
+          env.DB.prepare(`
+            CREATE TABLE material_distribution (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              material_id INTEGER NOT NULL,
+              class_id INTEGER NOT NULL,
+              is_visible INTEGER DEFAULT 1,
+              distributed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (material_id) REFERENCES material_bank(id) ON DELETE CASCADE,
+              FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+            )
+          `),
+
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_material_bank_period ON material_bank(period_id)`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_material_bank_folder ON material_bank(folder_id)`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_material_dist_material ON material_distribution(material_id)`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_material_dist_class ON material_distribution(class_id)`),
+          env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_material_dist_unique ON material_distribution(material_id, class_id)`),
+
+          // ========================================
+          // MODUL KELOMPOK (Groups)
+          // ========================================
+
+          env.DB.prepare(`
+            CREATE TABLE group_sets (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              class_id INTEGER NOT NULL,
+              name TEXT NOT NULL,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (class_id) REFERENCES classes(id)
+            )
+          `),
+
+          env.DB.prepare(`
+            CREATE TABLE groups (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              set_id INTEGER NOT NULL,
+              name TEXT NOT NULL,
+              FOREIGN KEY (set_id) REFERENCES group_sets(id) ON DELETE CASCADE
+            )
+          `),
+
+          env.DB.prepare(`
+            CREATE TABLE group_members (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              group_id INTEGER NOT NULL,
+              student_id INTEGER NOT NULL,
+              FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+              FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+            )
+          `),
 
           // Seed Data (Admin dengan Secure Hash)
           env.DB.prepare(`
