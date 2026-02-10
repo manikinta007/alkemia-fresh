@@ -25,6 +25,7 @@ import { handleJournalRequest } from '../controllers/journalController.js'; // [
 import { handleMaterialBankRequest } from '../controllers/materialBankController.js'; // [NEW] Bank Bahan Ajar
 import { handleProxyRequest } from '../controllers/proxyController.js'; // [NEW] Proxy Gambar & File
 import { handleParticipationRequest } from '../controllers/participationController.js'; // [NEW] Nilai Keaktifan
+import { handleGroupTaskRequest } from '../controllers/groupTaskController.js'; // [NEW] Tugas Kelompok
 
 // --- CONFIG & HEADERS ---
 // [PENTING] Ganti URL ini dengan domain Worker Anda sendiri!
@@ -250,6 +251,9 @@ export async function handleApiRequest(request, env) {
 
     // [NEW] Participation API (Nilai Keaktifan)
     if (!apiResponse) apiResponse = await handleParticipationRequest(request, env);
+
+    // [NEW] Group Tasks API
+    if (!apiResponse && pathname.startsWith("/api/group-tasks")) apiResponse = await handleGroupTaskRequest(request, env);
 
     // [NEW] Groups API
     if (!apiResponse && pathname.startsWith("/api/groups")) apiResponse = await handleGroupRequest(request, env);

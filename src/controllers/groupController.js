@@ -135,6 +135,54 @@ export async function handleGroupRequest(request, env) {
             return jsonResponse({ message: "Group set deleted" });
         }
 
+        // ========================================
+        // 5. SET GROUP LEADER (Any Member Can Set if NULL, or Override?)
+        // ========================================
+        if (pathname.match(/^\/api\/groups\/\d+\/leader$/) && method === "POST") {
+            const groupId = pathname.split("/")[3];
+            const { studentId } = await request.json(); // The new leader ID
+
+            // 1. Authenticate Requesting Student
+            const authHeader = request.headers.get("Authorization");
+            if (!authHeader || !authHeader.startsWith("Bearer ")) return jsonResponse({ error: "Unauthorized" }, 401);
+            const token = authHeader.split(" ")[1];
+            const session = await env.DB.prepare("SELECT * FROM student_sessions WHERE device_token = ? AND is_active = 1").bind(token).first();
+
+            if (!session) return jsonResponse({ error: "Unauthorized session" }, 401);
+            const requestorId = session.student_id;
+
+            // 2. Validate Membership
+            // Check if both requestor and target leader are in the group
+            const membership = await env.DB.prepare(`
+                SELECT student_id 
+                FROM group_members 
+                WHERE group_id = ? AND student_id IN (?, ?)
+            `).bind(groupId, requestorId, studentId).all();
+
+            // Must find both IDs (or 1 if self-appointing) in the group
+            const memberIds = membership.results.map(m => m.student_id);
+            if (!memberIds.includes(requestorId)) return jsonResponse({ error: "You are not in this group" }, 403);
+            if (!memberIds.includes(studentId)) return jsonResponse({ error: "Target leader is not in this group" }, 400);
+
+            // 3. Get Requestor Name for Audit
+            const requestor = await env.DB.prepare("SELECT name FROM students WHERE id = ?").bind(requestorId).first();
+
+            // 4. Update Group
+            const auditLog = JSON.stringify({
+                by_id: requestorId,
+                by_name: requestor.name,
+                at: new Date().toISOString()
+            });
+
+            await env.DB.prepare(`
+                UPDATE groups 
+                SET leader_id = ?, leader_selected_by = ? 
+                WHERE id = ?
+            `).bind(studentId, auditLog, groupId).run();
+
+            return jsonResponse({ message: "Ketua berhasil dipilih" });
+        }
+
         return null; // Not handled
     } catch (e) {
         return jsonResponse({ error: "Group Controller Error: " + e.message, stack: e.stack }, 500);

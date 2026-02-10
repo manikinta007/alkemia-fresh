@@ -11,6 +11,42 @@ export async function handleMigrationRequest(request, env) {
   const method = request.method;
 
   try {
+    // 1c. MIGRATE GROUP LEADERS (ADD COLUMNS)
+    // Jalankan ini untuk menambah fitur Leader
+    if (pathname === "/api/migrate/group-leaders" && method === "GET") {
+      try {
+        // Check if column exists first to avoid error? SQLite doesn't support IF NOT EXISTS for ADD COLUMN
+        // We just wrap in try-catch. If exists, it fails safely.
+        try {
+          await env.DB.prepare("ALTER TABLE groups ADD COLUMN leader_id INTEGER").run();
+        } catch (e) { /* ignore if exists */ }
+
+        try {
+          await env.DB.prepare("ALTER TABLE groups ADD COLUMN leader_selected_by TEXT").run(); // JSON string {id, name, time} or just text
+        } catch (e) { /* ignore if exists */ }
+
+        return jsonResponse({ message: "Migration: Leader columns added to groups table." });
+      } catch (e) {
+        return jsonResponse({ error: "Migration Error: " + e.message }, 500);
+      }
+    }
+
+    // 1b. ROLLBACK GROUP TASKS (SAFE CLEANUP)
+    // Jalankan ini jika ingin menghapus fitur Group Tasks
+    if (pathname === "/api/migrate/rollback-group-tasks" && method === "GET") {
+      try {
+        await env.DB.batch([
+          env.DB.prepare("DROP TABLE IF EXISTS group_task_answers"),
+          env.DB.prepare("DROP TABLE IF EXISTS group_task_submissions"),
+          env.DB.prepare("DROP TABLE IF EXISTS group_task_questions"),
+          env.DB.prepare("DROP TABLE IF EXISTS group_tasks")
+        ]);
+        return jsonResponse({ message: "SUCCESS: Group Task tables have been removed." });
+      } catch (e) {
+        return jsonResponse({ error: "Rollback Failed: " + e.message }, 500);
+      }
+    }
+
     // 1. FULL RESET & INIT (Jalankan ini HANYA untuk instalasi baru atau jika ingin menghapus semua data tugas)
     // Endpoint: /api/migrate/tasks
     if (pathname === "/api/migrate/tasks" && method === "GET") {
