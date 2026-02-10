@@ -45,8 +45,8 @@ export async function handleGroupTaskRequest(request, env) {
 
             // Insert Task
             const taskRes = await env.DB.prepare(`
-                INSERT INTO group_tasks (period_id, class_id, group_set_id, title, description, deadline, question_mode, is_active)
-                VALUES (?, ?, ?, ?, ?, ?, 'same', 1)
+                INSERT INTO group_tasks (period_id, class_id, group_set_id, title, description, deadline, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, 1)
             `).bind(period_id, class_id, group_set_id, title, description, deadline).run();
 
             const taskId = taskRes.meta.last_row_id;

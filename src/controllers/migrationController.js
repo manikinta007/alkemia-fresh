@@ -671,8 +671,26 @@ export async function handleMigrationRequest(request, env) {
           env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_group_task_ans_sub ON group_task_answers(submission_id)`)
         ]);
 
+        // Also handle EXISTING tables: add missing columns via ALTER TABLE
+        const missingColumns = [
+          "ALTER TABLE group_tasks ADD COLUMN question_mode TEXT DEFAULT 'same'",
+          "ALTER TABLE group_tasks ADD COLUMN pg_weight INTEGER DEFAULT 0",
+          "ALTER TABLE group_tasks ADD COLUMN grades_published INTEGER DEFAULT 0",
+          "ALTER TABLE group_tasks ADD COLUMN discussion_text TEXT",
+          "ALTER TABLE group_tasks ADD COLUMN discussion_url TEXT",
+          "ALTER TABLE group_tasks ADD COLUMN show_discussion INTEGER DEFAULT 0",
+          "ALTER TABLE group_task_submissions ADD COLUMN feedback TEXT",
+          "ALTER TABLE group_task_submissions ADD COLUMN is_published INTEGER DEFAULT 0",
+          "ALTER TABLE group_task_answers ADD COLUMN score REAL DEFAULT 0",
+          "ALTER TABLE group_task_answers ADD COLUMN is_graded INTEGER DEFAULT 0"
+        ];
+
+        for (const sql of missingColumns) {
+          try { await env.DB.prepare(sql).run(); } catch (e) { /* column already exists, ignore */ }
+        }
+
         return jsonResponse({
-          message: "Migrasi Group Tasks Berhasil: Tabel group_tasks, group_task_questions, group_task_submissions, group_task_answers siap."
+          message: "Migrasi Group Tasks Berhasil: Tabel group_tasks, group_task_questions, group_task_submissions, group_task_answers siap. Kolom yang hilang juga ditambahkan."
         });
       } catch (e) {
         return jsonResponse({ error: "Migrate Group Tasks Error: " + e.message }, 500);
