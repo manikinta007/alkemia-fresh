@@ -145,7 +145,10 @@ export async function handleGroupTaskRequest(request, env) {
             const sub = submissions.find(s => s.group_id === g.id);
             let status = 'BELUM_DIKERJAKAN';
             if (sub) {
-                if (sub.is_graded === 1) {
+                if (sub.is_graded === -1) {
+                    // Draft — not yet submitted, treat as not collected
+                    status = 'BELUM_DIKERJAKAN';
+                } else if (sub.is_graded === 1) {
                     status = 'DINILAI';
                 } else {
                     // Check if any answers have been graded (partial)

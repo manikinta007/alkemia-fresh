@@ -282,7 +282,7 @@ export const GroupTaskGrading = ({
                                         {selectedSubmission.submission.group_name}
                                     </h2>
                                     <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1">
-                                        <Clock size={12} /> Dikumpulkan oleh {selectedSubmission.submission.submitter_name} • {new Date(selectedSubmission.submission.submitted_at + (selectedSubmission.submission.submitted_at.endsWith?.('Z') ? '' : 'Z')).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}
+                                        <Clock size={12} /> Dikumpulkan oleh {selectedSubmission.submission.submitter_name} • {selectedSubmission.submission.submitted_at ? new Date(selectedSubmission.submission.submitted_at + (selectedSubmission.submission.submitted_at.endsWith?.('Z') ? '' : 'Z')).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : 'Draft'}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-6">
