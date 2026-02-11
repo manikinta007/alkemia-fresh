@@ -566,6 +566,7 @@ export default function GroupTasks() {
                     onOpenWeightModal={() => setWeightModal(true)}
                     pgWeight={headerForm.pgWeight}
                     showConfirm={showConfirm}
+                    showAlert={showAlert}
                 />
             </>
         );

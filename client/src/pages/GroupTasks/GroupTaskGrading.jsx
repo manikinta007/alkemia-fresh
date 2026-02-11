@@ -16,7 +16,8 @@ export const GroupTaskGrading = ({
     onBack,
     onOpenWeightModal,
     pgWeight,
-    showConfirm
+    showConfirm,
+    showAlert
 }) => {
     const [previewImage, setPreviewImage] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -96,26 +97,25 @@ export const GroupTaskGrading = ({
     // Publish All
     const handlePublishAll = () => {
         const readyCount = filteredGroups.filter(g => g.status === 'DINILAI').length;
+        const partialCount = filteredGroups.filter(g => g.status === 'SEBAGIAN_DINILAI').length;
         const waitingCount = filteredGroups.filter(g => g.status === 'MENUNGGU_NILAI').length;
         const notSubmittedCount = filteredGroups.filter(g => g.status === 'BELUM_DIKERJAKAN').length;
 
         if (readyCount === 0) {
-            alert('Tidak ada kelompok yang sudah selesai dinilai.');
+            showAlert('Tidak ada kelompok yang sudah selesai dinilai.', 'error');
             return;
         }
 
-        let warningMessage = '';
-        if (waitingCount > 0) {
-            warningMessage = `⚠️ Perhatian:\n\n• ${waitingCount} kelompok belum diperiksa\n\nHanya ${readyCount} kelompok yang nilainya akan dipublish.\n\nLanjutkan?`;
-        } else {
-            warningMessage = notSubmittedCount > 0
-                ? `Terbitkan nilai ${readyCount} kelompok yang sudah dinilai?\n\n(${notSubmittedCount} kelompok belum mengumpulkan)`
-                : `Terbitkan nilai semua ${readyCount} kelompok?`;
-        }
+        let warningMessage = `Terbitkan nilai ${readyCount} kelompok yang sudah dinilai?`;
+        const warnings = [];
+        if (partialCount > 0) warnings.push(`${partialCount} kelompok belum selesai diperiksa`);
+        if (waitingCount > 0) warnings.push(`${waitingCount} kelompok belum diperiksa sama sekali`);
+        if (notSubmittedCount > 0) warnings.push(`${notSubmittedCount} kelompok belum mengumpulkan`);
+        if (warnings.length > 0) warningMessage += `\n\n⚠️ ${warnings.join('\n• ')}`;
 
-        if (confirm(warningMessage)) {
+        showConfirm(warningMessage, () => {
             onPublish(task.id, true);
-        }
+        });
     };
 
     return (
@@ -196,6 +196,11 @@ export const GroupTaskGrading = ({
                                                 {status === 'MENUNGGU_NILAI' && (
                                                     <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded border border-blue-200">
                                                         SUDAH KUMPUL
+                                                    </span>
+                                                )}
+                                                {status === 'SEBAGIAN_DINILAI' && (
+                                                    <span className="text-[10px] font-bold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded border border-yellow-200">
+                                                        SEBAGIAN DINILAI
                                                     </span>
                                                 )}
                                                 {status === 'DINILAI' && (

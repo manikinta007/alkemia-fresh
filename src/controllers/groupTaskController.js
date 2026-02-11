@@ -126,14 +126,43 @@ export async function handleGroupTaskRequest(request, env) {
         }
 
         // Merge logic: Show all groups, attach submission + members
+        // Build answer grading info for status
+        const submissionIds = submissions.map(s => s.id).filter(Boolean);
+        let answerGradingMap = {};
+        if (submissionIds.length > 0) {
+            const { results: answerStats } = await env.DB.prepare(`
+                SELECT a.submission_id, 
+                       COUNT(*) as total_answers,
+                       SUM(CASE WHEN a.is_graded = 1 THEN 1 ELSE 0 END) as graded_answers
+                FROM group_task_answers a
+                WHERE a.submission_id IN (${submissionIds.map(() => '?').join(',')})
+                GROUP BY a.submission_id
+            `).bind(...submissionIds).all();
+            answerStats.forEach(s => { answerGradingMap[s.submission_id] = s; });
+        }
+
         const data = groups.map(g => {
             const sub = submissions.find(s => s.group_id === g.id);
+            let status = 'BELUM_DIKERJAKAN';
+            if (sub) {
+                if (sub.is_graded === 1) {
+                    status = 'DINILAI';
+                } else {
+                    // Check if any answers have been graded (partial)
+                    const stats = answerGradingMap[sub.id];
+                    if (stats && stats.graded_answers > 0 && stats.graded_answers < stats.total_answers) {
+                        status = 'SEBAGIAN_DINILAI';
+                    } else {
+                        status = 'MENUNGGU_NILAI';
+                    }
+                }
+            }
             return {
                 group_id: g.id,
                 group_name: g.name,
                 members: membersMap[g.id] || [],
                 submission: sub || null,
-                status: sub ? (sub.is_graded ? 'DINILAI' : 'MENUNGGU_NILAI') : 'BELUM_DIKERJAKAN'
+                status
             };
         });
 
@@ -171,21 +200,70 @@ export async function handleGroupTaskRequest(request, env) {
         try {
             const { submissionId, grade, feedback, essayScores } = await request.json();
 
-            await env.DB.prepare(`
-                UPDATE group_task_submissions 
-                SET grade = ?, feedback = ?, is_graded = 1 
-                WHERE id = ?
-            `).bind(grade, feedback || '', submissionId).run();
+            const stmts = [];
 
-            // Save individual essay answer scores
+            // 1. Save individual essay answer scores
             if (essayScores && Object.keys(essayScores).length > 0) {
-                const stmts = Object.entries(essayScores).map(([answerId, score]) =>
-                    env.DB.prepare(`
+                for (const [answerId, score] of Object.entries(essayScores)) {
+                    stmts.push(env.DB.prepare(`
                         UPDATE group_task_answers SET score = ?, is_graded = 1 WHERE id = ?
-                    `).bind(score, answerId)
-                );
-                await env.DB.batch(stmts);
+                    `).bind(score, answerId));
+                }
             }
+
+            // 2. Auto-calculate PG scores (like individual tasks)
+            const subData = await env.DB.prepare("SELECT group_task_id FROM group_task_submissions WHERE id = ?").bind(submissionId).first();
+            if (subData) {
+                const task = await env.DB.prepare("SELECT pg_weight FROM group_tasks WHERE id = ?").bind(subData.group_task_id).first();
+                const { results: pgQuestions } = await env.DB.prepare("SELECT id, correct_key FROM group_task_questions WHERE group_task_id = ? AND type = 'pg'").bind(subData.group_task_id).all();
+
+                if (task && pgQuestions.length > 0) {
+                    const pgWeight = task.pg_weight || 0;
+                    const scorePerPg = pgWeight / pgQuestions.length;
+
+                    const { results: pgAnswers } = await env.DB.prepare(`
+                        SELECT a.id, a.answer_text, q.correct_key 
+                        FROM group_task_answers a
+                        JOIN group_task_questions q ON a.question_id = q.id
+                        WHERE a.submission_id = ? AND q.type = 'pg'
+                    `).bind(submissionId).all();
+
+                    for (const ans of pgAnswers) {
+                        const isCorrect = ans.answer_text === ans.correct_key;
+                        const score = isCorrect ? scorePerPg : 0;
+                        stmts.push(env.DB.prepare("UPDATE group_task_answers SET score = ?, is_graded = 1 WHERE id = ?").bind(score, ans.id));
+                    }
+                }
+
+                // 3. Smart is_graded: check if ALL essay answers have been graded
+                const { results: allQuestions } = await env.DB.prepare("SELECT id, type FROM group_task_questions WHERE group_task_id = ?").bind(subData.group_task_id).all();
+                const { results: allAnswers } = await env.DB.prepare("SELECT id, question_id, is_graded FROM group_task_answers WHERE submission_id = ?").bind(submissionId).all();
+
+                const essayQuestionIds = allQuestions.filter(q => q.type !== 'pg').map(q => q.id);
+
+                // After this save, which essays will be graded?
+                const gradedEssayIds = new Set();
+                for (const a of allAnswers) {
+                    if (!essayQuestionIds.includes(a.question_id)) continue; // skip PG
+                    // Check if this answer's score is being set in current save
+                    if (essayScores && Object.keys(essayScores).includes(String(a.id))) {
+                        gradedEssayIds.add(a.question_id);
+                    } else if (a.is_graded === 1) {
+                        gradedEssayIds.add(a.question_id);
+                    }
+                }
+
+                const allEssaysGraded = essayQuestionIds.length === 0 || essayQuestionIds.every(qId => gradedEssayIds.has(qId));
+                const isGradedValue = allEssaysGraded ? 1 : 0;
+
+                stmts.push(env.DB.prepare(`
+                    UPDATE group_task_submissions 
+                    SET grade = ?, feedback = ?, is_graded = ? 
+                    WHERE id = ?
+                `).bind(grade, feedback || '', isGradedValue, submissionId));
+            }
+
+            if (stmts.length > 0) await env.DB.batch(stmts);
 
             return jsonResponse({ message: "Grade saved" });
         } catch (e) {
@@ -379,7 +457,7 @@ export async function handleGroupTaskRequest(request, env) {
                 gt.id, gt.title, gt.deadline, gt.created_at, gt.grades_published,
                 gs.name as group_set_name,
                 g.id as my_group_id, g.name as my_group_name,
-                s.id as submission_id, s.is_graded, s.grade, s.submitted_by
+                s.id as submission_id, s.is_graded, s.grade, s.submitted_by, s.is_published
             FROM group_tasks gt
             JOIN group_sets gs ON gt.group_set_id = gs.id
             JOIN groups g ON g.set_id = gs.id
@@ -388,7 +466,13 @@ export async function handleGroupTaskRequest(request, env) {
             ORDER BY gt.created_at DESC
         `).all();
 
-        return jsonResponse(tasks);
+        // Sanitize: only show grade when is_published = 1
+        const safeTasks = tasks.map(t => ({
+            ...t,
+            grade: (t.is_published == 1 && t.is_graded === 1) ? t.grade : null
+        }));
+
+        return jsonResponse(safeTasks);
     }
 
     // 2. GET TASK DETAIL & MY SUBMISSION
@@ -448,13 +532,21 @@ export async function handleGroupTaskRequest(request, env) {
             }
         }
 
+        // Security: Strip grade data if not published (like individual tasks)
+        let safeSubmission = submission;
+        let safeAnswers = answers;
+        if (submission && submission.is_published != 1) {
+            safeSubmission = { ...submission, grade: null, feedback: null };
+            safeAnswers = answers.map(a => ({ ...a, score: null }));
+        }
+
         return jsonResponse({
             task,
             questions,
             group: { ...myGroup, members },
             currentStudentId: studentId,
-            submission,
-            answers,
+            submission: safeSubmission,
+            answers: safeAnswers,
             activityLogs
         });
     }
