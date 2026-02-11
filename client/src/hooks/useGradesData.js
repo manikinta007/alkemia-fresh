@@ -78,11 +78,29 @@ export const useGradesData = () => {
         }
     }, [activePeriod]);
 
-    // Reload recap
-    const reloadRecap = useCallback(async () => {
+    // Silent reload (no loading/toast, for cell-level operations)
+    const silentReload = useCallback(async () => {
         if (selectedClass && activePeriod) {
             const res = await fetchApi(`/api/grade-recap?class_id=${selectedClass.id}&period_id=${activePeriod.id}`);
             if (res.ok) setGradeRecap(await res.json());
+        }
+    }, [selectedClass, activePeriod]);
+
+    // Reload recap (with loading + toast)
+    const reloadRecap = useCallback(async () => {
+        if (selectedClass && activePeriod) {
+            setLoading(true);
+            try {
+                const res = await fetchApi(`/api/grade-recap?class_id=${selectedClass.id}&period_id=${activePeriod.id}`);
+                if (res.ok) {
+                    setGradeRecap(await res.json());
+                    showAlert('Data nilai berhasil diperbarui!', 'success');
+                }
+            } catch {
+                showAlert('Gagal memuat ulang data.', 'error');
+            } finally {
+                setLoading(false);
+            }
         }
     }, [selectedClass, activePeriod]);
 
@@ -130,7 +148,7 @@ export const useGradesData = () => {
                 })
             });
             if (res.ok) {
-                await reloadRecap();
+                await silentReload();
                 return true;
             }
             return false;
@@ -139,7 +157,7 @@ export const useGradesData = () => {
         } finally {
             setSavingCell(null);
         }
-    }, [selectedClass, reloadRecap]);
+    }, [selectedClass, silentReload]);
 
     // Reset override
     const resetOverride = useCallback(async (componentId, studentId) => {
@@ -153,11 +171,11 @@ export const useGradesData = () => {
                     student_id: studentId
                 })
             });
-            await reloadRecap();
+            await silentReload();
         } catch (err) {
             showAlert('Gagal mereset override.', 'error');
         }
-    }, [selectedClass, reloadRecap]);
+    }, [selectedClass, silentReload]);
 
     // Apply remedial
     const applyRemedial = useCallback(async (studentId) => {
@@ -237,6 +255,70 @@ export const useGradesData = () => {
         }
     }, [selectedClass, reloadRecap]);
 
+    // Save final grade override
+    const saveFinalGrade = useCallback(async (studentId, value) => {
+        if (!selectedClass) return false;
+        const cellKey = `final_${studentId}`;
+        setSavingCell(cellKey);
+        try {
+            const res = await fetchApi('/api/grade-recap/save-final', {
+                method: 'POST',
+                body: JSON.stringify({
+                    class_id: selectedClass.id,
+                    student_id: studentId,
+                    value
+                })
+            });
+            if (res.ok) {
+                await silentReload();
+                return true;
+            }
+            return false;
+        } catch {
+            return false;
+        } finally {
+            setSavingCell(null);
+        }
+    }, [selectedClass, silentReload]);
+
+    // Reset final grade override
+    const resetFinalGrade = useCallback(async (studentId) => {
+        if (!selectedClass) return;
+        try {
+            await fetchApi('/api/grade-recap/reset-final', {
+                method: 'POST',
+                body: JSON.stringify({
+                    class_id: selectedClass.id,
+                    student_id: studentId
+                })
+            });
+            await silentReload();
+        } catch {
+            showAlert('Gagal mereset override nilai akhir.', 'error');
+        }
+    }, [selectedClass, silentReload]);
+
+    // Download grades as CSV
+    const downloadGradesCsv = useCallback(() => {
+        const { components, students } = gradeRecap;
+        if (!students.length) return;
+        const headers = ['No', 'Nama', ...components.map(c => c.name), 'Nilai Akhir'];
+        const rows = students.map((s, i) => [
+            i + 1,
+            s.student_name,
+            ...s.values.map(v => v.effective_value ?? ''),
+            s.final_grade
+        ]);
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rekap_nilai_${selectedClass?.name || 'kelas'}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }, [gradeRecap, selectedClass]);
+
     return {
         loading,
         classes,
@@ -254,6 +336,9 @@ export const useGradesData = () => {
         undoRemedial,
         csvPreview,
         csvUpload,
-        reloadRecap
+        reloadRecap,
+        saveFinalGrade,
+        resetFinalGrade,
+        downloadGradesCsv
     };
 };

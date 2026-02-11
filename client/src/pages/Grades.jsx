@@ -25,7 +25,10 @@ export default function Grades() {
         undoRemedial,
         csvPreview,
         csvUpload,
-        reloadRecap
+        reloadRecap,
+        saveFinalGrade,
+        resetFinalGrade,
+        downloadGradesCsv
     } = useGradesData();
 
     const { showConfirm } = useAlertContext();
@@ -54,6 +57,22 @@ export default function Grades() {
 
     const handleKeyDown = (e, compId, studentId, comp, cv) => {
         if (e.key === 'Enter') saveEdit(compId, studentId, comp, cv);
+        if (e.key === 'Escape') cancelEdit();
+    };
+
+    // Final grade inline editing
+    const startFinalEdit = (studentId, currentValue) => {
+        setEditingCell(`final_${studentId}`);
+        setEditValue(currentValue !== null ? String(currentValue) : '');
+    };
+
+    const saveFinalEdit = async (studentId) => {
+        await saveFinalGrade(studentId, editValue);
+        cancelEdit();
+    };
+
+    const handleFinalKeyDown = (e, studentId) => {
+        if (e.key === 'Enter') saveFinalEdit(studentId);
         if (e.key === 'Escape') cancelEdit();
     };
 
@@ -100,6 +119,13 @@ export default function Grades() {
                             </button>
                         )}
                         <button
+                            onClick={downloadGradesCsv}
+                            className="px-3 py-2 text-xs font-bold text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:border-green-300 hover:text-green-600 transition flex items-center gap-1.5"
+                            title="Download rekap nilai ke file CSV"
+                        >
+                            <Download size={14} /> Download CSV
+                        </button>
+                        <button
                             onClick={() => setConfigModalOpen(true)}
                             className="px-3 py-2 text-xs font-bold text-white bg-zinc-900 rounded-lg hover:bg-zinc-800 transition flex items-center gap-1.5"
                         >
@@ -139,7 +165,7 @@ export default function Grades() {
                                                 <div className="text-[10px] text-zinc-400 font-normal">({c.weight}%)</div>
                                             </th>
                                         ))}
-                                        <th className="px-4 py-3 text-center text-xs text-zinc-500 uppercase font-bold w-20 bg-zinc-100">NA</th>
+                                        <th className="px-4 py-3 text-center text-xs text-zinc-500 uppercase font-bold w-24 bg-zinc-100">Nilai Akhir</th>
                                         <th className="px-4 py-3 text-center text-xs text-zinc-500 uppercase font-bold w-28">Status</th>
                                     </tr>
                                 </thead>
@@ -200,11 +226,57 @@ export default function Grades() {
                                                 );
                                             })}
 
-                                            {/* Final Grade */}
-                                            <td className={`px-4 py-3 text-center font-bold text-sm bg-zinc-50 ${s.is_remedial ? 'text-green-600' : s.is_below_kkm ? 'text-red-600' : 'text-zinc-900'
-                                                }`}>
-                                                {s.final_grade.toFixed(1)}
-                                            </td>
+                                            {/* Final Grade — Editable */}
+                                            {(() => {
+                                                const finalCellKey = `final_${s.student_id}`;
+                                                const isFinalEditing = editingCell === finalCellKey;
+                                                const isFinalSaving = savingCell === finalCellKey;
+                                                return (
+                                                    <td className="px-3 py-2 text-center bg-zinc-50">
+                                                        {isFinalEditing ? (
+                                                            <input
+                                                                type="number"
+                                                                autoFocus
+                                                                value={editValue}
+                                                                onChange={e => setEditValue(e.target.value)}
+                                                                onKeyDown={e => handleFinalKeyDown(e, s.student_id)}
+                                                                onBlur={() => saveFinalEdit(s.student_id)}
+                                                                className="w-16 px-1 py-1 text-center text-xs font-bold border-2 border-orange-400 rounded focus:ring-2 focus:ring-orange-500 outline-none"
+                                                                min="0" max="100"
+                                                            />
+                                                        ) : isFinalSaving ? (
+                                                            <span className="text-xs text-zinc-400">...</span>
+                                                        ) : (
+                                                            <div className="group/final relative flex items-center justify-center">
+                                                                <button
+                                                                    onClick={() => startFinalEdit(s.student_id, s.final_grade)}
+                                                                    className={`py-1 px-1 font-bold text-sm rounded transition cursor-pointer hover:bg-zinc-100 ${s.is_final_overridden
+                                                                            ? 'text-blue-600'
+                                                                            : s.is_remedial
+                                                                                ? 'text-green-600'
+                                                                                : s.is_below_kkm
+                                                                                    ? 'text-red-600'
+                                                                                    : 'text-zinc-900'
+                                                                        }`}
+                                                                    title={s.is_final_overridden ? `Auto: ${s.calculated_final_grade} | Override: ${s.final_grade_override}` : 'Klik untuk edit nilai akhir'}
+                                                                >
+                                                                    {s.final_grade.toFixed(1)}
+                                                                    {s.is_final_overridden && <span className="ml-0.5 text-[8px]">✎</span>}
+                                                                </button>
+                                                                {s.is_final_overridden && (
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); resetFinalGrade(s.student_id); }}
+                                                                        className="absolute -right-1 -top-1 w-4 h-4 bg-blue-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/final:opacity-100 transition-opacity hover:bg-red-500 shadow-sm"
+                                                                        title={`Kembalikan ke nilai auto (${s.calculated_final_grade})`}
+                                                                    >
+                                                                        <Undo2 size={8} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                );
+                                            })()}
 
                                             {/* Status */}
                                             <td className="px-3 py-3 text-center">

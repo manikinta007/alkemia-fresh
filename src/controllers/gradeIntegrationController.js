@@ -140,8 +140,14 @@ export async function handleGradeIntegrationRequest(request, env) {
 
             // Build lookup: { `${component_id}_${student_id}`: gradeValue }
             const valuesMap = {};
+            const finalOverrides = {}; // studentId -> override value
             existingValues.forEach(v => {
-                valuesMap[`${v.component_id}_${v.student_id}`] = v;
+                if (v.component_id === 0) {
+                    // Final grade override (component_id = 0 convention)
+                    finalOverrides[v.student_id] = v.manual_override;
+                } else {
+                    valuesMap[`${v.component_id}_${v.student_id}`] = v;
+                }
             });
 
             // ---- AUTO-CALCULATION ----
@@ -291,29 +297,36 @@ export async function handleGradeIntegrationRequest(request, env) {
                 });
 
                 // Calculate final grade
-                let finalGrade = 0;
+                let calculatedFinal = 0;
                 let hasAllValues = true;
                 components.forEach((comp, i) => {
                     const cv = componentValues[i];
                     if (cv.effective_value !== null) {
-                        finalGrade += cv.effective_value * (comp.weight / 100);
+                        calculatedFinal += cv.effective_value * (comp.weight / 100);
                     } else {
                         hasAllValues = false;
                     }
                 });
-                finalGrade = Math.round(finalGrade * 100) / 100;
+                calculatedFinal = Math.round(calculatedFinal * 100) / 100;
 
                 // Check remedial (any component)
                 const isRemedial = componentValues.some(cv => cv.is_remedial === 1);
                 if (isRemedial) {
-                    finalGrade = Math.max(finalGrade, kkm);
+                    calculatedFinal = Math.max(calculatedFinal, kkm);
                 }
+
+                // Final grade override
+                const finalOverride = finalOverrides[s.id] ?? null;
+                const finalGrade = finalOverride !== null ? finalOverride : calculatedFinal;
 
                 return {
                     student_id: s.id,
                     student_name: s.name,
                     values: componentValues,
-                    final_grade: finalGrade,
+                    calculated_final_grade: calculatedFinal,
+                    final_grade_override: finalOverride !== null ? Math.round(finalOverride * 100) / 100 : null,
+                    final_grade: Math.round(finalGrade * 100) / 100,
+                    is_final_overridden: finalOverride !== null,
                     is_below_kkm: finalGrade < kkm && !isRemedial,
                     is_remedial: isRemedial,
                     has_all_values: hasAllValues
@@ -510,6 +523,49 @@ export async function handleGradeIntegrationRequest(request, env) {
             ).bind(class_id, student_id).run();
 
             return jsonResponse({ message: "Remedial dibatalkan" });
+        }
+
+        // ========================================
+        // 10b. SAVE FINAL GRADE OVERRIDE
+        // ========================================
+        if (pathname === "/api/grade-recap/save-final" && method === "POST") {
+            const body = await request.json();
+            const { class_id, student_id, value } = body;
+            if (!class_id || !student_id) return jsonResponse({ error: "class_id, student_id diperlukan" }, 400);
+
+            const parsedValue = value !== null && value !== '' ? parseFloat(value) : null;
+
+            // component_id = 0 convention for final grade override
+            const existing = await env.DB.prepare(
+                "SELECT id FROM grade_values WHERE component_id = 0 AND class_id = ? AND student_id = ?"
+            ).bind(class_id, student_id).first();
+
+            if (existing) {
+                await env.DB.prepare(
+                    "UPDATE grade_values SET manual_override = ? WHERE id = ?"
+                ).bind(parsedValue, existing.id).run();
+            } else {
+                await env.DB.prepare(
+                    "INSERT INTO grade_values (component_id, class_id, student_id, manual_override) VALUES (0, ?, ?, ?)"
+                ).bind(class_id, student_id, parsedValue).run();
+            }
+
+            return jsonResponse({ message: "Nilai akhir override disimpan" });
+        }
+
+        // ========================================
+        // 10c. RESET FINAL GRADE OVERRIDE
+        // ========================================
+        if (pathname === "/api/grade-recap/reset-final" && method === "POST") {
+            const body = await request.json();
+            const { class_id, student_id } = body;
+            if (!class_id || !student_id) return jsonResponse({ error: "class_id, student_id diperlukan" }, 400);
+
+            await env.DB.prepare(
+                "DELETE FROM grade_values WHERE component_id = 0 AND class_id = ? AND student_id = ?"
+            ).bind(class_id, student_id).run();
+
+            return jsonResponse({ message: "Override nilai akhir direset" });
         }
 
         // ========================================
