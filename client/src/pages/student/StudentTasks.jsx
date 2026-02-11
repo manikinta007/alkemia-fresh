@@ -894,11 +894,13 @@ export default function StudentTasks({ student, onBack }) {
                 const uploadedUrls = [];
                 for (const file of filesToProcess) {
                     if (file.size > 10 * 1024 * 1024) { showAlert('Peringatan', `File ${file.name} terlalu besar (Max 10MB).`, 'error'); continue; }
+                    const compressedFile = await compressImage(file);
                     const formData = new FormData();
-                    formData.append('file', file);
+                    formData.append('file', compressedFile);
                     const token = localStorage.getItem('student_token');
-                    const res = await fetch('/api/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
+                    const res = await fetch('/api/student/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
                     if (res.ok) { const data = await res.json(); uploadedUrls.push(data.url); }
+                    else { const errData = await res.json().catch(() => ({})); showAlert('Upload Gagal', errData.error || 'Gagal upload gambar.', 'error'); }
                 }
                 if (uploadedUrls.length > 0) {
                     const newImages = [...currentImages, ...uploadedUrls];
@@ -1181,7 +1183,7 @@ export default function StudentTasks({ student, onBack }) {
                                                     <span className="text-zinc-500 ml-1 text-xs">{log.detail}</span>
                                                 </p>
                                                 <p className="text-[10px] text-zinc-600 mt-0.5">
-                                                    {new Date(log.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })}
+                                                    {new Date(log.created_at + (log.created_at.endsWith('Z') ? '' : 'Z')).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })}
                                                 </p>
                                             </div>
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${log.action === 'final_submit' ? 'bg-green-900/30 text-green-400' : 'bg-blue-900/30 text-blue-400'}`}>
