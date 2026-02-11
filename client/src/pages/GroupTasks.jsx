@@ -512,9 +512,26 @@ export default function GroupTasks() {
                         if (firstEssay !== -1) newQ[firstEssay].weight += rem;
                         setQuestions(newQ);
                     }}
-                    onSave={() => {
-                        handleSaveFullTask();
-                        setWeightModal(false);
+                    onSave={async () => {
+                        try {
+                            setSaving(true);
+                            const payload = {
+                                id: headerForm.id,
+                                pg_weight: headerForm.pgWeight,
+                                questions: questions.map(q => ({ id: q.id, weight: q.weight || 0 }))
+                            };
+                            const res = await fetchApi('/api/group-tasks/update-weights', { method: 'PUT', body: JSON.stringify(payload) });
+                            if (res.ok) {
+                                showAlert('Bobot berhasil disimpan!', 'success');
+                                setWeightModal(false);
+                            } else {
+                                showAlert('Gagal menyimpan bobot.', 'error');
+                            }
+                        } catch (e) {
+                            showAlert('Error koneksi.', 'error');
+                        } finally {
+                            setSaving(false);
+                        }
                     }}
                 />
 

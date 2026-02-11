@@ -223,7 +223,9 @@ export async function handleGroupTaskRequest(request, env) {
                 WHERE id = ?
             `).bind(title, description || '', deadline || null, group_set_id, pg_weight || 0, id).run();
 
-            // Delete old questions and re-insert
+            // Delete answers first (FK constraint: answers reference questions without CASCADE)
+            await env.DB.prepare("DELETE FROM group_task_answers WHERE question_id IN (SELECT id FROM group_task_questions WHERE group_task_id = ?)").bind(id).run();
+            // Then delete old questions and re-insert
             await env.DB.prepare("DELETE FROM group_task_questions WHERE group_task_id = ?").bind(id).run();
 
             if (questions && questions.length > 0) {
@@ -243,6 +245,31 @@ export async function handleGroupTaskRequest(request, env) {
             }
 
             return jsonResponse({ message: "Tugas kelompok berhasil diperbarui" });
+        } catch (e) {
+            return jsonResponse({ error: e.message }, 500);
+        }
+    }
+
+    // 8b. UPDATE WEIGHTS ONLY (Safe — no delete/re-insert)
+    if (pathname === "/api/group-tasks/update-weights" && method === "PUT") {
+        try {
+            const body = await request.json();
+            const { id, pg_weight, questions } = body;
+
+            if (!id) return jsonResponse({ error: "Task ID required" }, 400);
+
+            // Update pg_weight on task
+            await env.DB.prepare(`UPDATE group_tasks SET pg_weight = ? WHERE id = ?`).bind(pg_weight || 0, id).run();
+
+            // Update each question's weight in-place
+            if (questions && questions.length > 0) {
+                const stmts = questions.filter(q => q.id).map(q =>
+                    env.DB.prepare(`UPDATE group_task_questions SET weight = ? WHERE id = ?`).bind(q.weight || 0, q.id)
+                );
+                if (stmts.length > 0) await env.DB.batch(stmts);
+            }
+
+            return jsonResponse({ message: "Bobot berhasil disimpan" });
         } catch (e) {
             return jsonResponse({ error: e.message }, 500);
         }
@@ -388,18 +415,35 @@ export async function handleGroupTaskRequest(request, env) {
         `).bind(taskId, myGroup.id).first();
 
         let answers = [];
+        let activityLogs = [];
         if (submission) {
             const res = await env.DB.prepare("SELECT * FROM group_task_answers WHERE submission_id = ?").bind(submission.id).all();
             answers = res.results;
+
+            // Fetch activity logs
+            try {
+                const logRes = await env.DB.prepare(`
+                    SELECT l.*, s.name as student_name
+                    FROM group_task_activity_log l
+                    LEFT JOIN students s ON l.student_id = s.id
+                    WHERE l.submission_id = ?
+                    ORDER BY l.created_at DESC
+                    LIMIT 50
+                `).bind(submission.id).all();
+                activityLogs = logRes.results;
+            } catch (e) {
+                // Table might not exist yet, ignore
+            }
         }
 
         return jsonResponse({
             task,
             questions,
             group: { ...myGroup, members },
-            currentStudentId: studentId, // IMPORTANT: For frontend logic
+            currentStudentId: studentId,
             submission,
-            answers
+            answers,
+            activityLogs
         });
     }
 
@@ -499,7 +543,23 @@ export async function handleGroupTaskRequest(request, env) {
 
             await env.DB.batch(insertPromises);
 
-            return jsonResponse({ message: isDraft ? "Draft saved" : "Task submitted successfully" });
+            // Log activity
+            try {
+                const questionIds = Object.keys(responses);
+                const action = isDraft ? 'draft_save' : 'final_submit';
+                const detail = isDraft
+                    ? `Menyimpan draft untuk ${questionIds.length} soal`
+                    : `Mengirim jawaban final untuk ${questionIds.length} soal`;
+                await env.DB.prepare(`
+                    INSERT INTO group_task_activity_log (submission_id, student_id, action, detail)
+                    VALUES (?, ?, ?, ?)
+                `).bind(submissionId, studentId, action, detail).run();
+            } catch (logErr) {
+                // Don't fail the whole request if logging fails (table might not exist)
+                console.error('Activity log error:', logErr);
+            }
+
+            return jsonResponse({ message: isDraft ? "Draft tersimpan" : "Tugas berhasil dikirim" });
         } catch (e) {
             return jsonResponse({ error: e.message }, 500);
         }

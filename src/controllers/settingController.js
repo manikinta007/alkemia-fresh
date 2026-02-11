@@ -641,6 +641,19 @@ export async function handleSettingRequest(request, env) {
             )
           `),
 
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS group_task_activity_log (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              submission_id INTEGER NOT NULL,
+              student_id INTEGER NOT NULL,
+              question_id INTEGER,
+              action TEXT NOT NULL,
+              detail TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (submission_id) REFERENCES group_task_submissions(id) ON DELETE CASCADE
+            )
+          `),
+
           // ========================================
           // MODUL KEAKTIFAN (Participation)
           // ========================================

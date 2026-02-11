@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Save, Users, Crown, Info, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Send, Save, Users, Crown, Info, AlertTriangle, Clock, ChevronDown, ChevronUp, Image as ImageIcon, FileText, CheckCircle } from 'lucide-react';
 
 const StudentGroupTaskDetail = () => {
     const { taskId } = useParams();
@@ -15,6 +15,8 @@ const StudentGroupTaskDetail = () => {
     const [submission, setSubmission] = useState(null);
     const [answers, setAnswers] = useState({}); // { questionId: { text, image, option } }
     const [error, setError] = useState(null);
+    const [activityLogs, setActivityLogs] = useState([]);
+    const [showLogs, setShowLogs] = useState(false);
 
     // Leader Logic
     const [isLeader, setIsLeader] = useState(false);
@@ -78,6 +80,11 @@ const StudentGroupTaskDetail = () => {
                     };
                 });
                 setAnswers(initialAnswers);
+            }
+
+            // Load activity logs
+            if (data.activityLogs) {
+                setActivityLogs(data.activityLogs);
             }
         } catch (err) {
             setError(err.message);
@@ -261,7 +268,15 @@ const StudentGroupTaskDetail = () => {
                                     <img src={q.question_image_url} alt="Soal" className="mt-2 max-h-64 rounded" />
                                 )}
                             </div>
-                            <span className="text-xs bg-gray-100 px-2 py-1 rounded h-fit">Bobot: {q.weight}</span>
+                            <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${q.type === 'pg' ? 'bg-blue-100 text-blue-700' :
+                                        q.type === 'essay_image' ? 'bg-purple-100 text-purple-700' :
+                                            'bg-green-100 text-green-700'
+                                    }`}>
+                                    {q.type === 'pg' ? 'PG' : q.type === 'essay_image' ? '📷 Essay Gambar' : '📝 Essay Teks'}
+                                </span>
+                                <span className="text-xs bg-gray-100 px-2 py-1 rounded h-fit">Bobot: {q.weight}</span>
+                            </div>
                         </div>
 
                         {/* INPUT AREA based on Type */}
@@ -282,8 +297,8 @@ const StudentGroupTaskDetail = () => {
                                                         key={optIdx}
                                                         onClick={() => handleAnswerChange(q.id, 'option', letter)}
                                                         className={`w-full text-left p-3 rounded-lg border-2 transition flex items-center gap-3 ${isSelected
-                                                                ? 'border-blue-500 bg-blue-50 text-blue-900 font-bold'
-                                                                : 'border-gray-200 hover:border-gray-300 bg-white'
+                                                            ? 'border-blue-500 bg-blue-50 text-blue-900 font-bold'
+                                                            : 'border-gray-200 hover:border-gray-300 bg-white'
                                                             }`}
                                                     >
                                                         <span className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold shrink-0 ${isSelected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
@@ -373,6 +388,47 @@ const StudentGroupTaskDetail = () => {
                 <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <h3 className="font-bold text-blue-800 mb-2">Umpan Balik Guru:</h3>
                     <p className="text-blue-700">{submission.feedback}</p>
+                </div>
+            )}
+            {/* ACTIVITY LOG */}
+            {activityLogs.length > 0 && (
+                <div className="bg-white rounded-lg shadow mt-6 mb-24">
+                    <button
+                        onClick={() => setShowLogs(!showLogs)}
+                        className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Clock size={16} className="text-gray-500" />
+                            <span className="font-semibold text-sm text-gray-700">Riwayat Aktivitas ({activityLogs.length})</span>
+                        </div>
+                        {showLogs ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                    {showLogs && (
+                        <div className="border-t max-h-60 overflow-y-auto">
+                            {activityLogs.map((log, idx) => (
+                                <div key={log.id || idx} className="flex items-start gap-3 px-4 py-3 border-b border-gray-50 last:border-0">
+                                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${log.action === 'final_submit' ? 'bg-green-500' : 'bg-blue-400'
+                                        }`} />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm">
+                                            <span className="font-bold text-gray-800">{log.student_name || 'Siswa'}</span>
+                                            <span className="text-gray-500 ml-1">{log.detail}</span>
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">
+                                            {new Date(log.created_at).toLocaleString('id-ID', {
+                                                day: 'numeric', month: 'short', year: 'numeric',
+                                                hour: '2-digit', minute: '2-digit'
+                                            })}
+                                        </p>
+                                    </div>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${log.action === 'final_submit' ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-600'
+                                        }`}>
+                                        {log.action === 'final_submit' ? 'Dikirim' : 'Draft'}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 
