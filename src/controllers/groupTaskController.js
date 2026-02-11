@@ -534,10 +534,15 @@ export async function handleGroupTaskRequest(request, env) {
             `);
 
             const insertPromises = Object.entries(responses).map(([qId, innerVal]) => {
-                // innerVal is { text, image, option }. We need to map it correctly.
-                // In StudentGroupTaskDetail, we send { qId: { text, image } } structure.
+                // innerVal is { text, image, option, answerImages }. We need to map it correctly.
                 let text = innerVal.text || innerVal.option || (typeof innerVal === 'string' ? innerVal : null);
-                let image = innerVal.image || null;
+                // Support multi-image: if answerImages array exists with multiple items, store as JSON array
+                let image = null;
+                if (innerVal.answerImages && Array.isArray(innerVal.answerImages) && innerVal.answerImages.length > 0) {
+                    image = innerVal.answerImages.length === 1 ? innerVal.answerImages[0] : JSON.stringify(innerVal.answerImages);
+                } else {
+                    image = innerVal.image || null;
+                }
                 return answerStmt.bind(submissionId, qId, text, image);
             });
 

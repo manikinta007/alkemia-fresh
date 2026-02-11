@@ -68,6 +68,10 @@ export default function StudentTasks({ student, onBack }) {
     const [groupAnswers, setGroupAnswers] = useState({});
     const [groupIsLeader, setGroupIsLeader] = useState(false);
     const [groupLeaderName, setGroupLeaderName] = useState('');
+    const [groupActivityLogs, setGroupActivityLogs] = useState([]);
+    const [showGroupDiscussion, setShowGroupDiscussion] = useState(false);
+    const [groupUploading, setGroupUploading] = useState({});
+    const [showGroupLogs, setShowGroupLogs] = useState(false);
 
     // DETAIL STATE
     const [activeTask, setActiveTask] = useState(null);
@@ -144,12 +148,34 @@ export default function StudentTasks({ student, onBack }) {
                 if (data.answers) {
                     const mapped = {};
                     data.answers.forEach(a => {
-                        mapped[a.question_id] = { text: a.answer_text, image: a.answer_image_url, option: a.answer_text };
+                        // Parse multi-image: answer_image_url may be a JSON array or a single URL
+                        let answerImages = [];
+                        if (a.answer_image_url) {
+                            try {
+                                const parsed = JSON.parse(a.answer_image_url);
+                                answerImages = Array.isArray(parsed) ? parsed : [a.answer_image_url];
+                            } catch {
+                                answerImages = [a.answer_image_url];
+                            }
+                        }
+                        mapped[a.question_id] = {
+                            text: a.answer_text,
+                            image: a.answer_image_url,
+                            option: a.answer_text,
+                            answerImages,
+                            score: a.score,
+                            is_graded: a.is_graded
+                        };
                     });
                     setGroupAnswers(mapped);
                 } else {
                     setGroupAnswers({});
                 }
+
+                // Load activity logs
+                setGroupActivityLogs(data.activityLogs || []);
+                setShowGroupLogs(false);
+                setShowGroupDiscussion(false);
                 setViewMode('GROUP_DETAIL');
             } else {
                 const err = await res.json();
@@ -852,10 +878,50 @@ export default function StudentTasks({ student, onBack }) {
     // 3. GROUP TASK DETAIL VIEW (DARK MODE)
     if (viewMode === 'GROUP_DETAIL' && groupDetail) {
         const grpReadOnly = groupSubmission?.submitted_at && !groupSubmission?.is_draft;
+        const grpShowKey = groupDetail.show_discussion;
+        const grpPgCount = groupQuestions.filter(q => q.type === 'pg').length;
+        const grpPgScorePerItem = grpPgCount > 0 ? (groupDetail.pg_weight / grpPgCount) : 0;
+
+        // Group image upload handler
+        const handleGroupFileUpload = async (qId, files) => {
+            if (!files || files.length === 0 || grpReadOnly) return;
+            const currentImages = groupAnswers[qId]?.answerImages || [];
+            const remainingSlots = 5 - currentImages.length;
+            if (remainingSlots <= 0) return showAlert('Batas Tercapai', 'Maksimal 5 gambar per soal.', 'error');
+            const filesToProcess = Array.from(files).slice(0, remainingSlots);
+            setGroupUploading(prev => ({ ...prev, [qId]: true }));
+            try {
+                const uploadedUrls = [];
+                for (const file of filesToProcess) {
+                    if (file.size > 10 * 1024 * 1024) { showAlert('Peringatan', `File ${file.name} terlalu besar (Max 10MB).`, 'error'); continue; }
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const token = localStorage.getItem('student_token');
+                    const res = await fetch('/api/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
+                    if (res.ok) { const data = await res.json(); uploadedUrls.push(data.url); }
+                }
+                if (uploadedUrls.length > 0) {
+                    const newImages = [...currentImages, ...uploadedUrls];
+                    setGroupAnswers(prev => ({ ...prev, [qId]: { ...prev[qId], answerImages: newImages, image: newImages[0] } }));
+                }
+            } catch (e) { showAlert('Error', 'Gagal upload gambar.', 'error'); }
+            setGroupUploading(prev => ({ ...prev, [qId]: false }));
+        };
+
+        const handleGroupRemoveImage = (qId, imageIndex) => {
+            const currentImages = groupAnswers[qId]?.answerImages || [];
+            const newImages = currentImages.filter((_, idx) => idx !== imageIndex);
+            setGroupAnswers(prev => ({ ...prev, [qId]: { ...prev[qId], answerImages: newImages, image: newImages[0] || null } }));
+        };
 
         return (
             <div className="flex flex-col h-full bg-zinc-950 animate-in slide-in-from-bottom-4 duration-300 text-white">
                 <CustomModal modal={modal} closeModal={closeModal} modalCallbackRef={modalCallbackRef} />
+                <DiscussionGlobalModal
+                    show={showGroupDiscussion}
+                    onClose={() => setShowGroupDiscussion(false)}
+                    activeTask={groupDetail}
+                />
 
                 {/* Header */}
                 <div className="bg-zinc-900 border-b border-zinc-800 p-3 pt-safe sticky top-0 z-20 shadow-lg flex justify-between items-center">
@@ -872,9 +938,30 @@ export default function StudentTasks({ student, onBack }) {
 
                     {/* Score card if graded */}
                     {groupSubmission?.is_graded === 1 && groupSubmission?.grade !== null && (
-                        <div className={`bg-zinc-900 border ${getGradeBorderColor(groupSubmission.grade)} p-5 rounded-2xl`}>
-                            <p className="text-xs font-bold text-zinc-500 uppercase mb-1">Nilai Kelompok</p>
-                            <p className={`text-4xl font-black ${getGradeColor(groupSubmission.grade)}`}>{groupSubmission.grade}<span className="text-lg text-zinc-600">/100</span></p>
+                        <div className="space-y-4">
+                            <div className={`bg-zinc-900 border ${getGradeBorderColor(groupSubmission.grade)} p-5 rounded-2xl relative overflow-hidden`}>
+                                <div className="absolute top-0 right-0 p-4 opacity-10">
+                                    <svg className={`w-24 h-24 ${getGradeColor(groupSubmission.grade)}`} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                                </div>
+                                <div className="relative z-10">
+                                    <p className="text-xs font-bold text-zinc-500 uppercase mb-1">Nilai Kelompok</p>
+                                    <p className={`text-4xl font-black ${getGradeColor(groupSubmission.grade)} mb-2`}>{groupSubmission.grade}<span className="text-lg text-zinc-600 font-medium">/100</span></p>
+                                    <div className="flex gap-4 text-xs text-zinc-400 mt-2">
+                                        <span>PG Weight: {groupDetail.pg_weight}%</span>
+                                        <span>Essay Weight: {100 - groupDetail.pg_weight}%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Pembahasan Button */}
+                            {grpShowKey && (groupDetail.discussion_text || groupDetail.discussion_url) && (
+                                <button
+                                    onClick={() => setShowGroupDiscussion(true)}
+                                    className="w-full py-3 bg-blue-900/30 text-blue-400 border border-blue-800 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-900/50 transition"
+                                >
+                                    <span>📖</span> LIHAT KUNCI & PEMBAHASAN GLOBAL
+                                </button>
+                            )}
                         </div>
                     )}
 
@@ -918,52 +1005,192 @@ export default function StudentTasks({ student, onBack }) {
                     )}
 
                     {/* Questions */}
-                    {groupQuestions.map((q, idx) => (
-                        <div key={q.id} className="bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
-                            <div className="flex justify-between items-start mb-3">
-                                <span className="bg-purple-900/30 border border-purple-800/50 text-purple-400 px-3 py-1.5 rounded-lg text-sm font-black">NO {idx + 1}</span>
-                                <span className="text-xs text-zinc-500">Bobot: {q.weight}</span>
-                            </div>
-                            <div className="text-zinc-100 font-medium mb-4" dangerouslySetInnerHTML={{ __html: q.question_text }}></div>
-                            {q.question_image_url && <img src={q.question_image_url} className="rounded-lg border border-zinc-700 max-h-60 object-contain bg-black mb-4" />}
-
-                            {/* Answer Input */}
-                            <div className="border-t border-zinc-800 pt-4">
-                                {q.type === 'pg' && q.options ? (
-                                    <div className="space-y-2">
-                                        {(typeof q.options === 'string' ? JSON.parse(q.options) : q.options).map((opt, oIdx) => {
-                                            if (!opt) return null;
-                                            const char = String.fromCharCode(65 + oIdx);
-                                            const isSelected = groupAnswers[q.id]?.option === char;
-                                            return (
-                                                <div key={oIdx}
-                                                    onClick={() => !grpReadOnly && setGroupAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], option: char, text: char } }))}
-                                                    className={`flex items-center gap-4 p-4 rounded-xl border transition cursor-pointer ${isSelected ? 'bg-purple-600 border-purple-500 text-white' : 'bg-black border-zinc-800 text-zinc-400 hover:bg-zinc-800'} ${grpReadOnly ? 'pointer-events-none' : ''}`}
-                                                >
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${isSelected ? 'border-white bg-white text-purple-600' : 'border-zinc-700 bg-zinc-900 text-zinc-500'}`}>{char}</div>
-                                                    <span className="text-base font-medium">{opt}</span>
-                                                </div>
-                                            );
-                                        })}
+                    {groupQuestions.map((q, idx) => {
+                        const qType = q.type || 'essay_text';
+                        return (
+                            <div key={q.id} className="bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
+                                <div className="mb-4">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <span className="bg-purple-900/30 border border-purple-800/50 text-purple-400 px-3 py-1.5 rounded-lg text-sm font-black">NO {idx + 1}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${qType === 'pg' ? 'bg-blue-900/30 text-blue-400 border border-blue-800' : qType === 'essay_image' ? 'bg-purple-900/30 text-purple-400 border border-purple-800' : 'bg-green-900/30 text-green-400 border border-green-800'}`}>
+                                                {qType === 'pg' ? 'PG' : qType === 'essay_image' ? '📷 Gambar' : '📝 Teks'}
+                                            </span>
+                                            {grpReadOnly && groupSubmission?.is_graded === 1 && groupAnswers[q.id]?.score !== undefined ? (
+                                                <span className={`text-[10px] font-bold ${getGradeColor((groupAnswers[q.id].score / (qType === 'pg' ? Math.max(grpPgScorePerItem, 1) : Math.max(q.weight, 1))) * 100)}`}>
+                                                    Poin: {Number(groupAnswers[q.id].score).toFixed(1)}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-zinc-500">Bobot: {qType === 'pg' ? grpPgScorePerItem.toFixed(0) : q.weight}%</span>
+                                            )}
+                                        </div>
                                     </div>
-                                ) : (
-                                    <textarea
-                                        className="w-full p-4 bg-black border border-zinc-700 rounded-xl focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none text-base min-h-[120px] text-zinc-100 placeholder-zinc-600 disabled:opacity-50"
-                                        placeholder={grpReadOnly ? 'Tidak ada jawaban' : 'Tulis jawaban kelompok...'}
-                                        value={groupAnswers[q.id]?.text || ''}
-                                        onChange={(e) => setGroupAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
-                                        disabled={grpReadOnly}
-                                    />
-                                )}
-                            </div>
-                        </div>
-                    ))}
+                                    <div className="text-zinc-100 font-medium" dangerouslySetInnerHTML={{ __html: q.question_text }}></div>
+                                    {q.question_image_url && <img src={q.question_image_url} className="mt-3 rounded-lg border border-zinc-700 max-h-60 object-contain bg-black" />}
+                                </div>
 
-                    {/* Feedback */}
+                                {/* Answer Input */}
+                                <div className="border-t border-zinc-800 pt-4">
+                                    {/* PG TYPE */}
+                                    {qType === 'pg' && q.options ? (
+                                        <div className="space-y-2">
+                                            {(typeof q.options === 'string' ? JSON.parse(q.options) : q.options).map((opt, oIdx) => {
+                                                if (!opt) return null;
+                                                const char = String.fromCharCode(65 + oIdx);
+                                                const isSelected = groupAnswers[q.id]?.option === char;
+
+                                                let itemClass = 'bg-black border-zinc-800 text-zinc-400 hover:bg-zinc-800 cursor-pointer';
+                                                let badgeClass = 'border-zinc-700 bg-zinc-900 text-zinc-500';
+
+                                                if (grpReadOnly) {
+                                                    if (grpShowKey) {
+                                                        const isCorrect = q.correct_key === char;
+                                                        if (isCorrect) {
+                                                            itemClass = 'bg-green-900/20 border-green-600 text-green-400';
+                                                            badgeClass = 'border-green-500 bg-green-900 text-green-400';
+                                                        } else if (isSelected && !isCorrect) {
+                                                            itemClass = 'bg-red-900/20 border-red-800 text-red-500';
+                                                            badgeClass = 'border-red-800 bg-red-900 text-red-400';
+                                                        }
+                                                    } else {
+                                                        if (isSelected) {
+                                                            itemClass = 'bg-blue-900/20 border-blue-800 text-blue-400';
+                                                            badgeClass = 'border-blue-700 bg-blue-900 text-blue-400';
+                                                        }
+                                                    }
+                                                } else {
+                                                    if (isSelected) {
+                                                        itemClass = 'bg-purple-600 border-purple-500 text-white';
+                                                        badgeClass = 'border-white bg-white text-purple-600';
+                                                    }
+                                                }
+
+                                                return (
+                                                    <div key={oIdx}
+                                                        onClick={() => !grpReadOnly && setGroupAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], option: char, text: char } }))}
+                                                        className={`flex items-center gap-4 p-4 rounded-xl border transition ${itemClass} ${grpReadOnly ? 'pointer-events-none' : ''}`}
+                                                    >
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${badgeClass}`}>{char}</div>
+                                                        <span className="text-base font-medium">{opt}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                            {/* PG Summary Card when show_discussion */}
+                                            {grpReadOnly && grpShowKey && (() => {
+                                                const myAns = groupAnswers[q.id]?.option || null;
+                                                const isCorrect = myAns === q.correct_key;
+                                                return (
+                                                    <div className={`mt-4 p-3 rounded-xl border text-sm font-bold flex items-center gap-2 ${!myAns ? 'bg-yellow-900/20 border-yellow-700 text-yellow-400' : isCorrect ? 'bg-green-900/20 border-green-700 text-green-400' : 'bg-red-900/20 border-red-700 text-red-400'}`}>
+                                                        <span>{!myAns ? '⚠️' : isCorrect ? '✅' : '❌'}</span>
+                                                        <span>
+                                                            {!myAns ? 'Tidak Dijawab' : `Jawaban: ${myAns}`}
+                                                            {myAns && !isCorrect && <span className="text-zinc-400 font-normal ml-2">• Jawaban Benar: {q.correct_key}</span>}
+                                                            {isCorrect && <span className="ml-2">• BENAR</span>}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    ) : null}
+
+                                    {/* ESSAY TEXT TYPE */}
+                                    {(qType === 'essay' || qType === 'essay_text') && (
+                                        <div>
+                                            <textarea
+                                                className="w-full p-4 bg-black border border-zinc-700 rounded-xl focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none text-base min-h-[120px] text-zinc-100 placeholder-zinc-600 disabled:opacity-50"
+                                                placeholder={grpReadOnly ? 'Tidak ada jawaban' : 'Tulis jawaban kelompok...'}
+                                                value={groupAnswers[q.id]?.text || ''}
+                                                onChange={(e) => setGroupAnswers(prev => ({ ...prev, [q.id]: { ...prev[q.id], text: e.target.value } }))}
+                                                disabled={grpReadOnly}
+                                            />
+                                            {grpReadOnly && !groupAnswers[q.id]?.is_graded && groupSubmission?.is_graded !== 1 && (
+                                                <div className="mt-2 text-right"><span className="text-xs text-zinc-500 animate-pulse">⏳ Menunggu penilaian guru...</span></div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* ESSAY IMAGE TYPE */}
+                                    {qType === 'essay_image' && (() => {
+                                        const images = groupAnswers[q.id]?.answerImages || [];
+                                        const canAddMore = !grpReadOnly && images.length < 5;
+                                        return (
+                                            <div>
+                                                {images.length > 0 && (
+                                                    <div className="grid grid-cols-3 gap-2 mb-3">
+                                                        {images.map((imgUrl, imgIdx) => (
+                                                            <div key={imgIdx} className="relative group aspect-square">
+                                                                <img src={imgUrl} className="w-full h-full object-cover rounded-lg border border-zinc-700 bg-black" alt={`Jawaban ${imgIdx + 1}`} />
+                                                                {!grpReadOnly && (
+                                                                    <button onClick={() => handleGroupRemoveImage(q.id, imgIdx)} className="absolute -top-1.5 -right-1.5 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold text-[10px] shadow-md hover:bg-red-700 transition opacity-0 group-hover:opacity-100">✕</button>
+                                                                )}
+                                                                <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">{imgIdx + 1}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {canAddMore && (
+                                                    <div>
+                                                        <input type="file" id={`grp-file-${q.id}`} className="hidden" accept="image/*" multiple onChange={(e) => handleGroupFileUpload(q.id, e.target.files)} disabled={grpReadOnly} />
+                                                        <label htmlFor={`grp-file-${q.id}`} className="w-full py-4 border-2 border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center gap-1 transition cursor-pointer hover:bg-zinc-900 hover:border-purple-900/50">
+                                                            <span className="text-xl">{groupUploading[q.id] ? '⏳' : images.length > 0 ? '➕' : '📷'}</span>
+                                                            <span className="text-xs font-bold text-zinc-500">{groupUploading[q.id] ? 'Mengupload...' : images.length > 0 ? `Tambah Foto (${images.length}/5)` : 'Ambil Foto Jawaban'}</span>
+                                                        </label>
+                                                    </div>
+                                                )}
+                                                {grpReadOnly && images.length === 0 && (
+                                                    <div className="py-6 border-2 border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center gap-1 opacity-50">
+                                                        <span className="text-xl">🖼️</span>
+                                                        <span className="text-xs font-bold text-zinc-500">Tidak ada gambar</span>
+                                                    </div>
+                                                )}
+                                                {!grpReadOnly && images.length >= 5 && <p className="text-[10px] text-zinc-500 text-center mt-2">Maksimal 5 gambar tercapai</p>}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {/* Feedback / Catatan Guru */}
                     {groupSubmission?.feedback && (
                         <div className="bg-blue-900/20 border border-blue-800 rounded-xl p-4">
-                            <p className="text-xs font-bold text-blue-400 uppercase mb-2">Umpan Balik Guru</p>
-                            <p className="text-sm text-blue-300">{groupSubmission.feedback}</p>
+                            <p className="text-xs font-bold text-blue-400 uppercase mb-2">📝 Catatan Guru</p>
+                            <p className="text-sm text-blue-300 whitespace-pre-wrap">{groupSubmission.feedback}</p>
+                        </div>
+                    )}
+
+                    {/* Activity Log */}
+                    {groupActivityLogs.length > 0 && (
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl">
+                            <button onClick={() => setShowGroupLogs(!showGroupLogs)} className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-800/50 transition rounded-xl">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-zinc-500">🕐</span>
+                                    <span className="font-bold text-sm text-zinc-400">Riwayat Aktivitas ({groupActivityLogs.length})</span>
+                                </div>
+                                <span className="text-zinc-500 text-xs">{showGroupLogs ? '▲' : '▼'}</span>
+                            </button>
+                            {showGroupLogs && (
+                                <div className="border-t border-zinc-800 max-h-60 overflow-y-auto">
+                                    {groupActivityLogs.map((log, idx) => (
+                                        <div key={log.id || idx} className="flex items-start gap-3 px-4 py-3 border-b border-zinc-800/50 last:border-0">
+                                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${log.action === 'final_submit' ? 'bg-green-500' : 'bg-blue-400'}`} />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm">
+                                                    <span className="font-bold text-zinc-200">{log.student_name || 'Siswa'}</span>
+                                                    <span className="text-zinc-500 ml-1 text-xs">{log.detail}</span>
+                                                </p>
+                                                <p className="text-[10px] text-zinc-600 mt-0.5">
+                                                    {new Date(log.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })}
+                                                </p>
+                                            </div>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${log.action === 'final_submit' ? 'bg-green-900/30 text-green-400' : 'bg-blue-900/30 text-blue-400'}`}>
+                                                {log.action === 'final_submit' ? 'Dikirim' : 'Draft'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

@@ -164,10 +164,10 @@ export const GroupTaskGrading = ({
                                     {/* Group Header */}
                                     <div
                                         className={`p-3 border transition flex items-center justify-between group cursor-pointer ${status === 'BELUM_DIKERJAKAN'
-                                                ? 'opacity-60 bg-zinc-50/50 border-transparent'
-                                                : isSelected
-                                                    ? 'bg-purple-50 border-purple-200 shadow-sm ring-1 ring-purple-200'
-                                                    : 'hover:bg-zinc-50 border-transparent bg-white'
+                                            ? 'opacity-60 bg-zinc-50/50 border-transparent'
+                                            : isSelected
+                                                ? 'bg-purple-50 border-purple-200 shadow-sm ring-1 ring-purple-200'
+                                                : 'hover:bg-zinc-50 border-transparent bg-white'
                                             }`}
                                         onClick={() => {
                                             if (status !== 'BELUM_DIKERJAKAN' && submission) {
@@ -212,8 +212,8 @@ export const GroupTaskGrading = ({
                                                     // Individual publish not supported for groups, just visual indicator
                                                 }}
                                                 className={`w-8 h-8 flex items-center justify-center rounded-lg transition z-20 border ${submission.is_published
-                                                        ? 'bg-green-50 text-green-600 border-green-200'
-                                                        : 'bg-white text-zinc-300 border-zinc-200'
+                                                    ? 'bg-green-50 text-green-600 border-green-200'
+                                                    : 'bg-white text-zinc-300 border-zinc-200'
                                                     }`}
                                                 title={submission.is_published ? "Status: TERBIT" : "Status: TERSEMBUNYI"}
                                             >
@@ -275,7 +275,7 @@ export const GroupTaskGrading = ({
                                         {selectedSubmission.submission.group_name}
                                     </h2>
                                     <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1">
-                                        <Clock size={12} /> Dikumpulkan oleh {selectedSubmission.submission.submitter_name} • {new Date(selectedSubmission.submission.submitted_at).toLocaleString('id-ID')}
+                                        <Clock size={12} /> Dikumpulkan oleh {selectedSubmission.submission.submitter_name} • {new Date(selectedSubmission.submission.submitted_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-6">
