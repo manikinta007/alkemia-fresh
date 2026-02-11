@@ -133,7 +133,7 @@ const StudentGroupTaskDetail = () => {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
-                    'X-Device-Id': localStorage.getItem('device_id')
+                    'X-Device-Id': localStorage.getItem('student_device_id')
                 },
                 body: JSON.stringify(payload)
             });
@@ -176,7 +176,7 @@ const StudentGroupTaskDetail = () => {
     if (loading) return <div className="p-8 text-center">Loading task...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
-    const isReadOnly = submission?.is_graded === 1 || (submission?.is_graded === 0 && submission?.submitted_at); // Submitted logic
+    const isReadOnly = submission?.is_graded === 1 || submission?.is_graded === 0; // Draft (is_graded === -1) is editable
 
     return (
         <div className="max-w-4xl mx-auto p-4 pb-24">
@@ -267,7 +267,35 @@ const StudentGroupTaskDetail = () => {
                         {/* INPUT AREA based on Type */}
                         {!isReadOnly ? (
                             <div className="mt-4">
-                                {q.type === 'essay' && (
+                                {q.type === 'pg' && (
+                                    <div className="space-y-2">
+                                        {(() => {
+                                            let options = [];
+                                            try {
+                                                options = typeof q.options === 'string' ? JSON.parse(q.options) : (q.options || []);
+                                            } catch (e) { options = []; }
+                                            return options.map((opt, optIdx) => {
+                                                const letter = String.fromCharCode(65 + optIdx); // A, B, C, D, E
+                                                const isSelected = answers[q.id]?.option === letter;
+                                                return (
+                                                    <button
+                                                        key={optIdx}
+                                                        onClick={() => handleAnswerChange(q.id, 'option', letter)}
+                                                        className={`w-full text-left p-3 rounded-lg border-2 transition flex items-center gap-3 ${isSelected
+                                                                ? 'border-blue-500 bg-blue-50 text-blue-900 font-bold'
+                                                                : 'border-gray-200 hover:border-gray-300 bg-white'
+                                                            }`}
+                                                    >
+                                                        <span className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold shrink-0 ${isSelected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+                                                            }`}>{letter}</span>
+                                                        <span className="flex-1">{opt}</span>
+                                                    </button>
+                                                );
+                                            });
+                                        })()}
+                                    </div>
+                                )}
+                                {(q.type === 'essay' || q.type === 'essay_text') && (
                                     <textarea
                                         className="w-full border rounded p-3 focus:ring-2 focus:ring-blue-500 outline-none"
                                         rows="4"
@@ -276,11 +304,64 @@ const StudentGroupTaskDetail = () => {
                                         onChange={(e) => handleAnswerChange(q.id, 'text', e.target.value)}
                                     />
                                 )}
-                                {/* Add other types here (PG, Image) if needed as per previous files */}
+                                {q.type === 'essay_image' && (
+                                    <div className="space-y-3">
+                                        <textarea
+                                            className="w-full border rounded p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+                                            rows="2"
+                                            placeholder="Tulis keterangan gambar (opsional)..."
+                                            value={answers[q.id]?.text || ''}
+                                            onChange={(e) => handleAnswerChange(q.id, 'text', e.target.value)}
+                                        />
+                                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files[0];
+                                                    if (!file) return;
+                                                    try {
+                                                        const url = await handleImageUpload(file);
+                                                        handleAnswerChange(q.id, 'image', url);
+                                                    } catch (err) {
+                                                        alert('Gagal upload gambar: ' + err.message);
+                                                    }
+                                                }}
+                                                className="w-full text-sm"
+                                            />
+                                            {answers[q.id]?.image && (
+                                                <div className="mt-3">
+                                                    <img src={answers[q.id].image} alt="Preview" className="max-h-48 rounded border" />
+                                                    <button
+                                                        onClick={() => handleAnswerChange(q.id, 'image', null)}
+                                                        className="text-red-500 text-xs mt-1 hover:underline"
+                                                    >Hapus gambar</button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="mt-4 bg-gray-50 p-4 rounded text-gray-700">
-                                {answers[q.id]?.text || <em className="text-gray-400">Tidak ada jawaban</em>}
+                                {q.type === 'pg' ? (
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
+                                            {answers[q.id]?.option || '-'}
+                                        </span>
+                                        <span className="text-sm">Jawaban yang dipilih</span>
+                                    </div>
+                                ) : q.type === 'essay_image' ? (
+                                    <div className="space-y-2">
+                                        {answers[q.id]?.text && <p>{answers[q.id].text}</p>}
+                                        {answers[q.id]?.image && (
+                                            <img src={answers[q.id].image} alt="Jawaban" className="max-h-48 rounded border" />
+                                        )}
+                                        {!answers[q.id]?.text && !answers[q.id]?.image && <em className="text-gray-400">Tidak ada jawaban</em>}
+                                    </div>
+                                ) : (
+                                    answers[q.id]?.text || <em className="text-gray-400">Tidak ada jawaban</em>
+                                )}
                             </div>
                         )}
                     </div>

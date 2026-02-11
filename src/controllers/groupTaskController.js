@@ -155,7 +155,8 @@ export async function handleGroupTaskRequest(request, env) {
         if (!submission) return jsonResponse({ error: "Submission not found" }, 404);
 
         const { results: answers } = await env.DB.prepare(`
-            SELECT a.*, q.question_text, q.type, q.weight, q.options, q.question_image_url
+            SELECT a.id as answer_id, a.submission_id, a.question_id, a.answer_text, a.answer_image_url, a.score, a.is_graded,
+                   q.question_text, q.type, q.weight, q.options, q.question_image_url, q.correct_key
             FROM group_task_answers a
             JOIN group_task_questions q ON a.question_id = q.id
             WHERE a.submission_id = ?
@@ -443,19 +444,39 @@ export async function handleGroupTaskRequest(request, env) {
             let submissionId;
             if (submission) {
                 // Update existing
-                await env.DB.prepare(`
-                    UPDATE group_task_submissions 
-                    SET submitted_by = ?, is_graded = ?, submitted_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                `).bind(studentId, isDraft ? -1 : 0, submission.id).run();
+                if (isDraft) {
+                    // Draft: DON'T set submitted_at so it's not treated as submitted
+                    await env.DB.prepare(`
+                        UPDATE group_task_submissions 
+                        SET submitted_by = ?, is_graded = -1
+                        WHERE id = ?
+                    `).bind(studentId, submission.id).run();
+                } else {
+                    // Final submit: set submitted_at
+                    await env.DB.prepare(`
+                        UPDATE group_task_submissions 
+                        SET submitted_by = ?, is_graded = 0, submitted_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    `).bind(studentId, submission.id).run();
+                }
                 submissionId = submission.id;
             } else {
                 // Create new
-                const res = await env.DB.prepare(`
-                    INSERT INTO group_task_submissions (group_task_id, group_id, submitted_by, is_graded)
-                    VALUES (?, ?, ?, ?)
-                `).bind(taskId, myGroup.id, studentId, isDraft ? -1 : 0).run();
-                submissionId = res.meta.last_row_id;
+                if (isDraft) {
+                    // Draft: don't set submitted_at (leave NULL)
+                    const res = await env.DB.prepare(`
+                        INSERT INTO group_task_submissions (group_task_id, group_id, submitted_by, is_graded, submitted_at)
+                        VALUES (?, ?, ?, -1, NULL)
+                    `).bind(taskId, myGroup.id, studentId).run();
+                    submissionId = res.meta.last_row_id;
+                } else {
+                    // Final submit
+                    const res = await env.DB.prepare(`
+                        INSERT INTO group_task_submissions (group_task_id, group_id, submitted_by, is_graded)
+                        VALUES (?, ?, ?, 0)
+                    `).bind(taskId, myGroup.id, studentId).run();
+                    submissionId = res.meta.last_row_id;
+                }
             }
 
             // Save Answers
