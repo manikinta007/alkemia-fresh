@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAlert } from '../components/Alert';
+import { fetchApi } from '../utils/api';
 
 export const useGradesData = () => {
     const { showAlert } = useAlert();
@@ -20,7 +21,7 @@ export const useGradesData = () => {
         const fetchInitial = async () => {
             setLoading(true);
             try {
-                const periodRes = await fetch('/api/periods?active=true');
+                const periodRes = await fetchApi('/api/periods?active=true');
                 let period = null;
                 if (periodRes.ok) {
                     const periods = await periodRes.json();
@@ -29,21 +30,20 @@ export const useGradesData = () => {
                 }
 
                 if (period) {
-                    const classesRes = await fetch(`/api/classes?period_id=${period.id}`);
+                    const classesRes = await fetchApi(`/api/classes?period_id=${period.id}`);
                     if (classesRes.ok) {
                         const classesData = await classesRes.json();
                         setClasses(classesData);
                     }
 
                     // Seed default components if none exist
-                    await fetch('/api/grade-config/seed', {
+                    await fetchApi('/api/grade-config/seed', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
                         body: JSON.stringify({ period_id: period.id })
                     });
 
                     // Load config
-                    const configRes = await fetch(`/api/grade-config?period_id=${period.id}`);
+                    const configRes = await fetchApi(`/api/grade-config?period_id=${period.id}`);
                     if (configRes.ok) {
                         setConfig(await configRes.json());
                     }
@@ -64,7 +64,7 @@ export const useGradesData = () => {
         if (!cls || !activePeriod) return;
         setLoading(true);
         try {
-            const res = await fetch(`/api/grade-recap?class_id=${cls.id}&period_id=${activePeriod.id}`);
+            const res = await fetchApi(`/api/grade-recap?class_id=${cls.id}&period_id=${activePeriod.id}`);
             if (res.ok) {
                 setGradeRecap(await res.json());
             } else {
@@ -81,7 +81,7 @@ export const useGradesData = () => {
     // Reload recap
     const reloadRecap = useCallback(async () => {
         if (selectedClass && activePeriod) {
-            const res = await fetch(`/api/grade-recap?class_id=${selectedClass.id}&period_id=${activePeriod.id}`);
+            const res = await fetchApi(`/api/grade-recap?class_id=${selectedClass.id}&period_id=${activePeriod.id}`);
             if (res.ok) setGradeRecap(await res.json());
         }
     }, [selectedClass, activePeriod]);
@@ -90,16 +90,15 @@ export const useGradesData = () => {
     const saveConfig = useCallback(async (newConfig) => {
         if (!activePeriod) return false;
         try {
-            const res = await fetch('/api/grade-config', {
+            const res = await fetchApi('/api/grade-config', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
                 body: JSON.stringify({ period_id: activePeriod.id, ...newConfig })
             });
             const data = await res.json();
             if (res.ok) {
                 showAlert('Konfigurasi berhasil disimpan!', 'success');
                 // Reload config
-                const configRes = await fetch(`/api/grade-config?period_id=${activePeriod.id}`);
+                const configRes = await fetchApi(`/api/grade-config?period_id=${activePeriod.id}`);
                 if (configRes.ok) setConfig(await configRes.json());
                 // Reload recap if class selected
                 if (selectedClass) await reloadRecap();
@@ -120,9 +119,8 @@ export const useGradesData = () => {
         const cellKey = `${componentId}_${studentId}`;
         setSavingCell(cellKey);
         try {
-            const res = await fetch('/api/grade-recap/save', {
+            const res = await fetchApi('/api/grade-recap/save', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
                 body: JSON.stringify({
                     component_id: componentId,
                     class_id: selectedClass.id,
@@ -147,9 +145,8 @@ export const useGradesData = () => {
     const resetOverride = useCallback(async (componentId, studentId) => {
         if (!selectedClass) return;
         try {
-            await fetch('/api/grade-recap/reset-override', {
+            await fetchApi('/api/grade-recap/reset-override', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
                 body: JSON.stringify({
                     component_id: componentId,
                     class_id: selectedClass.id,
@@ -166,9 +163,8 @@ export const useGradesData = () => {
     const applyRemedial = useCallback(async (studentId) => {
         if (!selectedClass || !activePeriod) return;
         try {
-            const res = await fetch('/api/grade-recap/remedial', {
+            const res = await fetchApi('/api/grade-recap/remedial', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
                 body: JSON.stringify({
                     class_id: selectedClass.id,
                     student_id: studentId,
@@ -188,9 +184,8 @@ export const useGradesData = () => {
     const undoRemedial = useCallback(async (studentId) => {
         if (!selectedClass) return;
         try {
-            await fetch('/api/grade-recap/undo-remedial', {
+            await fetchApi('/api/grade-recap/undo-remedial', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
                 body: JSON.stringify({
                     class_id: selectedClass.id,
                     student_id: studentId
@@ -206,9 +201,8 @@ export const useGradesData = () => {
     const csvPreview = useCallback(async (rows) => {
         if (!selectedClass) return null;
         try {
-            const res = await fetch('/api/grade-recap/csv-preview', {
+            const res = await fetchApi('/api/grade-recap/csv-preview', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
                 body: JSON.stringify({ class_id: selectedClass.id, rows })
             });
             if (res.ok) return await res.json();
@@ -222,9 +216,8 @@ export const useGradesData = () => {
     const csvUpload = useCallback(async (componentId, entries) => {
         if (!selectedClass) return false;
         try {
-            const res = await fetch('/api/grade-recap/csv-upload', {
+            const res = await fetchApi('/api/grade-recap/csv-upload', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
                 body: JSON.stringify({
                     component_id: componentId,
                     class_id: selectedClass.id,
