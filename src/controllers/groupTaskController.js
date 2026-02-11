@@ -155,12 +155,13 @@ export async function handleGroupTaskRequest(request, env) {
         if (!submission) return jsonResponse({ error: "Submission not found" }, 404);
 
         const { results: answers } = await env.DB.prepare(`
-            SELECT a.id as answer_id, a.submission_id, a.question_id, a.answer_text, a.answer_image_url, a.score, a.is_graded,
+            SELECT a.id as answer_id, a.submission_id, q.id as question_id, a.answer_text, a.answer_image_url, a.score, a.is_graded,
                    q.question_text, q.type, q.weight, q.options, q.question_image_url, q.correct_key
-            FROM group_task_answers a
-            JOIN group_task_questions q ON a.question_id = q.id
-            WHERE a.submission_id = ?
-        `).bind(submissionId).all();
+            FROM group_task_questions q
+            LEFT JOIN group_task_answers a ON a.question_id = q.id AND a.submission_id = ?
+            WHERE q.group_task_id = ?
+            ORDER BY q.id ASC
+        `).bind(submissionId, submission.group_task_id).all();
 
         return jsonResponse({ submission, answers });
     }

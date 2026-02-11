@@ -1130,7 +1130,7 @@ export default function StudentTasks({ student, onBack }) {
                                                 )}
                                                 {canAddMore && (
                                                     <div>
-                                                        <input type="file" id={`grp-file-${q.id}`} className="hidden" accept="image/*" multiple onChange={(e) => handleGroupFileUpload(q.id, e.target.files)} disabled={grpReadOnly} />
+                                                        <input type="file" id={`grp-file-${q.id}`} className="hidden" accept="image/*" multiple capture={groupDetail.allow_gallery ? undefined : "environment"} onChange={(e) => handleGroupFileUpload(q.id, e.target.files)} disabled={grpReadOnly} />
                                                         <label htmlFor={`grp-file-${q.id}`} className="w-full py-4 border-2 border-dashed border-zinc-800 rounded-xl flex flex-col items-center justify-center gap-1 transition cursor-pointer hover:bg-zinc-900 hover:border-purple-900/50">
                                                             <span className="text-xl">{groupUploading[q.id] ? '⏳' : images.length > 0 ? '➕' : '📷'}</span>
                                                             <span className="text-xs font-bold text-zinc-500">{groupUploading[q.id] ? 'Mengupload...' : images.length > 0 ? `Tambah Foto (${images.length}/5)` : 'Ambil Foto Jawaban'}</span>

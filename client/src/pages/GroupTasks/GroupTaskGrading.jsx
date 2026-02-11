@@ -36,7 +36,8 @@ export const GroupTaskGrading = ({
     const essayProgress = useMemo(() => {
         const total = essayQuestions.length;
         const graded = essayQuestions.filter(ans => {
-            const inputVal = gradeInput.essayScores[ans.answer_id];
+            const scoreKey = ans.answer_id || `q_${ans.question_id}`;
+            const inputVal = gradeInput.essayScores[scoreKey];
             return inputVal !== undefined && inputVal !== '';
         }).length;
         return { graded, total };
@@ -64,7 +65,7 @@ export const GroupTaskGrading = ({
 
         selectedSubmission.answers.forEach(a => {
             if (a.type !== 'pg') {
-                const quality = gradeInput.essayScores[a.answer_id] || 0;
+                const quality = gradeInput.essayScores[a.answer_id || `q_${a.question_id}`] || 0;
                 const weight = a.weight || 0;
                 total += (quality / 100) * weight;
             }
@@ -396,6 +397,12 @@ export const GroupTaskGrading = ({
                                                     )}
                                                 </div>
 
+                                                {/* No answer submitted */}
+                                                {!isPG && !ans.answer_text && !ans.answer_image_url && (
+                                                    <div className="py-4 text-center">
+                                                        <span className="text-zinc-400 italic text-sm">Belum dijawab oleh kelompok</span>
+                                                    </div>
+                                                )}
                                                 {/* Essay Grade Input */}
                                                 {!isPG && (
                                                     <div className="w-full md:w-56 bg-blue-50/50 p-5 rounded-xl border border-blue-100 flex flex-col justify-center shrink-0">
@@ -405,12 +412,13 @@ export const GroupTaskGrading = ({
                                                                 type="number" min="0" max="100"
                                                                 className="text-center text-3xl font-black p-2 rounded-xl border border-blue-200 focus:border-blue-500 outline-none w-full shadow-inner bg-white text-blue-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                 placeholder="-"
-                                                                value={gradeInput.essayScores[ans.answer_id] ?? ''}
+                                                                value={gradeInput.essayScores[ans.answer_id || `q_${ans.question_id}`] ?? ''}
                                                                 onWheel={(e) => e.target.blur()}
                                                                 onChange={e => {
                                                                     const rawVal = e.target.value;
+                                                                    const scoreKey = ans.answer_id || `q_${ans.question_id}`;
                                                                     const val = rawVal === '' ? '' : Math.min(100, Math.max(0, parseInt(rawVal) || 0));
-                                                                    setGradeInput({ ...gradeInput, essayScores: { ...gradeInput.essayScores, [ans.answer_id]: val } });
+                                                                    setGradeInput({ ...gradeInput, essayScores: { ...gradeInput.essayScores, [scoreKey]: val } });
                                                                 }}
                                                             />
                                                             <button
@@ -423,7 +431,7 @@ export const GroupTaskGrading = ({
                                                         </div>
                                                         <div className="text-center text-blue-400 mt-3 text-[10px] font-medium bg-blue-100/50 py-1.5 rounded-lg border border-blue-100">
                                                             Konversi: <span className="font-bold text-blue-700">
-                                                                {((gradeInput.essayScores[ans.answer_id] || 0) / 100 * (ans.weight || 0)).toFixed(1)}
+                                                                {((gradeInput.essayScores[ans.answer_id || `q_${ans.question_id}`] || 0) / 100 * (ans.weight || 0)).toFixed(1)}
                                                             </span> Poin
                                                         </div>
                                                     </div>
@@ -465,7 +473,7 @@ export const GroupTaskGrading = ({
                                         const isActive = activeQuestionIdx === ans.originalIndex;
                                         return (
                                             <button
-                                                key={ans.answer_id}
+                                                key={ans.answer_id || `q_${ans.question_id}`}
                                                 onClick={() => scrollToQuestion(ans.originalIndex)}
                                                 className={`w-10 h-10 rounded-lg font-bold text-sm transition border-2 ${isActive
                                                     ? 'bg-zinc-700 text-white border-zinc-700'
