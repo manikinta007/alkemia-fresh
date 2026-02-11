@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useGradesData } from '../hooks/useGradesData';
 import { Card, Spinner } from '../components/UI';
 import { GridSkeleton } from '../components/Skeleton';
-import { ChevronRight, ArrowLeft, Settings, Upload, RefreshCw, AlertTriangle, CheckCircle, Undo2 } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Settings, Upload, RefreshCw, AlertTriangle, CheckCircle, Undo2, Download } from 'lucide-react';
 import GradeConfigModal from './Grades/GradeConfigModal';
 import CsvUploadModal from './Grades/CsvUploadModal';
 import { useAlertContext } from '../components/Alert';
@@ -88,7 +88,7 @@ export default function Grades() {
                         Kembali
                     </button>
                     <div className="flex items-center gap-2">
-                        <button onClick={reloadRecap} className="p-2 text-zinc-500 hover:bg-zinc-100 rounded-lg transition" title="Refresh">
+                        <button onClick={reloadRecap} className="p-2 text-zinc-500 hover:bg-zinc-100 rounded-lg transition" title="Hitung ulang nilai auto (tugas, quiz, keaktifan) dari database terbaru">
                             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                         </button>
                         {hasManualComponents && (
@@ -109,16 +109,11 @@ export default function Grades() {
                 </div>
 
                 {/* Class Header */}
-                <div className="mb-6">
+                <div className="mb-6 flex items-center gap-3">
                     <h2 className="text-2xl font-bold text-zinc-900">{selectedClass.name}</h2>
-                    <div className="flex items-center gap-4 mt-1">
-                        <p className="text-zinc-500 text-sm">
-                            {components.map(c => `${c.name} ${c.weight}%`).join(' • ')}
-                        </p>
-                        <span className="px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-700 rounded-full">
-                            KKM: {kkm}
-                        </span>
-                    </div>
+                    <span className="px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-700 rounded-full">
+                        KKM: {kkm}
+                    </span>
                 </div>
 
                 {loading ? (
@@ -176,19 +171,30 @@ export default function Grades() {
                                                         ) : isSaving ? (
                                                             <span className="text-xs text-zinc-400">...</span>
                                                         ) : (
-                                                            <button
-                                                                onClick={() => startEdit(comp.id, s.student_id, cv.effective_value)}
-                                                                className={`w-full py-1 text-xs font-bold rounded transition cursor-pointer hover:bg-zinc-100 ${cv.is_overridden
-                                                                    ? 'text-blue-600'
-                                                                    : cv.effective_value !== null
-                                                                        ? 'text-zinc-700'
-                                                                        : 'text-zinc-300'
-                                                                    }`}
-                                                                title={cv.is_overridden ? `Auto: ${cv.auto_value ?? '-'} | Override: ${cv.manual_override}` : undefined}
-                                                            >
-                                                                {cv.effective_value !== null ? cv.effective_value : '-'}
-                                                                {cv.is_overridden && <span className="ml-0.5 text-[8px]">✎</span>}
-                                                            </button>
+                                                            <div className="group/cell relative flex items-center justify-center gap-0.5">
+                                                                <button
+                                                                    onClick={() => startEdit(comp.id, s.student_id, cv.effective_value)}
+                                                                    className={`py-1 px-1 text-xs font-bold rounded transition cursor-pointer hover:bg-zinc-100 ${cv.is_overridden
+                                                                        ? 'text-blue-600'
+                                                                        : cv.effective_value !== null
+                                                                            ? 'text-zinc-700'
+                                                                            : 'text-zinc-300'
+                                                                        }`}
+                                                                    title={cv.is_overridden ? `Auto: ${cv.auto_value ?? '-'} | Override: ${cv.manual_override}` : undefined}
+                                                                >
+                                                                    {cv.effective_value !== null ? cv.effective_value : '-'}
+                                                                    {cv.is_overridden && <span className="ml-0.5 text-[8px]">✎</span>}
+                                                                </button>
+                                                                {cv.is_overridden && (
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); resetOverride(comp.id, s.student_id); }}
+                                                                        className="absolute -right-1 -top-1 w-4 h-4 bg-blue-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity hover:bg-red-500 shadow-sm"
+                                                                        title={`Kembalikan ke nilai auto (${cv.auto_value ?? '-'})`}
+                                                                    >
+                                                                        <Undo2 size={8} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </td>
                                                 );
@@ -256,6 +262,7 @@ export default function Grades() {
                     components={gradeRecap.components}
                     onPreview={csvPreview}
                     onUpload={csvUpload}
+                    studentNames={gradeRecap.students.map(s => s.student_name)}
                 />
             </div>
         );

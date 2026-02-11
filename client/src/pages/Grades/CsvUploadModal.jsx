@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { X, Upload, FileSpreadsheet, Check, AlertTriangle } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, Check, AlertTriangle, Download } from 'lucide-react';
 
-export default function CsvUploadModal({ isOpen, onClose, components, onPreview, onUpload }) {
+export default function CsvUploadModal({ isOpen, onClose, components, onPreview, onUpload, studentNames }) {
     const [selectedComponent, setSelectedComponent] = useState(null);
     const [csvText, setCsvText] = useState('');
     const [preview, setPreview] = useState(null);
@@ -74,6 +74,18 @@ export default function CsvUploadModal({ isOpen, onClose, components, onPreview,
         }
     }, []);
 
+    const downloadTemplate = () => {
+        const names = studentNames || [];
+        const csv = 'Nama,Nilai\n' + names.map(n => `${n},`).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `template_nilai_${selectedComponent?.name || 'komponen'}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -99,8 +111,8 @@ export default function CsvUploadModal({ isOpen, onClose, components, onPreview,
                                             key={c.id}
                                             onClick={() => setSelectedComponent(c)}
                                             className={`p-3 text-sm font-medium rounded-xl border-2 transition ${selectedComponent?.id === c.id
-                                                    ? 'border-orange-500 bg-orange-50 text-orange-700'
-                                                    : 'border-zinc-200 hover:border-zinc-300 text-zinc-600'
+                                                ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                                : 'border-zinc-200 hover:border-zinc-300 text-zinc-600'
                                                 }`}
                                         >
                                             {c.name} ({c.weight}%)
@@ -136,6 +148,16 @@ export default function CsvUploadModal({ isOpen, onClose, components, onPreview,
                                     <span className="text-xs text-zinc-500">Atau seret file CSV ke sini</span>
                                 </label>
                             </div>
+
+                            {/* Download Template */}
+                            <button
+                                onClick={downloadTemplate}
+                                disabled={!selectedComponent}
+                                className={`w-full py-2.5 flex items-center justify-center gap-2 text-sm font-medium rounded-xl border transition ${selectedComponent ? 'text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100' : 'text-zinc-400 border-zinc-200 cursor-not-allowed'
+                                    }`}
+                            >
+                                <Download size={16} /> Download Template CSV
+                            </button>
                         </>
                     )}
 
