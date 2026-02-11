@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAlert } from '../components/Alert';
 
 export const useGradesData = () => {
@@ -9,20 +9,18 @@ export const useGradesData = () => {
     const [classes, setClasses] = useState([]);
     const [activePeriod, setActivePeriod] = useState(null);
     const [selectedClass, setSelectedClass] = useState(null);
-    const [students, setStudents] = useState([]); // Students merged with Grades
-    const [gradesData, setGradesData] = useState({}); // Map: studentId -> gradeObj
+
+    // Grade Integration State
+    const [config, setConfig] = useState({ kkm: 75, show_grade_breakdown: 0, components: [] });
+    const [gradeRecap, setGradeRecap] = useState({ kkm: 75, components: [], students: [] });
+    const [savingCell, setSavingCell] = useState(null); // `${compId}_${studentId}`
 
     // Initial Fetch (Classes & Active Period)
     useEffect(() => {
         const fetchInitial = async () => {
             setLoading(true);
             try {
-                // 1. Get Active Period & Classes from Dashboard/Init API or specialized endpoints
-                // Assuming we can reuse the dashboard data logic or fetch separately
-                // Ideally, we fetch Active Period + Classes linked to that period
-
-                // Fetch Active Period
-                const periodRes = await fetch('/api/periods?active=true'); // Or use existing store
+                const periodRes = await fetch('/api/periods?active=true');
                 let period = null;
                 if (periodRes.ok) {
                     const periods = await periodRes.json();
@@ -36,126 +34,233 @@ export const useGradesData = () => {
                         const classesData = await classesRes.json();
                         setClasses(classesData);
                     }
+
+                    // Seed default components if none exist
+                    await fetch('/api/grade-config/seed', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
+                        body: JSON.stringify({ period_id: period.id })
+                    });
+
+                    // Load config
+                    const configRes = await fetch(`/api/grade-config?period_id=${period.id}`);
+                    if (configRes.ok) {
+                        setConfig(await configRes.json());
+                    }
                 }
             } catch (err) {
                 console.error("Error loading initial data:", err);
-                showAlert('Gagal memuat data kelas.', 'error');
+                showAlert('Gagal memuat data.', 'error');
             } finally {
                 setLoading(false);
             }
         };
-
         fetchInitial();
     }, []);
 
-    // Fetch Grades for Selected Class
-    const selectClass = async (cls) => {
+    // Fetch grade recap when class is selected
+    const selectClass = useCallback(async (cls) => {
         setSelectedClass(cls);
+        if (!cls || !activePeriod) return;
         setLoading(true);
         try {
-            // Parallel Fetch: Students & Grades
-            // Actually, the legacy controller /api/students?class_id=X returns students
-            // And /api/grades?class_id=X returns grades joined with students
-            // Let's check gradeController... it does a JOIN students using class_id
-
-            const res = await fetch(`/api/grades?class_id=${cls.id}`);
+            const res = await fetch(`/api/grade-recap?class_id=${cls.id}&period_id=${activePeriod.id}`);
             if (res.ok) {
-                const data = await res.json();
-
-                // Helper to map array to object for easier O(1) access
-                const map = {};
-                data.forEach(g => {
-                    // g contains: student_id, student_name, uh, uts, uas, tugas, final_grade
-                    map[g.student_id] = g;
-                });
-
-                setStudents(data); // The API returns list of students with grades already joined
-                setGradesData(map);
+                setGradeRecap(await res.json());
             } else {
-                showAlert('Gagal memuat data nilai.', 'error');
+                showAlert('Gagal memuat rekap nilai.', 'error');
             }
         } catch (err) {
             console.error(err);
-            showAlert('Terjadi kesalahan koneksi.', 'error');
+            showAlert('Kesalahan koneksi.', 'error');
         } finally {
             setLoading(false);
         }
-    };
+    }, [activePeriod]);
 
-    // Calculate Final Grade (Client-Side Preview)
-    const calculateFinal = (g) => {
-        const uh = parseFloat(g.uh || 0);
-        const uts = parseFloat(g.uts || 0);
-        const uas = parseFloat(g.uas || 0);
-        const tugas = parseFloat(g.tugas || 0);
+    // Reload recap
+    const reloadRecap = useCallback(async () => {
+        if (selectedClass && activePeriod) {
+            const res = await fetch(`/api/grade-recap?class_id=${selectedClass.id}&period_id=${activePeriod.id}`);
+            if (res.ok) setGradeRecap(await res.json());
+        }
+    }, [selectedClass, activePeriod]);
 
-        // Formula: UH 30%, UTS 20%, UAS 30%, Tugas 20%
-        return (uh * 0.3) + (uts * 0.2) + (uas * 0.3) + (tugas * 0.2);
-    };
-
-    // Save Grade
-    const saveGrade = async (studentId, gradeValues) => {
-        if (!activePeriod) return;
-
+    // Save config
+    const saveConfig = useCallback(async (newConfig) => {
+        if (!activePeriod) return false;
         try {
-            const payload = {
-                periodId: activePeriod.id,
-                studentId: studentId,
-                uh: parseFloat(gradeValues.uh || 0),
-                uts: parseFloat(gradeValues.uts || 0),
-                uas: parseFloat(gradeValues.uas || 0),
-                tugas: parseFloat(gradeValues.tugas || 0)
-            };
-
-            const res = await fetch('/api/grades', {
+            const res = await fetch('/api/grade-config', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
+                body: JSON.stringify({ period_id: activePeriod.id, ...newConfig })
             });
-
             const data = await res.json();
-
             if (res.ok) {
-                // Update Local State with Server Response (Final Grade)
-                setGradesData(prev => ({
-                    ...prev,
-                    [studentId]: {
-                        ...prev[studentId],
-                        ...gradeValues,
-                        final_grade: data.finalGrade
-                    }
-                }));
-
-                // Also update the students array since we iterate that
-                setStudents(prev => prev.map(s =>
-                    s.student_id === studentId
-                        ? { ...s, ...gradeValues, final_grade: data.finalGrade }
-                        : s
-                ));
-
-                showAlert('Nilai berhasil disimpan.', 'success');
+                showAlert('Konfigurasi berhasil disimpan!', 'success');
+                // Reload config
+                const configRes = await fetch(`/api/grade-config?period_id=${activePeriod.id}`);
+                if (configRes.ok) setConfig(await configRes.json());
+                // Reload recap if class selected
+                if (selectedClass) await reloadRecap();
                 return true;
             } else {
-                showAlert(data.error || 'Gagal menyimpan nilai.', 'error');
+                showAlert(data.error || 'Gagal menyimpan konfigurasi.', 'error');
                 return false;
             }
         } catch (err) {
-            console.error(err);
-            showAlert('Kesalahan koneksi saat menyimpan.', 'error');
+            showAlert('Kesalahan koneksi.', 'error');
             return false;
         }
-    };
+    }, [activePeriod, selectedClass, reloadRecap]);
+
+    // Save single cell value
+    const saveCellValue = useCallback(async (componentId, studentId, value, isOverride) => {
+        if (!selectedClass) return false;
+        const cellKey = `${componentId}_${studentId}`;
+        setSavingCell(cellKey);
+        try {
+            const res = await fetch('/api/grade-recap/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
+                body: JSON.stringify({
+                    component_id: componentId,
+                    class_id: selectedClass.id,
+                    student_id: studentId,
+                    value,
+                    is_override: isOverride
+                })
+            });
+            if (res.ok) {
+                await reloadRecap();
+                return true;
+            }
+            return false;
+        } catch {
+            return false;
+        } finally {
+            setSavingCell(null);
+        }
+    }, [selectedClass, reloadRecap]);
+
+    // Reset override
+    const resetOverride = useCallback(async (componentId, studentId) => {
+        if (!selectedClass) return;
+        try {
+            await fetch('/api/grade-recap/reset-override', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
+                body: JSON.stringify({
+                    component_id: componentId,
+                    class_id: selectedClass.id,
+                    student_id: studentId
+                })
+            });
+            await reloadRecap();
+        } catch (err) {
+            showAlert('Gagal mereset override.', 'error');
+        }
+    }, [selectedClass, reloadRecap]);
+
+    // Apply remedial
+    const applyRemedial = useCallback(async (studentId) => {
+        if (!selectedClass || !activePeriod) return;
+        try {
+            const res = await fetch('/api/grade-recap/remedial', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
+                body: JSON.stringify({
+                    class_id: selectedClass.id,
+                    student_id: studentId,
+                    period_id: activePeriod.id
+                })
+            });
+            if (res.ok) {
+                showAlert('Remedial berhasil diterapkan!', 'success');
+                await reloadRecap();
+            }
+        } catch (err) {
+            showAlert('Gagal menerapkan remedial.', 'error');
+        }
+    }, [selectedClass, activePeriod, reloadRecap]);
+
+    // Undo remedial
+    const undoRemedial = useCallback(async (studentId) => {
+        if (!selectedClass) return;
+        try {
+            await fetch('/api/grade-recap/undo-remedial', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
+                body: JSON.stringify({
+                    class_id: selectedClass.id,
+                    student_id: studentId
+                })
+            });
+            await reloadRecap();
+        } catch (err) {
+            showAlert('Gagal membatalkan remedial.', 'error');
+        }
+    }, [selectedClass, reloadRecap]);
+
+    // CSV Preview
+    const csvPreview = useCallback(async (rows) => {
+        if (!selectedClass) return null;
+        try {
+            const res = await fetch('/api/grade-recap/csv-preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
+                body: JSON.stringify({ class_id: selectedClass.id, rows })
+            });
+            if (res.ok) return await res.json();
+            return null;
+        } catch {
+            return null;
+        }
+    }, [selectedClass]);
+
+    // CSV Upload
+    const csvUpload = useCallback(async (componentId, entries) => {
+        if (!selectedClass) return false;
+        try {
+            const res = await fetch('/api/grade-recap/csv-upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__CSRF_TOKEN },
+                body: JSON.stringify({
+                    component_id: componentId,
+                    class_id: selectedClass.id,
+                    entries
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                showAlert(data.message, 'success');
+                await reloadRecap();
+                return true;
+            }
+            return false;
+        } catch {
+            showAlert('Gagal mengimpor CSV.', 'error');
+            return false;
+        }
+    }, [selectedClass, reloadRecap]);
 
     return {
         loading,
         classes,
         activePeriod,
         selectedClass,
-        students,
-        gradesData,
+        config,
+        gradeRecap,
+        savingCell,
         selectClass,
-        saveGrade,
-        calculateFinal,
-        setSelectedClass // To go back to class list
+        setSelectedClass,
+        saveConfig,
+        saveCellValue,
+        resetOverride,
+        applyRemedial,
+        undoRemedial,
+        csvPreview,
+        csvUpload,
+        reloadRecap
     };
 };

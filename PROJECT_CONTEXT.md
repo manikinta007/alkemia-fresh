@@ -105,32 +105,8 @@ main ──────────────────────●──
 - [x] **Materials**: Migrate `materials.js` -> `Materials.jsx`.
 
 ## 5. Active Session Context
-**Current Focus**: Bug Fixing Session (Feb 3, 2026)
-**Tasks Completed**:
-1.  ✅ **Task Grading White Screen**: Added missing `Clock` import in `TaskGrading.jsx`.
-2.  ✅ **Mobile Sidebar Overlay**: Fixed overlay logic in `Layout.jsx` - now closes on outside click.
-3.  ✅ **Task Publish Button**: Fixed `handleToggleStatus` in `Tasks.jsx` (Promise-based showConfirm).
-4.  ✅ **Global QR Reset**: Fixed `handleReset` in `QRCodes.jsx` (Promise-based).
-5.  ✅ **Task Delete Button**: Fixed in `Tasks.jsx`.
-6.  ✅ **Google Drive Materials**: Simplified fallback UI in `StudentPortal.jsx`.
-7.  ✅ **Grade Leak**: Fixed in `taskController.js` (checked `is_published` before returning `myGrade`).
-8.  ✅ **Grade Status Label**: Added `NILAI_DALAM_PROSES` status (Purple) for graded but unpublished tasks.
-9.  ✅ **Student Modal/Redirect**: Refactored Modal components to fix flicker. Changed Draft flow to "Save & Continue".
-10. ✅ **Quiz Delete/Save Questions**: Fixed `showConfirm` usage in `useQuizData.js` (was callback-based, now Promise-based).
-11. ✅ **Period Set Active/Delete**: Fixed `showConfirm` usage in `Periods.jsx` (was callback-based, now Promise-based).
-12. ✅ **Delete Schedule Button**: Fixed `showConfirm` usage in `useScheduleData.js` (was callback-based, now Promise-based).
-13. ✅ **Leaderboard Fullscreen Mode**: Added Browser Fullscreen API toggle in `LiveLeaderboard.jsx` for presentation mode.
-14. ✅ **Quiz Answer Not Saved**: Fixed type mismatch (`question_id` string vs integer) in `quizController.js`. Fixed stale closure issue in `StudentCBT.jsx` for violation/auto-submit by reading from localStorage and using `handleSubmitRef`.
-15. ✅ **Student App UI**: Prominent orange refresh button in header. Sticky header in Quiz Review page.
-16. ✅ **Google Drive Quiz Images**: Improved proxy strategy using `uc?export=view` via Proxy (with fake User-Agent) to bypass Google Blocking/Flickering.
-17. ✅ **Task Editor Image Button**: Fixed unresponsive button by passing explicit props to `TaskEditor` and using `type="button"`.
-18. ✅ **Bank Gambar (Gudang Gambar)**:
-    - Renamed menu "Gudang Gambar" -> "Bank Gambar".
-    - Fixed `loadFolders` and `loadImages` JSON parsing logic (was using raw Response).
-    - Added `/api/migrate/images` endpoint for initializing `image_folders` and `images` tables.
-    - Verified `ImagePickerModal` is integrated into both Quiz Editor and Task Editor.
-
-**Session End**: Issues persisted despite fixes.
+**Current Focus**: Group Task Grading Fixes (Feb 11, 2026)
+**Status**: All fixes deployed and verified.
 
 ### 🐛 Known Issues (Active)
 1. ~~**Google Drive Quiz Images**~~: ✅ FIXED - Client-side URL transformation via `imageUtils.js` + `processContentForDisplay()` + thumbnail proxy endpoint.
@@ -363,86 +339,254 @@ Transform the single-school system into a SaaS platform where 1 Account = 1 Teac
 
 ## 9. Completed Features (Historical)
 ### ✅ Sidebar Restructure (Academic Flow)
-Reorganized sidebar menu to follow the teaching workflow:
+Organized sidebar menu to follow the teaching workflow:
 1.  **Dashboard**
-2.  **Akademik** (Data Master: Periode, Kelas, Siswa)
+2.  **Akademik** (Data Master: Periode, Kelas, Siswa, Kelompok)
 3.  **KBM** (Jadwal, Absensi, Materi)
-4.  **Evaluasi** (Tugas, Bank Soal/Quizzes, Nilai)
+4.  **Evaluasi** (Tugas, Tugas Kelompok, Bank Soal/Quizzes, Nilai, Keaktifan)
 5.  **Tools** (QR Code, dll)
 6.  **Pengaturan**
 
 ### ✅ Completed (Feb 5, 2026)
 27. ✅ **Teaching Journal (Jurnal Mengajar)**:
     - **Feature**: Digital teaching log with dynamic templates and auto-attendance.
-    - **Architecture**:
-      - **App-Side Join**: `journalController.js` performs manual joining of Journals + Classes + Periods to avoid D1 SQL JOIN instability.
-      - **PWA Fix**: Excluded `/api/*` from VitePWA navigation fallback to prevent React app interception.
-      - **Migration**: `/api/migrate/journals` endpoint for initializing tables.
     - **Components**: `Journal.jsx`, `JournalForm.jsx`, `JournalSettings.jsx`.
     - **Database**: `teaching_journals`, `journal_templates`, `journal_settings`.
 
 28. ✅ **Enhanced KOP Settings (Journal PDF)**:
-    - **Dual Logo Support**: Upload Logo 2, independent positioning (Left/Right/Top/Bottom).
-    - **Text Alignment**: Control alignment for School Name & Address (Left/Center/Right).
-    - **Signature Features**: Delete button, Place & Date fields (Manual/Auto).
-    - **Migration**: Added new columns to `journal_settings` table.
+    - Dual Logo Support, Text Alignment, Signature Features.
 
-29. ✅ **Journal Visuals & Validation (Feb 5, 2026)**:
-    - **Header**: PDF Table Header changed to White with borders.
-    - **Signature**: Added "Jabatan" (Title) field.
-    - **Validation**: Added `required` field check.
-    - **Logo 2**: Fixed 403 Forbidden.
+29. ✅ **Journal Visuals & Validation (Feb 5, 2026)**.
+
+### ✅ Completed (Feb 7-9, 2026)
+30. ✅ **Participation Points (Nilai Keaktifan)**:
+    - **Feature**: Configurable point types (Bertanya, Menjawab, Sukarela, Sanksi) per class.
+    - **Components**: `Participation.jsx`, `participationController.js`.
+    - **Database**: `participation_logs`, + new columns on `grades` and `classes`.
+
+31. ✅ **Material Bank (Bank Bahan Ajar)**:
+    - **Feature**: Centralized material repository with folder organization and class distribution.
+    - **Database**: `material_folders`, `material_bank`, `material_distribution`.
+
+32. ✅ **Group Management (Kelompok)**:
+    - **Feature**: Group sets, groups, and member management per class.
+    - **Components**: Group management in `groupController.js`.
+    - **Database**: `group_sets`, `groups`, `group_members`.
+
+### ✅ Completed (Feb 9-10, 2026)
+33. ✅ **Group Tasks (Tugas Kelompok)**:
+    - **Feature**: Full teacher group task interface mirroring individual tasks.
+    - **Components**: `GroupTasks.jsx`, `GroupTaskEditor.jsx`, `GroupTaskList.jsx`, `GroupTaskGrading.jsx`.
+    - **Student Side**: Group task detail view in `StudentTasks.jsx` with group member display, leader selection, and collaborative submission.
+    - **Database**: `group_tasks`, `group_task_questions`, `group_task_submissions`, `group_task_answers`, `group_task_activity_log`.
+
+### ✅ Completed (Feb 11, 2026)
+34. ✅ **Group Task Grading Fixes**:
+    - **PG Auto-Score**: Backend now auto-calculates PG scores (`pgWeight / totalPgQuestions`) on grade save, matching individual tasks.
+    - **Smart `is_graded` Levels**: `is_graded=0` (submitted), `is_graded=1` (fully graded). Only sets 1 when ALL essays are graded.
+    - **4-Level Teacher Status**: BELUM KUMPUL → SUDAH KUMPUL (blue) → SEBAGIAN DINILAI (yellow) → DINILAI (green).
+    - **`is_published` Check**: Student detail endpoint strips grade/feedback/scores when `is_published != 1`.
+    - **Custom Alerts**: Replaced native `confirm()`/`alert()` with `showConfirm`/`showAlert`.
+    - **Per-Group Publish**: New `/api/group-tasks/publish-submission` endpoint for individual group publishing.
+    - **Student Status System**: 5 states: DRAFT → BELUM DIKERJAKAN → DIKUMPULKAN → DIPERIKSA (blue) → DINILAI (green).
+    - **Draft Handling**: Draft saves show as BELUM_DIKERJAKAN on teacher side; student sees "DRAFT" with "LANJUTKAN →" button.
+    - **Grading Transparency**: Group tasks show both Bobot (weight) and Poin (earned) per question with color grading.
+    - Files modified: `groupTaskController.js`, `GroupTaskGrading.jsx`, `GroupTasks.jsx`, `StudentTasks.jsx`.
 
 ## 10. 📚 Database Schema Reference
 > [!IMPORTANT]
 > **Always refer to this schema before writing SQL queries.**
-> Cloudflare D1 (SQLite) has specific limitations and this project uses specific naming conventions (e.g., `academic_periods` uses `year` & `semester`, NOT `name`).
+> Cloudflare D1 (SQLite). `academic_periods` uses `year` & `semester`, NOT `name`.
 
 ### **Core Identity & School**
 - **`users`**: `username` (PK), `password`, `salt`, `name`, `nip`, `subject`
-- **`admin_sessions`**: `session_token`, `expires_at`, `username`
+- **`teacher_subjects`**: `id`, `username`, `subject_name`
+- **`admin_sessions`**: `session_token`, `csrf_token`, `expires_at`, `username`
 - **`school_profile`**: `id`, `name`, `address`, `headmaster`
-- **`academic_periods`**: 
-  - `id` (PK)
-  - `year` (TEXT, e.g., "2024/2025")
-  - `semester` (TEXT, e.g., "Ganjil")
-  - `is_active` (INT)
-  - *Note: No `name` column. Combine `year + ' - ' + semester` for display.*
+- **`academic_periods`**: `id`, `year` (TEXT), `semester` (TEXT), `is_active` (INT)
 
 ### **Academic & Students**
-- **`classes`**: `id` (PK), `period_id`, `name` (TEXT), `show_grades`
-- **`students`**: `id` (PK), `period_id`, `class_id`, `name`, `qr_token` (UUID/Shortcode)
+- **`classes`**: `id`, `period_id`, `name`, `show_grades`, `participation_base_score` (default 60), `point_ask`, `point_answer`, `point_volunteer`, `point_sanction`
+- **`students`**: `id`, `period_id`, `class_id`, `name`, `qr_token`
 - **`student_sessions`**: `device_token`, `device_uuid_hash`, `is_active`
+- **`class_qr_codes`**: `id`, `class_id`, `qr_token`
 
 ### **Learning Management (KBM)**
 - **`class_schedules`**: `day` (INT 0-6), `start_time`, `end_time`, `subject`
 - **`attendance`**: `class_id`, `student_id`, `date`, `status` (H/S/I/A)
-- **`materials`**: `class_id`, `title`, `file_url`, `file_type`
-- **`grades`**: `student_id`, `uh`, `uts`, `uas`, `tugas`, `final_grade`
+- **`materials`**: `class_id`, `title`, `file_url`, `file_type` (legacy)
+- **`grades`**: `student_id`, `uh`, `uts`, `uas`, `tugas`, `final_grade`, `participation`, `participation_notes`
 
-### **Examination (CBT & Tasks)**
-- **`quizzes`**: `id`, `title`, `duration`, `is_active`, `is_offline_mode`
-- **`quiz_questions`**: `question_text`, `option_a`...`option_e`, `correct_answer`
-- **`quiz_attempts`**: `student_id`, `score`, `student_answers` (JSON)
-- **`tasks`**: `title`, `deadline`, `target_type` ('all'/'selected'), `pg_weight`
-- **`task_submissions`**: `student_id`, `grade`, `is_graded` (0=None, 1=Partial, 2=Full)
+### **Material Bank (Bahan Ajar)**
+- **`material_folders`**: `id`, `period_id`, `name`
+- **`material_bank`**: `id`, `period_id`, `folder_id`, `title`, `description`, `file_url`, `file_type`, `file_size`, `r2_key`
+- **`material_distribution`**: `id`, `material_id`, `class_id`, `is_visible`
+
+### **Image Bank (Bank Gambar)**
+- **`image_folders`**: `id`, `name`
+- **`images`**: `id`, `folder_id`, `filename`, `r2_key`, `size_bytes`, `mime_type`
+
+### **Examination (CBT)**
+- **`quizzes`**: `id`, `title`, `duration`, `is_active`, `is_offline_mode`, `is_random`, `show_results`, `tolerance_minutes`, `show_limit`, `scheduled_at`, `check_attendance`, `allowed_students`
+- **`quiz_questions`**: `question_text`, `option_a`…`option_e`, `correct_answer`
+- **`quiz_attempts`**: `student_id`, `score`, `student_answers` (JSON), `questions_order`, `offline_status`, `offline_violations`, `offline_duration`
+
+### **Individual Tasks (Tugas Individu)**
+- **`tasks`**: `id`, `period_id`, `class_id`, `title`, `deadline`, `target_type`, `allowed_students`, `is_active`, `pg_weight`, `allow_gallery`, `discussion_text`, `discussion_url`, `show_discussion`
+- **`task_questions`**: `id`, `task_id`, `type` (pg/essay_text/essay_image), `question_text`, `question_image_url`, `options` (JSON), `correct_key`, `weight`, `char_limit`
+- **`task_submissions`**: `id`, `task_id`, `student_id`, `grade`, `feedback`, `is_published` (0/1), `is_graded` (-1=Draft, 0=Submitted, 1=Fully Graded)
+- **`task_answers`**: `id`, `submission_id`, `question_id`, `answer_text`, `answer_image_url`, `score`, `is_graded` (0/1)
+
+### **Group Management (Kelompok)**
+- **`group_sets`**: `id`, `class_id`, `name`
+- **`groups`**: `id`, `set_id`, `name`, `leader_id`, `leader_selected_by`
+- **`group_members`**: `id`, `group_id`, `student_id`
+
+### **Group Tasks (Tugas Kelompok)**
+- **`group_tasks`**: `id`, `period_id`, `class_id`, `group_set_id`, `title`, `description`, `deadline`, `question_mode`, `is_active`, `pg_weight`, `grades_published`, `discussion_text`, `discussion_url`, `show_discussion`
+- **`group_task_questions`**: `id`, `group_task_id`, `type`, `question_text`, `question_image_url`, `options`, `correct_key`, `weight`
+- **`group_task_submissions`**: `id`, `group_task_id`, `group_id`, `submitted_by`, `grade`, `feedback`, `is_graded` (-1=Draft, 0=Submitted, 1=Fully Graded), `is_published` (0/1), `submitted_at`
+- **`group_task_answers`**: `id`, `submission_id`, `question_id`, `answer_text`, `answer_image_url`, `score`, `is_graded` (0/1)
+- **`group_task_activity_log`**: `id`, `submission_id`, `student_id`, `question_id`, `action`, `detail`, `created_at`
+
+### **Participation (Keaktifan)**
+- **`participation_logs`**: `id`, `period_id`, `class_id`, `student_id`, `type`, `points`, `notes`, `created_at`
 
 ### **Teaching Journal (Jurnal Mengajar)**
-- **`teaching_journals`**: 
-  - `id` (PK)
-  - `class_id` (FK -> classes.id)
-  - `period_id` (FK -> academic_periods.id)
-  - `date`, `start_time`, `end_time`
-  - `custom_data` (JSON String: `{"materi": "...", "absensi": "..."}`)
-- **`journal_templates`**: `name`, `template_config` (JSON)
-- **`journal_settings`**: `school_logo_url`, `signature_image_url`
+- **`teaching_journals`**: `id`, `period_id`, `class_id`, `date`, `start_time`, `end_time`, `custom_data` (JSON)
+- **`journal_templates`**: `id`, `name`, `is_default`, `template_config` (JSON)
+- **`journal_settings`**: `id`, `school_name`, `school_address`, `school_logo_url`, `school_logo_2_url`, `logo_position`, `logo_2_position`, `school_name_align`, `school_address_align`, `pdf_orientation`, `signature_name`, `signature_nip`, `signature_image_url`, `signature_place`, `signature_date`, `signature_title`, `active_template_id`
 
-## 11. Future Roadmap (Planned)
+## 11. 📊 Next Feature: Grade Integration (Integrasi Nilai)
 
-### 📊 Phase 2: Grade Integration (Integrasi Nilai)
-- **Objective**: Auto-sync scores from Quizzes/Tasks to the Gradebook.
-- **Current Issue**: Manual double-entry required (Quiz Result → Gradebook).
-- **Plan**:
-  - **One-Click Sync**: Button "Export to Gradebook" in Quiz/Task result page.
-  - **Destination Selection**: Teacher chooses target column (UH/Tugas/UTS/UAS).
-  - **Long-term**: Dynamic columns in Gradebook (e.g., UH 1, UH 2, Tugas 1, Tugas 2) instead of fixed columns.
+### **Status**: DESIGN FINALIZED — Ready for Implementation
+
+### **Objective**
+Replace the rigid `grades` table (fixed columns: uh, uts, uas, tugas) with a **dynamic, configurable grading system** where teachers define their own components and weights.
+
+### **Core Design Decisions**
+
+| Topik | Keputusan |
+|---|---|
+| Komponen & Bobot | Guru buat sendiri + atur bobot (%) per **periode** |
+| KKM | Guru set per **periode** (default 75) |
+| Nilai | Dihitung per **kelas** (tugas/quiz per kelas bisa beda) |
+| Default Template | Sudah ada template terisi yang bisa diedit |
+| Tabel `grades` lama | Tidak dipakai, buat tabel baru |
+| Student View | Nilai akhir saja (breakdown opsional, diatur toggle guru) |
+| Export/Print | Nanti (Phase 2) |
+
+### **Sumber Nilai & Cara Hitung**
+
+| Komponen | Sumber | Rumus |
+|---|---|---|
+| Tugas Harian | Auto: semua task individu + kelompok (published & graded) | `total_nilai / jumlah_tugas` (0 jika tidak kumpul) |
+| Ulangan Harian | Auto: semua quiz (published) | `total_nilai / jumlah_quiz` |
+| UTS | Manual input / CSV upload | Langsung |
+| UAS | Manual input / CSV upload | Langsung |
+| Keaktifan | Auto: participation points | `base_score + total_points`, cap 100 |
+
+> [!IMPORTANT]
+> **Enforcement Rule**: Jika siswa tidak mengumpulkan tugas/quiz, nilainya = 0 dan tetap masuk pembagi. Contoh: 3 tugas, siswa hanya kumpul 2 (70, 75) → avg = (70 + 75 + 0) / 3 = 48.3.
+
+### **Manual Override**
+- Guru bisa **override** nilai auto per siswa per komponen
+- Nilai yang di-override ditampilkan dengan **warna biru** sebagai tanda manual edit
+- Database: `manual_override` column. Effective value = `COALESCE(manual_override, auto_value)`
+- Use case: guru ingin "angkat" nilai siswa jika terlalu rendah
+
+### **Contoh Perhitungan**
+```
+Konfigurasi: Tugas 30%, UH 25%, UTS 20%, UAS 15%, Keaktifan 10%  |  KKM: 75
+
+Siswa A:
+  Tugas Harian  = avg(80, 80, 80) = 80   × 30% = 24.0
+  Ulangan Harian = avg(70, 75)    = 72.5 × 25% = 18.125
+  UTS            = 65                    × 20% = 13.0
+  UAS            = 70                    × 15% = 10.5
+  Keaktifan      = 85                    × 10% = 8.5
+  ─────────────────────────────────────────────────
+  Nilai Akhir = 74.125  ⚠️ DI BAWAH KKM!
+```
+
+### **CSV Upload (UTS/UAS)**
+Format: `Nama,Nilai`
+```csv
+Nama,Nilai
+Ahmad Fauzi,75
+Budi Santoso,80
+Citra Dewi,65
+```
+- Match berdasarkan nama siswa di kelas
+- Preview sebelum import: nama tidak cocok → warning merah
+- Guru pilih komponen tujuan (UTS/UAS) saat upload
+
+### **Remedial Flow (Opsi B3 — Simpel)**
+```
+1. Sistem deteksi NA < KKM → badge ⚠️ merah di tabel nilai
+2. Guru beri tugas remedial di menu Tugas (seperti biasa, tidak perlu linking)
+3. Siswa kerjakan → guru nilai di menu Tugas
+4. Di halaman Nilai, tombol "Remedial → KKM" muncul untuk siswa di bawah KKM
+5. Guru klik → konfirmasi → NA = KKM (75) ✅
+6. Badge berubah hijau: "Remedial ✅"
+```
+- Tombol **hanya aktif** jika NA < KKM (tidak bisa disalahgunakan)
+- Database: `is_remedial = true`, `remedial_at` (timestamp) sebagai audit trail
+- Tidak perlu linking ke tugas spesifik — guru yang memutuskan kapan remedial sah
+
+### **UI Rekap Nilai (Teacher)**
+```
+┌──────────────────────────────────────────────────────────────┐
+│ Kelas: XI IPA 1                                    KKM: 75  │
+├───────────────┬───────┬───────┬─────┬─────┬──────┬──────┬───┤
+│ Siswa         │ Tugas │ UH    │ UTS │ UAS │ Akt  │ NA   │   │
+│               │ (30%) │ (25%) │(20%)│(15%)│(10%) │      │   │
+├───────────────┼───────┼───────┼─────┼─────┼──────┼──────┼───┤
+│ Ahmad Fauzi   │  80   │ [72]🔵│ 65  │ 70  │  85  │ 76.4 │ ✅ │
+│ Budi Santoso  │  50   │  45   │ 60  │ 55  │  70  │ 53.5 │ ⚠️ │
+│ Citra Dewi    │  90   │  85   │ 80  │ 78  │  90  │ 85.2 │ ✅ │
+└───────────────┴───────┴───────┴─────┴─────┴──────┴──────┴───┘
+
+🔵 = Diedit guru (override manual)
+⚠️ = Di bawah KKM → tombol "Remedial → KKM"
+✅ = Lulus / Sudah remedial
+```
+
+### **Planned Database Schema**
+```sql
+-- Komponen nilai per periode (guru configurable)
+grade_components (
+  id INTEGER PRIMARY KEY,
+  period_id INTEGER,         -- FK → academic_periods
+  name TEXT,                 -- "Tugas Harian", "UH", "UTS", "UAS", "Keaktifan"
+  weight INTEGER,            -- Bobot persentase (30, 25, 20, 15, 10)
+  source_type TEXT,          -- 'tasks' | 'quizzes' | 'participation' | 'manual'
+  sort_order INTEGER
+)
+
+-- Nilai per komponen per siswa
+grade_values (
+  id INTEGER PRIMARY KEY,
+  component_id INTEGER,      -- FK → grade_components
+  class_id INTEGER,          -- FK → classes
+  student_id INTEGER,        -- FK → students
+  auto_value REAL,           -- Nilai auto-kalkulasi
+  manual_override REAL,      -- Override guru (NULL = pakai auto). Ditandai biru di UI
+  is_remedial INTEGER DEFAULT 0,  -- 1 = sudah remedial
+  remedial_at TEXT           -- Timestamp remedial
+)
+
+-- KKM per periode
+ALTER TABLE academic_periods ADD COLUMN kkm INTEGER DEFAULT 75;
+
+-- Toggle breakdown visibility untuk siswa
+ALTER TABLE academic_periods ADD COLUMN show_grade_breakdown INTEGER DEFAULT 0;
+```
+
+### **Implementation Phases**
+1. **Phase 1**: Database migration + Component CRUD + KKM setting
+2. **Phase 2**: Auto-calculation engine (tasks, quizzes, participation → grade_values)
+3. **Phase 3**: Manual input UI + CSV upload for UTS/UAS
+4. **Phase 4**: Override manual (blue indicator) + Remedial flow
+5. **Phase 5**: Student-side display (final grade + optional breakdown)
+6. **Future**: Export/Print rekap nilai (PDF)

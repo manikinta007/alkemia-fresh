@@ -697,6 +697,59 @@ export async function handleMigrationRequest(request, env) {
       }
     }
 
+    // [NEW] MIGRATION: Grade Integration (Integrasi Nilai)
+    // Endpoint: /api/migrate/grade-integration
+    if (pathname === "/api/migrate/grade-integration" && method === "GET") {
+      try {
+        await env.DB.batch([
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS grade_components (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              period_id INTEGER NOT NULL,
+              name TEXT NOT NULL,
+              weight INTEGER NOT NULL,
+              source_type TEXT NOT NULL,
+              sort_order INTEGER DEFAULT 0,
+              FOREIGN KEY (period_id) REFERENCES academic_periods(id)
+            )
+          `),
+          env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS grade_values (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              component_id INTEGER NOT NULL,
+              class_id INTEGER NOT NULL,
+              student_id INTEGER NOT NULL,
+              auto_value REAL,
+              manual_override REAL,
+              is_remedial INTEGER DEFAULT 0,
+              remedial_at TEXT,
+              FOREIGN KEY (component_id) REFERENCES grade_components(id) ON DELETE CASCADE,
+              FOREIGN KEY (class_id) REFERENCES classes(id),
+              FOREIGN KEY (student_id) REFERENCES students(id)
+            )
+          `),
+          env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_grade_values_unique ON grade_values(component_id, class_id, student_id)`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_grade_components_period ON grade_components(period_id)`),
+          env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_grade_values_class ON grade_values(class_id, student_id)`)
+        ]);
+
+        // Add columns to academic_periods
+        const newCols = [
+          "ALTER TABLE academic_periods ADD COLUMN kkm INTEGER DEFAULT 75",
+          "ALTER TABLE academic_periods ADD COLUMN show_grade_breakdown INTEGER DEFAULT 0"
+        ];
+        for (const sql of newCols) {
+          try { await env.DB.prepare(sql).run(); } catch (e) { /* exists */ }
+        }
+
+        return jsonResponse({
+          message: "Migrasi Grade Integration Berhasil: Tabel grade_components, grade_values siap. Kolom kkm & show_grade_breakdown ditambahkan ke academic_periods."
+        });
+      } catch (e) {
+        return jsonResponse({ error: "Migrate Grade Integration Error: " + e.message }, 500);
+      }
+    }
+
     return null;
   } catch (err) {
     return jsonResponse({ error: "Migration Error: " + err.message }, 500);

@@ -26,6 +26,7 @@ import { handleMaterialBankRequest } from '../controllers/materialBankController
 import { handleProxyRequest } from '../controllers/proxyController.js'; // [NEW] Proxy Gambar & File
 import { handleParticipationRequest } from '../controllers/participationController.js'; // [NEW] Nilai Keaktifan
 import { handleGroupTaskRequest } from '../controllers/groupTaskController.js'; // [NEW] Tugas Kelompok
+import { handleGradeIntegrationRequest } from '../controllers/gradeIntegrationController.js'; // [NEW] Integrasi Nilai
 
 // --- CONFIG & HEADERS ---
 // [PENTING] Ganti URL ini dengan domain Worker Anda sendiri!
@@ -168,6 +169,7 @@ export async function handleApiRequest(request, env) {
     pathname === "/api/init" ||
     pathname.startsWith("/api/migrate") || // Allow migration
     pathname.startsWith("/api/student") ||
+    pathname.startsWith("/api/student/grade-recap") || // [PUBLIC] Student grades
     pathname.startsWith("/api/proxy") || // Allow proxy (Security handled in controller)
     pathname.startsWith("/api/participation/debug") || // [DEBUG] Allow schema fix
     pathname.startsWith("/api/migrate/participation-points") || // [MIGRATION] Poin Keaktifan
@@ -228,6 +230,8 @@ export async function handleApiRequest(request, env) {
     if (!apiResponse) apiResponse = await handlePeriodRequest(request, env);
     if (!apiResponse) apiResponse = await handleClassRequest(request, env);
     if (!apiResponse) apiResponse = await handleGradeRequest(request, env);
+    // [NEW] Grade Integration API (Integrasi Nilai)
+    if (!apiResponse && (pathname.startsWith("/api/grade-") || pathname === "/api/student/grade-recap")) apiResponse = await handleGradeIntegrationRequest(request, env);
     if (!apiResponse) apiResponse = await handleMaterialRequest(request, env);
     if (!apiResponse) apiResponse = await handleQRRequest(request, env);
     if (!apiResponse) apiResponse = await handleQuizRequest(request, env);

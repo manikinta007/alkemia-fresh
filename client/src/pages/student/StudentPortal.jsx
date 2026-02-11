@@ -31,6 +31,107 @@ const getEmbedUrl = (url) => {
     return `/api/proxy?url=${encodeURIComponent(url)}`;
 };
 
+// Student Grade View Component
+function StudentGradeView({ student }) {
+    const [gradeData, setGradeData] = useState(null);
+    const [loadingGrade, setLoadingGrade] = useState(true);
+
+    useEffect(() => {
+        const fetchGrade = async () => {
+            try {
+                const token = localStorage.getItem('student_token');
+                const deviceId = localStorage.getItem('student_device_id');
+                const res = await fetch(
+                    `/api/student/grade-recap?student_id=${student.id}&class_id=${student.class_id}&period_id=${student.period_id}`,
+                    { headers: { 'Authorization': `Bearer ${token}`, 'X-Device-Id': deviceId } }
+                );
+                if (res.ok) setGradeData(await res.json());
+            } catch (e) { console.error(e); }
+            setLoadingGrade(false);
+        };
+        fetchGrade();
+    }, [student]);
+
+    if (loadingGrade) {
+        return (
+            <div className="flex flex-col items-center justify-center pt-16 pb-24">
+                <div className="w-32 h-32 bg-zinc-900 rounded-full animate-pulse mb-4" />
+                <div className="w-24 h-4 bg-zinc-900 rounded animate-pulse" />
+            </div>
+        );
+    }
+
+    if (!gradeData) {
+        return (
+            <div className="p-8 text-center text-zinc-500 mt-10">
+                <p className="text-lg mb-1">📊</p>
+                <p className="text-sm">Nilai belum tersedia.</p>
+                <p className="text-xs text-zinc-600 mt-1">Guru belum mengatur komponen penilaian.</p>
+            </div>
+        );
+    }
+
+    const { final_grade, kkm, is_below_kkm, is_remedial, breakdown } = gradeData;
+    const percentage = Math.min(100, (final_grade / 100) * 100);
+    const circumference = 2 * Math.PI * 54;
+    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+    return (
+        <div className="flex flex-col items-center pt-8 pb-24 animate-in fade-in">
+            {/* Circular Grade Display */}
+            <div className="relative w-36 h-36 mb-6">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="54" fill="none" stroke="#27272a" strokeWidth="8" />
+                    <circle
+                        cx="60" cy="60" r="54" fill="none"
+                        stroke={is_remedial ? '#22c55e' : is_below_kkm ? '#ef4444' : '#3b82f6'}
+                        strokeWidth="8" strokeLinecap="round"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={strokeDashoffset}
+                        className="transition-all duration-1000 ease-out"
+                    />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-3xl font-black ${is_below_kkm && !is_remedial ? 'text-red-400' : 'text-white'}`}>
+                        {final_grade.toFixed(1)}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-bold mt-0.5">NILAI AKHIR</span>
+                </div>
+            </div>
+
+            {/* KKM Badge */}
+            <div className={`px-4 py-2 rounded-xl text-xs font-bold mb-6 ${is_remedial ? 'bg-green-900/30 text-green-400 border border-green-800' :
+                is_below_kkm ? 'bg-red-900/30 text-red-400 border border-red-800' :
+                    'bg-blue-900/30 text-blue-400 border border-blue-800'
+                }`}>
+                {is_remedial ? '✅ Tuntas (Remedial)' : is_below_kkm ? `⚠️ Di Bawah KKM (${kkm})` : `✅ Tuntas (KKM: ${kkm})`}
+            </div>
+
+            {/* Breakdown Table (if enabled by teacher) */}
+            {breakdown && breakdown.length > 0 && (
+                <div className="w-full bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-zinc-800">
+                        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Rincian Nilai</h3>
+                    </div>
+                    <div className="divide-y divide-zinc-800">
+                        {breakdown.map((item, i) => (
+                            <div key={i} className="flex justify-between items-center px-4 py-3">
+                                <div>
+                                    <span className="text-sm text-white font-medium">{item.name}</span>
+                                    <span className="text-[10px] text-zinc-600 ml-2">({item.weight}%)</span>
+                                </div>
+                                <span className={`text-sm font-bold ${item.value !== null ? 'text-white' : 'text-zinc-600'}`}>
+                                    {item.value !== null ? item.value.toFixed(1) : '-'}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function StudentPortal() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('MATERI');
@@ -202,7 +303,9 @@ export default function StudentPortal() {
                 )}
             </div>
         );
-        if (activeTab === 'NILAI') return <div className="p-4 text-center text-zinc-500 mt-10">Fitur Nilai segera hadir! 🚧</div>;
+        if (activeTab === 'NILAI') {
+            return <StudentGradeView student={data.student} />;
+        }
         if (activeTab === 'PROFIL') return (
             <div className="flex flex-col items-center justify-center pt-10 px-6 animate-in fade-in cursor-default">
                 <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-2xl mb-6 ring-4 ring-black/50">
