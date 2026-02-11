@@ -510,13 +510,24 @@ export default function StudentTasks({ student, onBack }) {
                         const deadlineDate = t.deadline ? new Date(t.deadline) : null;
                         const isExpiredList = deadlineDate && new Date() > deadlineDate;
                         const hasSubmission = !!t.submission_id;
-                        const isGraded = t.is_graded === 1;
+                        const isDraft = t.is_graded === -1;
+                        const isSubmitted = hasSubmission && !isDraft; // final submitted
+                        const isGraded = t.is_graded === 1 && t.is_published == 1; // graded AND published
+                        const isBeingReviewed = t.is_graded === 1 && t.is_published != 1; // graded but NOT published
                         const isLocked = isExpiredList && !hasSubmission;
 
-                        const statusText = isGraded ? 'DINILAI' : hasSubmission ? 'DIKUMPULKAN' : 'BELUM DIKERJAKAN';
-                        const statusColor = isGraded ? 'bg-green-900/30 text-green-400 border-green-800' :
-                            hasSubmission ? 'bg-yellow-900/30 text-yellow-400 border-yellow-800' :
-                                'bg-zinc-800 text-zinc-400 border-zinc-700';
+                        let statusText, statusColor;
+                        if (isDraft) {
+                            statusText = 'DRAFT'; statusColor = 'bg-zinc-800 text-zinc-400 border-zinc-600';
+                        } else if (isGraded) {
+                            statusText = 'DINILAI'; statusColor = 'bg-green-900/30 text-green-400 border-green-800';
+                        } else if (isBeingReviewed) {
+                            statusText = 'DIPERIKSA'; statusColor = 'bg-blue-900/30 text-blue-400 border-blue-800';
+                        } else if (isSubmitted) {
+                            statusText = 'DIKUMPULKAN'; statusColor = 'bg-yellow-900/30 text-yellow-400 border-yellow-800';
+                        } else {
+                            statusText = 'BELUM DIKERJAKAN'; statusColor = 'bg-zinc-800 text-zinc-400 border-zinc-700';
+                        }
 
                         return (
                             <div key={t.id} onClick={() => !isLocked && openGroupTask(t.id)} className={`p-4 rounded-xl border transition-all relative overflow-hidden group ${isLocked ? 'bg-zinc-900/50 border-zinc-800 opacity-60 cursor-not-allowed' : 'bg-zinc-900 border-zinc-800 hover:border-purple-900 cursor-pointer active:scale-[0.98]'}`}>
@@ -537,7 +548,9 @@ export default function StudentTasks({ student, onBack }) {
                                         <button className="w-full py-2 bg-zinc-800 text-zinc-300 rounded-lg font-bold text-xs border border-zinc-700">👁️ LIHAT HASIL</button>
                                     ) : isLocked ? (
                                         <button disabled className="w-full py-2 bg-red-900/20 text-red-500 rounded-lg font-bold text-xs border border-red-900/30">🔒 DITUTUP</button>
-                                    ) : hasSubmission ? (
+                                    ) : isDraft ? (
+                                        <button className="w-full py-2 bg-purple-600 text-white rounded-lg font-bold text-xs shadow-lg shadow-purple-900/20 group-hover:bg-purple-500 transition">📝 LANJUTKAN →</button>
+                                    ) : isSubmitted ? (
                                         <button className="w-full py-2 bg-zinc-800 text-zinc-300 rounded-lg font-bold text-xs border border-zinc-700">📋 LIHAT JAWABAN</button>
                                     ) : (
                                         <button className="w-full py-2 bg-purple-600 text-white rounded-lg font-bold text-xs shadow-lg shadow-purple-900/20 group-hover:bg-purple-500 transition">KERJAKAN BERSAMA →</button>
