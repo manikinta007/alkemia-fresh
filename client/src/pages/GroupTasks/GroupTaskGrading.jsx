@@ -12,6 +12,7 @@ export const GroupTaskGrading = ({
     onSelectSubmission,
     onSave,
     onPublish,
+    onPublishSingle,
     onBack,
     onOpenWeightModal,
     pgWeight,
@@ -210,7 +211,7 @@ export const GroupTaskGrading = ({
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    // Individual publish not supported for groups, just visual indicator
+                                                    if (submission) onPublishSingle(submission.id, !submission.is_published);
                                                 }}
                                                 className={`w-8 h-8 flex items-center justify-center rounded-lg transition z-20 border ${submission.is_published
                                                     ? 'bg-green-50 text-green-600 border-green-200'

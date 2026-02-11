@@ -364,6 +364,22 @@ export default function GroupTasks() {
         } catch (e) { showAlert('Error koneksi', 'error'); }
     };
 
+    const handlePublishSingleGroup = async (submissionId, isPublished) => {
+        try {
+            const res = await fetchApi('/api/group-tasks/publish-submission', {
+                method: 'POST',
+                body: JSON.stringify({ submissionId, isPublished })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                showAlert(data.message, 'success');
+                if (activeTask) fetchGroupSubmissions(activeTask.id);
+            } else {
+                showAlert('Gagal mengubah status publish', 'error');
+            }
+        } catch (e) { showAlert('Error koneksi', 'error'); }
+    };
+
     // Discussion
     const handleSaveDiscussion = async (taskId, formData) => {
         try {
@@ -545,6 +561,7 @@ export default function GroupTasks() {
                     onSelectSubmission={fetchSubmissionDetail}
                     onSave={handleSaveGrade}
                     onPublish={handlePublishGrade}
+                    onPublishSingle={handlePublishSingleGroup}
                     onBack={() => setViewMode('LIST')}
                     onOpenWeightModal={() => setWeightModal(true)}
                     pgWeight={headerForm.pgWeight}

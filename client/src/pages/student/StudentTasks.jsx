@@ -1019,11 +1019,20 @@ export default function StudentTasks({ student, onBack }) {
                                                 {qType === 'pg' ? 'PG' : qType === 'essay_image' ? '📷 Gambar' : '📝 Teks'}
                                             </span>
                                             {grpReadOnly && groupSubmission?.is_graded === 1 && groupAnswers[q.id]?.score !== undefined ? (
-                                                <span className={`text-[10px] font-bold ${getGradeColor((groupAnswers[q.id].score / (qType === 'pg' ? Math.max(grpPgScorePerItem, 1) : Math.max(q.weight, 1))) * 100)}`}>
-                                                    Poin: {Number(groupAnswers[q.id].score).toFixed(1)}
-                                                </span>
+                                                (() => {
+                                                    const earned = Number(groupAnswers[q.id].score) || 0;
+                                                    const maxPoin = qType === 'pg' ? grpPgScorePerItem : (q.weight || 0);
+                                                    const percentage = maxPoin > 0 ? (earned / maxPoin) * 100 : 0;
+                                                    return (
+                                                        <span className="text-[10px] font-bold">
+                                                            <span className="text-zinc-500">Bobot: {qType === 'pg' ? grpPgScorePerItem.toFixed(0) : q.weight}%</span>
+                                                            <span className="text-zinc-600 mx-1">·</span>
+                                                            <span className={getGradeColor(percentage)}>Poin: {earned.toFixed(1)}</span>
+                                                        </span>
+                                                    );
+                                                })()
                                             ) : (
-                                                <span className="text-xs text-zinc-500">Bobot: {qType === 'pg' ? grpPgScorePerItem.toFixed(0) : q.weight}%</span>
+                                                <span className="text-[10px] font-bold text-zinc-500">Bobot: {qType === 'pg' ? grpPgScorePerItem.toFixed(0) : q.weight}%</span>
                                             )}
                                         </div>
                                     </div>

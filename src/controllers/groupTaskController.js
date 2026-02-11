@@ -209,7 +209,18 @@ export async function handleGroupTaskRequest(request, env) {
         return jsonResponse({ message: "Grades published status updated" });
     }
 
-    // 8. UPDATE TASK (Full save - questions + identity)
+    // 8. PUBLISH SINGLE GROUP SUBMISSION
+    if (pathname === "/api/group-tasks/publish-submission" && method === "POST") {
+        const { submissionId, isPublished } = await request.json();
+
+        await env.DB.prepare(`
+            UPDATE group_task_submissions SET is_published = ? WHERE id = ?
+        `).bind(isPublished ? 1 : 0, submissionId).run();
+
+        return jsonResponse({ message: isPublished ? "Nilai kelompok dipublish" : "Nilai kelompok disembunyikan" });
+    }
+
+    // 9. UPDATE TASK (Full save - questions + identity)
     if (pathname === "/api/group-tasks/update" && method === "PUT") {
         try {
             const body = await request.json();
