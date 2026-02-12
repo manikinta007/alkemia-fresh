@@ -215,6 +215,51 @@ export const useGradesData = () => {
         }
     }, [selectedClass, reloadRecap]);
 
+    // Save remedial evidence override
+    const saveRemedialEvidence = useCallback(async (taskId, studentId, value) => {
+        if (!selectedClass) return false;
+        const cellKey = `rem_${taskId}_${studentId}`;
+        setSavingCell(cellKey);
+        try {
+            const res = await fetchApi('/api/grade-recap/save-remedial-evidence', {
+                method: 'POST',
+                body: JSON.stringify({
+                    task_id: taskId,
+                    class_id: selectedClass.id,
+                    student_id: studentId,
+                    value
+                })
+            });
+            if (res.ok) {
+                await silentReload();
+                return true;
+            }
+            return false;
+        } catch {
+            return false;
+        } finally {
+            setSavingCell(null);
+        }
+    }, [selectedClass, silentReload]);
+
+    // Reset remedial evidence override
+    const resetRemedialEvidence = useCallback(async (taskId, studentId) => {
+        if (!selectedClass) return;
+        try {
+            await fetchApi('/api/grade-recap/reset-remedial-evidence', {
+                method: 'POST',
+                body: JSON.stringify({
+                    task_id: taskId,
+                    class_id: selectedClass.id,
+                    student_id: studentId
+                })
+            });
+            await silentReload();
+        } catch (err) {
+            showAlert('Gagal mereset override remedial.', 'error');
+        }
+    }, [selectedClass, silentReload]);
+
     // CSV Preview
     const csvPreview = useCallback(async (rows) => {
         if (!selectedClass) return null;
@@ -300,15 +345,23 @@ export const useGradesData = () => {
 
     // Download grades as CSV
     const downloadGradesCsv = useCallback(() => {
-        const { components, students } = gradeRecap;
+        const { components, students, remedial_columns = [] } = gradeRecap;
         if (!students.length) return;
-        const headers = ['No', 'Nama', ...components.map(c => c.name), 'Nilai Akhir'];
-        const rows = students.map((s, i) => [
-            i + 1,
-            s.student_name,
-            ...s.values.map(v => v.effective_value ?? ''),
-            s.final_grade
-        ]);
+        const remedialHeaders = remedial_columns.map(rc => `Remedial: ${rc.task_title}`);
+        const headers = ['No', 'Nama', ...components.map(c => c.name), 'Nilai Akhir', ...remedialHeaders];
+        const rows = students.map((s, i) => {
+            const remedialScores = remedial_columns.map(rc => {
+                const re = (s.remedial_evidence || []).find(r => r.task_id === rc.task_id);
+                return re?.effective_score ?? '';
+            });
+            return [
+                i + 1,
+                s.student_name,
+                ...s.values.map(v => v.effective_value ?? ''),
+                s.final_grade,
+                ...remedialScores
+            ];
+        });
         const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -339,6 +392,8 @@ export const useGradesData = () => {
         reloadRecap,
         saveFinalGrade,
         resetFinalGrade,
-        downloadGradesCsv
+        downloadGradesCsv,
+        saveRemedialEvidence,
+        resetRemedialEvidence
     };
 };

@@ -153,8 +153,9 @@ export async function handleGradeIntegrationRequest(request, env) {
             // ---- AUTO-CALCULATION ----
 
             // Tasks: individual + group (published & graded)
+            // EXCLUDE remedial tasks (target_type='specific') from grade calculation
             const { results: tasks } = await env.DB.prepare(
-                "SELECT id FROM tasks WHERE class_id = ? AND is_active = 1"
+                "SELECT id FROM tasks WHERE class_id = ? AND is_active = 1 AND (target_type IS NULL OR target_type != 'specific')"
             ).bind(classId).all();
             const taskIds = tasks.map(t => t.id);
 
@@ -260,6 +261,44 @@ export async function handleGradeIntegrationRequest(request, env) {
                 participationGrades[s.id] = Math.min(100, Math.max(0, baseScore + pts));
             });
 
+            // ---- REMEDIAL TASKS (target_type = 'specific') ----
+            const { results: remedialTasks } = await env.DB.prepare(
+                "SELECT id, title FROM tasks WHERE class_id = ? AND is_active = 1 AND target_type = 'specific'"
+            ).bind(classId).all();
+
+            const remedialColumns = []; // { task_id, task_title, scores: { studentId: score } }
+            for (const rt of remedialTasks) {
+                const { results: rtSubs } = await env.DB.prepare(
+                    `SELECT student_id, grade FROM task_submissions 
+                     WHERE task_id = ? AND is_graded = 1 AND is_published = 1`
+                ).bind(rt.id).all();
+
+                const scores = {};
+                rtSubs.forEach(sub => { scores[sub.student_id] = sub.grade || 0; });
+
+                remedialColumns.push({
+                    task_id: rt.id,
+                    task_title: rt.title,
+                    scores
+                });
+            }
+
+            // Get remedial evidence overrides from grade_values (component_id = -task_id convention)
+            const remedialOverrides = {}; // `${taskId}_${studentId}` -> override value
+            if (remedialTasks.length > 0) {
+                const negIds = remedialTasks.map(rt => -rt.id);
+                const phNeg = negIds.map(() => '?').join(',');
+                const { results: remOvr } = await env.DB.prepare(
+                    `SELECT component_id, student_id, manual_override FROM grade_values 
+                     WHERE class_id = ? AND component_id IN (${phNeg})`
+                ).bind(classId, ...negIds).all();
+                remOvr.forEach(v => {
+                    if (v.manual_override !== null) {
+                        remedialOverrides[`${-v.component_id}_${v.student_id}`] = v.manual_override;
+                    }
+                });
+            }
+
             // ---- BUILD STUDENT ROWS ----
             const studentRows = students.map(s => {
                 const componentValues = components.map(comp => {
@@ -319,10 +358,27 @@ export async function handleGradeIntegrationRequest(request, env) {
                 const finalOverride = finalOverrides[s.id] ?? null;
                 const finalGrade = finalOverride !== null ? finalOverride : calculatedFinal;
 
+                // Build remedial evidence for this student
+                const remedialEvidence = remedialColumns.map(rc => {
+                    const autoScore = rc.scores[s.id] ?? null;
+                    const overrideKey = `${rc.task_id}_${s.id}`;
+                    const manualOverride = remedialOverrides[overrideKey] ?? null;
+                    const effectiveScore = manualOverride !== null ? manualOverride : autoScore;
+                    return {
+                        task_id: rc.task_id,
+                        task_title: rc.task_title,
+                        auto_score: autoScore !== null ? Math.round(autoScore * 100) / 100 : null,
+                        manual_override: manualOverride !== null ? Math.round(manualOverride * 100) / 100 : null,
+                        effective_score: effectiveScore !== null ? Math.round(effectiveScore * 100) / 100 : null,
+                        is_overridden: manualOverride !== null
+                    };
+                });
+
                 return {
                     student_id: s.id,
                     student_name: s.name,
                     values: componentValues,
+                    remedial_evidence: remedialEvidence,
                     calculated_final_grade: calculatedFinal,
                     final_grade_override: finalOverride !== null ? Math.round(finalOverride * 100) / 100 : null,
                     final_grade: Math.round(finalGrade * 100) / 100,
@@ -333,9 +389,16 @@ export async function handleGradeIntegrationRequest(request, env) {
                 };
             });
 
+            // Build remedial columns metadata
+            const remedialColsMeta = remedialColumns.map(rc => ({
+                task_id: rc.task_id,
+                task_title: rc.task_title
+            }));
+
             return jsonResponse({
                 kkm,
                 components,
+                remedial_columns: remedialColsMeta,
                 students: studentRows
             });
         }
@@ -566,6 +629,55 @@ export async function handleGradeIntegrationRequest(request, env) {
             ).bind(class_id, student_id).run();
 
             return jsonResponse({ message: "Override nilai akhir direset" });
+        }
+
+        // ========================================
+        // 10d. SAVE REMEDIAL EVIDENCE OVERRIDE
+        // ========================================
+        if (pathname === "/api/grade-recap/save-remedial-evidence" && method === "POST") {
+            const body = await request.json();
+            const { task_id, class_id, student_id, value } = body;
+            if (!task_id || !class_id || !student_id) {
+                return jsonResponse({ error: "task_id, class_id, student_id diperlukan" }, 400);
+            }
+
+            const parsedValue = value !== null && value !== '' ? parseFloat(value) : null;
+            // Convention: component_id = -task_id for remedial evidence
+            const negTaskId = -task_id;
+
+            const existing = await env.DB.prepare(
+                "SELECT id FROM grade_values WHERE component_id = ? AND class_id = ? AND student_id = ?"
+            ).bind(negTaskId, class_id, student_id).first();
+
+            if (existing) {
+                await env.DB.prepare(
+                    "UPDATE grade_values SET manual_override = ? WHERE id = ?"
+                ).bind(parsedValue, existing.id).run();
+            } else {
+                await env.DB.prepare(
+                    "INSERT INTO grade_values (component_id, class_id, student_id, manual_override) VALUES (?, ?, ?, ?)"
+                ).bind(negTaskId, class_id, student_id, parsedValue).run();
+            }
+
+            return jsonResponse({ message: "Nilai remedial evidence disimpan" });
+        }
+
+        // ========================================
+        // 10e. RESET REMEDIAL EVIDENCE OVERRIDE
+        // ========================================
+        if (pathname === "/api/grade-recap/reset-remedial-evidence" && method === "POST") {
+            const body = await request.json();
+            const { task_id, class_id, student_id } = body;
+            if (!task_id || !class_id || !student_id) {
+                return jsonResponse({ error: "task_id, class_id, student_id diperlukan" }, 400);
+            }
+
+            const negTaskId = -task_id;
+            await env.DB.prepare(
+                "DELETE FROM grade_values WHERE component_id = ? AND class_id = ? AND student_id = ?"
+            ).bind(negTaskId, class_id, student_id).run();
+
+            return jsonResponse({ message: "Override nilai remedial direset" });
         }
 
         // ========================================

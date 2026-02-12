@@ -28,7 +28,9 @@ export default function Grades() {
         reloadRecap,
         saveFinalGrade,
         resetFinalGrade,
-        downloadGradesCsv
+        downloadGradesCsv,
+        saveRemedialEvidence,
+        resetRemedialEvidence
     } = useGradesData();
 
     const { showConfirm } = useAlertContext();
@@ -76,6 +78,22 @@ export default function Grades() {
         if (e.key === 'Escape') cancelEdit();
     };
 
+    // Remedial evidence inline editing
+    const startRemedialEdit = (taskId, studentId, currentValue) => {
+        setEditingCell(`rem_${taskId}_${studentId}`);
+        setEditValue(currentValue !== null ? String(currentValue) : '');
+    };
+
+    const saveRemedialEdit = async (taskId, studentId) => {
+        await saveRemedialEvidence(taskId, studentId, editValue);
+        cancelEdit();
+    };
+
+    const handleRemedialKeyDown = (e, taskId, studentId) => {
+        if (e.key === 'Enter') saveRemedialEdit(taskId, studentId);
+        if (e.key === 'Escape') cancelEdit();
+    };
+
     const handleRemedial = (student) => {
         showConfirm(
             `Terapkan remedial untuk ${student.student_name}?\nNilai akhir akan diset menjadi ${gradeRecap.kkm} (KKM).`,
@@ -92,8 +110,9 @@ export default function Grades() {
 
     // ====== RENDER: Class Selected → Grade Table ======
     if (selectedClass) {
-        const { components, students, kkm } = gradeRecap;
+        const { components, students, kkm, remedial_columns = [] } = gradeRecap;
         const hasManualComponents = components.some(c => c.source_type === 'manual');
+        const hasRemedialCols = remedial_columns.length > 0;
 
         return (
             <div className="animate-in fade-in duration-300">
@@ -166,6 +185,12 @@ export default function Grades() {
                                             </th>
                                         ))}
                                         <th className="px-4 py-3 text-center text-xs text-zinc-500 uppercase font-bold w-24 bg-zinc-100">Nilai Akhir</th>
+                                        {remedial_columns.map(rc => (
+                                            <th key={`rem_h_${rc.task_id}`} className="px-3 py-3 text-center text-xs uppercase font-bold w-24 bg-orange-50 text-orange-600">
+                                                <div className="text-[10px]">Remedial</div>
+                                                <div className="text-[9px] font-normal text-orange-400 truncate max-w-[80px]" title={rc.task_title}>{rc.task_title}</div>
+                                            </th>
+                                        ))}
                                         <th className="px-4 py-3 text-center text-xs text-zinc-500 uppercase font-bold w-28">Status</th>
                                     </tr>
                                 </thead>
@@ -251,12 +276,12 @@ export default function Grades() {
                                                                 <button
                                                                     onClick={() => startFinalEdit(s.student_id, s.final_grade)}
                                                                     className={`py-1 px-1 font-bold text-sm rounded transition cursor-pointer hover:bg-zinc-100 ${s.is_final_overridden
-                                                                            ? 'text-blue-600'
-                                                                            : s.is_remedial
-                                                                                ? 'text-green-600'
-                                                                                : s.is_below_kkm
-                                                                                    ? 'text-red-600'
-                                                                                    : 'text-zinc-900'
+                                                                        ? 'text-blue-600'
+                                                                        : s.is_remedial
+                                                                            ? 'text-green-600'
+                                                                            : s.is_below_kkm
+                                                                                ? 'text-red-600'
+                                                                                : 'text-zinc-900'
                                                                         }`}
                                                                     title={s.is_final_overridden ? `Auto: ${s.calculated_final_grade} | Override: ${s.final_grade_override}` : 'Klik untuk edit nilai akhir'}
                                                                 >
@@ -277,6 +302,63 @@ export default function Grades() {
                                                     </td>
                                                 );
                                             })()}
+
+                                            {/* Remedial Evidence Columns */}
+                                            {remedial_columns.map((rc) => {
+                                                const re = (s.remedial_evidence || []).find(r => r.task_id === rc.task_id);
+                                                const remCellKey = `rem_${rc.task_id}_${s.student_id}`;
+                                                const isRemEditing = editingCell === remCellKey;
+                                                const isRemSaving = savingCell === remCellKey;
+                                                const hasScore = re && re.effective_score !== null;
+
+                                                return (
+                                                    <td key={`rem_${rc.task_id}_${s.student_id}`} className="px-2 py-2 text-center bg-orange-50/30">
+                                                        {isRemEditing ? (
+                                                            <input
+                                                                type="number"
+                                                                autoFocus
+                                                                value={editValue}
+                                                                onChange={e => setEditValue(e.target.value)}
+                                                                onKeyDown={e => handleRemedialKeyDown(e, rc.task_id, s.student_id)}
+                                                                onBlur={() => saveRemedialEdit(rc.task_id, s.student_id)}
+                                                                className="w-16 px-1 py-1 text-center text-xs font-bold border-2 border-orange-400 rounded focus:ring-2 focus:ring-orange-500 outline-none"
+                                                                min="0" max="100"
+                                                            />
+                                                        ) : isRemSaving ? (
+                                                            <span className="text-xs text-zinc-400">...</span>
+                                                        ) : hasScore ? (
+                                                            <div className="group/rem relative flex items-center justify-center gap-0.5">
+                                                                <button
+                                                                    onClick={() => startRemedialEdit(rc.task_id, s.student_id, re.effective_score)}
+                                                                    className={`py-1 px-1 text-xs font-bold rounded transition cursor-pointer hover:bg-orange-100 ${re.is_overridden ? 'text-blue-600' : 'text-orange-700'
+                                                                        }`}
+                                                                    title={re.is_overridden ? `Auto: ${re.auto_score ?? '-'} | Override: ${re.manual_override}` : `Nilai remedial dari tugas`}
+                                                                >
+                                                                    {re.effective_score}
+                                                                    {re.is_overridden && <span className="ml-0.5 text-[8px]">✎</span>}
+                                                                </button>
+                                                                {re.is_overridden && (
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); resetRemedialEvidence(rc.task_id, s.student_id); }}
+                                                                        className="absolute -right-1 -top-1 w-4 h-4 bg-blue-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/rem:opacity-100 transition-opacity hover:bg-red-500 shadow-sm"
+                                                                        title={`Kembalikan ke nilai auto (${re.auto_score ?? '-'})`}
+                                                                    >
+                                                                        <Undo2 size={8} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => startRemedialEdit(rc.task_id, s.student_id, null)}
+                                                                className="text-xs text-zinc-300 hover:text-zinc-500 cursor-pointer"
+                                                                title="Klik untuk input manual"
+                                                            >
+                                                                -
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
 
                                             {/* Status */}
                                             <td className="px-3 py-3 text-center">
@@ -303,7 +385,7 @@ export default function Grades() {
                                     ))}
                                     {students.length === 0 && (
                                         <tr>
-                                            <td colSpan={components.length + 4} className="px-6 py-12 text-center text-zinc-400 italic">
+                                            <td colSpan={components.length + 4 + remedial_columns.length} className="px-6 py-12 text-center text-zinc-400 italic">
                                                 Tidak ada siswa di kelas ini.
                                             </td>
                                         </tr>
@@ -314,6 +396,7 @@ export default function Grades() {
                         {/* Legend */}
                         <div className="flex items-center gap-4 px-4 py-2 bg-zinc-50 border-t border-zinc-100 text-[10px] text-zinc-500">
                             <span><span className="text-blue-600 font-bold">Biru✎</span> = Override guru</span>
+                            <span><span className="text-orange-600 font-bold">🟠</span> = Nilai remedial (auto)</span>
                             <span><span className="text-red-600 font-bold">⚠️</span> = Di bawah KKM</span>
                             <span><span className="text-green-600 font-bold">✅</span> = Tuntas / Remedial</span>
                             <span className="ml-auto text-zinc-400">Klik nilai untuk edit</span>
