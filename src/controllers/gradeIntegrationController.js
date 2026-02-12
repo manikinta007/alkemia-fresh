@@ -940,51 +940,63 @@ export async function handleGradeIntegrationRequest(request, env) {
             ).bind(classId, studentId).first();
             const finalOverride = finalOvr?.value ?? null;
 
-            // Tasks (individual) - EXCLUDE remedial
+            // Tasks (individual) - EXCLUDE remedial — same logic as teacher
             const { results: tasks } = await env.DB.prepare(
                 "SELECT id FROM tasks WHERE class_id = ? AND is_active = 1 AND (target_type IS NULL OR target_type != 'specific')"
             ).bind(classId).all();
-            let taskTotal = 0, taskCount = 0;
-            if (tasks.length > 0) {
+            let taskTotal = 0;
+            const taskCount = tasks.length; // Use total task count like teacher
+            if (taskCount > 0) {
                 const taskIds = tasks.map(t => t.id);
                 const ph = taskIds.map(() => '?').join(',');
                 const { results: subs } = await env.DB.prepare(
-                    `SELECT task_id, grade FROM task_submissions WHERE student_id = ? AND task_id IN (${ph}) AND is_graded = 1 AND is_published = 1`
+                    `SELECT grade FROM task_submissions WHERE student_id = ? AND task_id IN (${ph}) AND is_graded = 1 AND is_published = 1`
                 ).bind(studentId, ...taskIds).all();
-                subs.forEach(s => { taskTotal += (s.grade || 0); taskCount++; });
+                subs.forEach(s => { taskTotal += (s.grade || 0); });
             }
 
-            // Tasks (group)
+            // Group tasks — same logic as teacher: iterate per task, map via group_members
             const { results: groupTasks } = await env.DB.prepare(
-                "SELECT id FROM group_tasks WHERE class_id = ? AND is_active = 1"
+                "SELECT id, group_set_id FROM group_tasks WHERE class_id = ? AND is_active = 1"
             ).bind(classId).all();
             let groupTotal = 0, groupCount = 0;
             if (groupTasks.length > 0) {
-                const gtIds = groupTasks.map(t => t.id);
-                const ph2 = gtIds.map(() => '?').join(',');
-                const { results: gSubs } = await env.DB.prepare(
-                    `SELECT gt.id as task_id, gts.grade FROM group_task_submissions gts
-                     JOIN group_tasks gt ON gts.group_task_id = gt.id
-                     WHERE gts.student_id = ? AND gt.id IN (${ph2}) AND gts.is_graded = 1 AND gts.is_published = 1`
-                ).bind(studentId, ...gtIds).all();
-                gSubs.forEach(s => { groupTotal += (s.grade || 0); groupCount++; });
+                for (const gt of groupTasks) {
+                    // Find which group this student belongs to in this set
+                    const membership = await env.DB.prepare(
+                        `SELECT gm.group_id FROM group_members gm
+                         JOIN groups g ON gm.group_id = g.id
+                         WHERE g.set_id = ? AND gm.student_id = ?`
+                    ).bind(gt.group_set_id, studentId).first();
+
+                    if (membership) {
+                        groupCount++;
+                        // Get the submission grade for this group
+                        const sub = await env.DB.prepare(
+                            `SELECT grade FROM group_task_submissions
+                             WHERE group_task_id = ? AND group_id = ? AND is_graded = 1 AND is_published = 1`
+                        ).bind(gt.id, membership.group_id).first();
+                        if (sub) groupTotal += (sub.grade || 0);
+                    }
+                }
             }
 
-            // Quizzes
+            // Quizzes — same logic as teacher: use total quiz count
             const { results: quizzes } = await env.DB.prepare(
                 "SELECT id FROM quizzes WHERE class_id = ? AND is_active = 1"
             ).bind(classId).all();
-            let quizTotal = 0, quizCount = 0;
-            if (quizzes.length > 0) {
+            let quizTotal = 0;
+            const quizCount = quizzes.length; // Use total quiz count like teacher
+            if (quizCount > 0) {
                 const qIds = quizzes.map(q => q.id);
                 const ph3 = qIds.map(() => '?').join(',');
                 const { results: attempts } = await env.DB.prepare(
                     `SELECT score FROM quiz_attempts WHERE student_id = ? AND quiz_id IN (${ph3}) AND finish_time IS NOT NULL`
                 ).bind(studentId, ...qIds).all();
-                attempts.forEach(a => { quizTotal += (a.score || 0); quizCount++; });
+                attempts.forEach(a => { quizTotal += (a.score || 0); });
             }
 
-            // Participation
+            // Participation — same logic as teacher
             const baseScore = student.participation_base_score || 60;
             const partLog = await env.DB.prepare(
                 "SELECT SUM(points) as total_points FROM participation_logs WHERE class_id = ? AND period_id = ? AND student_id = ?"
