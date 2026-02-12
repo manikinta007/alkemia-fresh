@@ -21,6 +21,19 @@ export const QuizList = ({
     const [activationModal, setActivationModal] = useState({ isOpen: false, quizId: null });
     const [copyModal, setCopyModal] = useState({ isOpen: false, quizId: null });
 
+    const [openMenuId, setOpenMenuId] = useState(null);
+
+    // Close menu when clicking outside
+    React.useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (openMenuId && !event.target.closest('.quiz-menu-container')) {
+                setOpenMenuId(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [openMenuId]);
+
     const handleCreateSubmit = (e) => {
         e.preventDefault();
         onCreate({ ...formQuiz, periodId: null, classId: selectedClass.id }, () => {
@@ -101,6 +114,8 @@ export const QuizList = ({
                         {quizzes.map(q => {
                             const activeClass = q.is_active ? 'border-l-4 border-l-green-500 shadow-md' : 'opacity-90 hover:opacity-100';
                             const btnClass = q.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200';
+                            const isMenuOpen = openMenuId === q.id;
+
                             return (
                                 <div key={q.id} className={'bg-white border border-zinc-200 p-6 rounded-xl transition-all ' + activeClass}>
                                     <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
@@ -136,30 +151,49 @@ export const QuizList = ({
                                             <button onClick={() => handleToggleClick(q)} className={'px-3 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ' + btnClass}>
                                                 {q.is_active ? <><Square size={14} fill="currentColor" /> STOP</> : <><Play size={14} fill="currentColor" /> START</>}
                                             </button>
-                                            <button onClick={() => onEdit(q)} className="px-3 py-2 bg-zinc-100 text-zinc-700 rounded-lg text-xs font-bold hover:bg-zinc-200 transition flex items-center justify-center gap-2">
-                                                <Settings size={14} /> SETTING
-                                            </button>
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-zinc-100">
+                                    <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-zinc-100 relative">
                                         <div className="text-xs font-bold text-zinc-400">{q.question_count} SOAL</div>
                                         <div className="text-xs font-bold text-zinc-400">{q.attempt_count} SISWA MENGERJAKAN</div>
                                         <div className="flex-1 hidden sm:block"></div>
 
-                                        <div className="flex flex-wrap gap-3">
-                                            <button onClick={() => setCopyModal({ isOpen: true, quizId: q.id })} className="text-xs font-bold text-zinc-500 hover:text-black flex items-center gap-1">
-                                                <Copy size={16} /> SALIN
+                                        <div className="flex items-center gap-2">
+                                            {/* Primary Secondary Action */}
+                                            <button onClick={() => onViewResults(q)} className="px-3 py-1.5 bg-zinc-100 text-zinc-700 rounded-lg text-xs font-bold hover:bg-zinc-200 transition flex items-center gap-2">
+                                                <Eye size={14} /> LIHAT HASIL
                                             </button>
-                                            <button onClick={() => onManageQuestions(q)} className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                                                <HelpCircle size={16} /> KELOLA SOAL
-                                            </button>
-                                            <button onClick={() => onViewResults(q)} className="text-xs font-bold text-black hover:underline flex items-center gap-1">
-                                                <Eye size={16} /> LIHAT HASIL
-                                            </button>
-                                            <button onClick={() => onDelete(q.id)} className="text-xs font-bold text-red-500 hover:text-red-600 flex items-center gap-1">
-                                                <Trash2 size={16} /> HAPUS
-                                            </button>
+
+                                            {/* Dropdown Menu */}
+                                            <div className="relative quiz-menu-container">
+                                                <button
+                                                    onClick={() => setOpenMenuId(isMenuOpen ? null : q.id)}
+                                                    className={`px-3 py-1.5 border border-zinc-200 bg-white text-zinc-600 rounded-lg text-xs font-bold hover:bg-zinc-50 transition flex items-center gap-2 ${isMenuOpen ? 'bg-zinc-100 ring-2 ring-zinc-200' : ''}`}
+                                                >
+                                                    <Settings size={14} /> OPSI LAIN
+                                                </button>
+
+                                                {isMenuOpen && (
+                                                    <div className="absolute right-0 bottom-full mb-2 w-48 bg-white border border-zinc-200 rounded-xl shadow-xl z-10 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-bottom-right">
+                                                        <div className="p-1">
+                                                            <button onClick={() => { onEdit(q); setOpenMenuId(null); }} className="w-full text-left px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 rounded-lg flex items-center gap-2">
+                                                                <Settings size={14} /> Pengaturan
+                                                            </button>
+                                                            <button onClick={() => { onManageQuestions(q); setOpenMenuId(null); }} className="w-full text-left px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 rounded-lg flex items-center gap-2">
+                                                                <HelpCircle size={14} /> Kelola Soal
+                                                            </button>
+                                                            <button onClick={() => { setCopyModal({ isOpen: true, quizId: q.id }); setOpenMenuId(null); }} className="w-full text-left px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 rounded-lg flex items-center gap-2">
+                                                                <Copy size={14} /> Salin Quiz
+                                                            </button>
+                                                            <div className="h-px bg-zinc-100 my-1"></div>
+                                                            <button onClick={() => { onDelete(q.id); setOpenMenuId(null); }} className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2">
+                                                                <Trash2 size={14} /> Hapus
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

@@ -97,7 +97,17 @@ main ──────────────────────●──
     - [x] **UI Refinement (Legacy)**: Reverted to `bg-zinc-950`, Floating Header, Hidden Scrollbars.
     - [x] **Features**: Material Presentation Modal, "Nilai" Tab Fix, Version Bump (2.1).
 - [x] **Dashboard Refactor**:
-    - [x] Fixed Legacy Links (SPA Navigation).
+- [x] **Participation Feature**:
+    - [x] Full CRUD for Participation Logs.
+    - [x] History Modal with "Undo" (Delete) capability.
+    - [x] Custom Confirmation Dialogs.
+    - [x] Configurable Points System.
+- [x] **UI/UX Refinements**:
+    - [x] Sidebar Reordering ("Keaktifan" > "Nilai").
+    - [x] Student Portal Grade Message Update.
+    - [x] Quiz List UI Simplification (Dropdown Menu).
+
+
     - [x] **Deep Linking**: implemented `class_id` auto-selection for Attendance & Materials.
 - [x] **Grades (Nilai)**: Migrate `grades.js` -> `Grades.jsx`.
 - [x] **Attendance**: Migrate `Attendance.jsx`.
