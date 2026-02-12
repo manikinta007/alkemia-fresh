@@ -608,9 +608,14 @@ export async function handleGradeIntegrationRequest(request, env) {
                     "UPDATE grade_values SET manual_override = ? WHERE id = ?"
                 ).bind(parsedValue, existing.id).run();
             } else {
-                await env.DB.prepare(
-                    "INSERT INTO grade_values (component_id, class_id, student_id, manual_override) VALUES (0, ?, ?, ?)"
-                ).bind(class_id, student_id, parsedValue).run();
+                // Use batch with PRAGMA to bypass FK constraint (component_id=0 has no parent row)
+                await env.DB.batch([
+                    env.DB.prepare("PRAGMA foreign_keys = OFF"),
+                    env.DB.prepare(
+                        "INSERT INTO grade_values (component_id, class_id, student_id, manual_override) VALUES (0, ?, ?, ?)"
+                    ).bind(class_id, student_id, parsedValue),
+                    env.DB.prepare("PRAGMA foreign_keys = ON")
+                ]);
             }
 
             return jsonResponse({ message: "Nilai akhir override disimpan" });
@@ -654,9 +659,14 @@ export async function handleGradeIntegrationRequest(request, env) {
                     "UPDATE grade_values SET manual_override = ? WHERE id = ?"
                 ).bind(parsedValue, existing.id).run();
             } else {
-                await env.DB.prepare(
-                    "INSERT INTO grade_values (component_id, class_id, student_id, manual_override) VALUES (?, ?, ?, ?)"
-                ).bind(negTaskId, class_id, student_id, parsedValue).run();
+                // Use batch with PRAGMA to bypass FK constraint (negative component_id has no parent row)
+                await env.DB.batch([
+                    env.DB.prepare("PRAGMA foreign_keys = OFF"),
+                    env.DB.prepare(
+                        "INSERT INTO grade_values (component_id, class_id, student_id, manual_override) VALUES (?, ?, ?, ?)"
+                    ).bind(negTaskId, class_id, student_id, parsedValue),
+                    env.DB.prepare("PRAGMA foreign_keys = ON")
+                ]);
             }
 
             return jsonResponse({ message: "Nilai remedial evidence disimpan" });
