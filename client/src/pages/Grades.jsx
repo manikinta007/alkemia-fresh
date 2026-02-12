@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useGradesData } from '../hooks/useGradesData';
 import { Card, Spinner } from '../components/UI';
 import { GridSkeleton } from '../components/Skeleton';
-import { ChevronRight, ArrowLeft, Settings, Upload, RefreshCw, AlertTriangle, CheckCircle, Undo2, Download } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Settings, Upload, RefreshCw, AlertTriangle, CheckCircle, Undo2, Download, Eye, EyeOff } from 'lucide-react';
 import GradeConfigModal from './Grades/GradeConfigModal';
 import CsvUploadModal from './Grades/CsvUploadModal';
 import { useAlertContext } from '../components/Alert';
@@ -30,7 +30,8 @@ export default function Grades() {
         resetFinalGrade,
         downloadGradesCsv,
         saveRemedialEvidence,
-        resetRemedialEvidence
+        resetRemedialEvidence,
+        toggleGrades
     } = useGradesData();
 
     const { showConfirm } = useAlertContext();
@@ -126,8 +127,8 @@ export default function Grades() {
                         Kembali
                     </button>
                     <div className="flex items-center gap-2">
-                        <button onClick={reloadRecap} className="p-2 text-zinc-500 hover:bg-zinc-100 rounded-lg transition" title="Hitung ulang nilai auto (tugas, quiz, keaktifan) dari database terbaru">
-                            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                        <button onClick={reloadRecap} className="px-3 py-2 text-xs font-bold text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:border-blue-300 hover:text-blue-600 transition flex items-center gap-1.5" title="Hitung ulang nilai auto (tugas, quiz, keaktifan) dari database terbaru">
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Hitung Ulang
                         </button>
                         {hasManualComponents && (
                             <button
@@ -143,6 +144,16 @@ export default function Grades() {
                             title="Download rekap nilai ke file CSV"
                         >
                             <Download size={14} /> Download CSV
+                        </button>
+                        <button
+                            onClick={toggleGrades}
+                            className={`px-3 py-2 text-xs font-bold rounded-lg transition flex items-center gap-1.5 border ${selectedClass.show_grades === 1
+                                ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                                : 'bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-200'
+                                }`}
+                            title={selectedClass.show_grades === 1 ? 'Nilai saat ini TAMPIL ke siswa. Klik untuk sembunyikan.' : 'Nilai saat ini TIDAK tampil ke siswa. Klik untuk tampilkan.'}
+                        >
+                            {selectedClass.show_grades === 1 ? <><Eye size={14} /> Nilai Tampil</> : <><EyeOff size={14} /> Nilai Sembunyi</>}
                         </button>
                         <button
                             onClick={() => setConfigModalOpen(true)}

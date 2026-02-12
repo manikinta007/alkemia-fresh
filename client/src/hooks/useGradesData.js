@@ -372,6 +372,28 @@ export const useGradesData = () => {
         URL.revokeObjectURL(url);
     }, [gradeRecap, selectedClass]);
 
+    // Toggle show/hide grades for the selected class
+    const toggleGrades = useCallback(async () => {
+        if (!selectedClass) return;
+        const newStatus = selectedClass.show_grades === 1 ? 0 : 1;
+
+        // Optimistic update
+        setSelectedClass(prev => ({ ...prev, show_grades: newStatus }));
+        setClasses(prev => prev.map(c => c.id === selectedClass.id ? { ...c, show_grades: newStatus } : c));
+
+        try {
+            await fetchApi('/api/classes/toggle-grades', {
+                method: 'POST',
+                body: JSON.stringify({ classId: selectedClass.id, showGrades: newStatus === 1 })
+            });
+            showAlert(newStatus === 1 ? 'Nilai ditampilkan ke siswa' : 'Nilai disembunyikan dari siswa', 'success');
+        } catch (err) {
+            // Revert on error
+            setSelectedClass(prev => ({ ...prev, show_grades: selectedClass.show_grades }));
+            showAlert('Gagal mengubah status tampilan nilai', 'error');
+        }
+    }, [selectedClass]);
+
     return {
         loading,
         classes,
@@ -394,6 +416,7 @@ export const useGradesData = () => {
         resetFinalGrade,
         downloadGradesCsv,
         saveRemedialEvidence,
-        resetRemedialEvidence
+        resetRemedialEvidence,
+        toggleGrades
     };
 };
