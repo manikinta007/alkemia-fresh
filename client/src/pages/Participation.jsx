@@ -172,6 +172,26 @@ export default function Participation() {
         }
     }
 
+    const handleDeleteLog = async (logId) => {
+        try {
+            const res = await fetchApi(`/api/participation/log?id=${logId}`, { method: 'DELETE' });
+            if (res.ok) {
+                showAlert("Riwayat dihapus", "success");
+                // Refresh history logs
+                const historyRes = await fetchApi(`/api/participation/history?student_id=${selectedStudentHistory.id}&period_id=${activePeriod.id}`);
+                if (historyRes.ok) {
+                    setHistoryLogs(await historyRes.json());
+                }
+                // Refresh main student list to update total points
+                fetchParticipationData(selectedClass.id);
+            } else {
+                showAlert("Gagal menghapus riwayat", "error");
+            }
+        } catch (e) {
+            showAlert("Terjadi kesalahan", "error");
+        }
+    };
+
     if (loadingClasses) return <div className="p-8"><GridSkeleton /></div>;
 
     if (!activePeriod) {
@@ -368,6 +388,7 @@ export default function Participation() {
                         logs={historyLogs}
                         loading={loadingHistory}
                         onClose={() => setShowHistory(false)}
+                        onDelete={handleDeleteLog}
                     />
                 )
             }
@@ -823,7 +844,7 @@ function SettingsModal({ currentConfig, onClose, onSave }) {
     );
 }
 
-function HistoryModal({ student, logs, loading, onClose }) {
+function HistoryModal({ student, logs, loading, onClose, onDelete }) {
     if (!student) return null;
 
     return (
@@ -846,7 +867,7 @@ function HistoryModal({ student, logs, loading, onClose }) {
                     ) : (
                         <div className="space-y-3">
                             {logs.map((log) => (
-                                <div key={log.id} className="flex justify-between items-center p-3 bg-zinc-50 rounded-lg border border-zinc-100">
+                                <div key={log.id} className="flex justify-between items-center p-3 bg-zinc-50 rounded-lg border border-zinc-100 group">
                                     <div>
                                         <p className="font-bold text-sm text-zinc-800">{log.type}</p>
                                         <p className="text-xs text-zinc-400">
@@ -857,9 +878,22 @@ function HistoryModal({ student, logs, loading, onClose }) {
                                             })} WIB
                                         </p>
                                     </div>
-                                    <span className={`font-bold ${log.points > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                        {log.points > 0 ? '+' : ''}{log.points}
-                                    </span>
+                                    <div className="flex items-center gap-3">
+                                        <span className={`font-bold ${log.points > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                            {log.points > 0 ? '+' : ''}{log.points}
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm('Hapus riwayat ini? Poin akan ditarik kembali.')) {
+                                                    onDelete(log.id);
+                                                }
+                                            }}
+                                            className="text-zinc-300 hover:text-red-500 p-1 hover:bg-red-50 rounded-md transition"
+                                            title="Hapus / Undo"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>

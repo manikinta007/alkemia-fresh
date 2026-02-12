@@ -79,8 +79,8 @@ function StudentGradeView({ gradesHidden }) {
                 <div className="w-20 h-20 bg-zinc-900 rounded-2xl flex items-center justify-center mb-6 border border-zinc-800">
                     <span className="text-4xl">🔒</span>
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">Nilai Belum Ditampilkan</h3>
-                <p className="text-sm text-zinc-500 max-w-xs">Guru belum membuka akses nilai untuk kelas ini. Silakan hubungi guru Anda.</p>
+                <h3 className="text-lg font-bold text-white mb-2">Nilai Belum Dipublikasikan</h3>
+                <p className="text-sm text-zinc-500 max-w-xs">Nilai akan dipublikasikan di akhir semester. Tetap semangat belajar!</p>
             </div>
         );
     }

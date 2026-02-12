@@ -235,6 +235,42 @@ export async function handleParticipationRequest(request, env) {
             return jsonResponse({ message: `Data di-reset ke nilai dasar (${baseScore}).` });
         }
 
+        // ========================================
+        // 4. DELETE LOG (Undo Participation)
+        // ========================================
+        if (pathname === "/api/participation/log" && method === "DELETE") {
+            const logId = url.searchParams.get("id");
+            if (!logId) return jsonResponse({ error: "ID required" }, 400);
+
+            // 1. Get Log Details first (to know student & subtract points)
+            const log = await env.DB.prepare("SELECT * FROM participation_logs WHERE id = ?").bind(logId).first();
+            if (!log) return jsonResponse({ error: "Log not found" }, 404);
+
+            const { student_id, period_id, class_id } = log;
+
+            // 2. Delete Log
+            await env.DB.prepare("DELETE FROM participation_logs WHERE id = ?").bind(logId).run();
+
+            // 3. Recalculate Student's Total Points
+            // Get Base Score
+            const classInfo = await env.DB.prepare("SELECT participation_base_score FROM classes WHERE id = ?").bind(class_id).first();
+            const baseScore = classInfo?.participation_base_score || 60;
+
+            // Sum remaining logs
+            const total = await env.DB.prepare(`SELECT SUM(points) as t FROM participation_logs WHERE student_id = ? AND period_id = ?`).bind(student_id, period_id).first();
+            const newScore = Math.min(100, Math.max(0, baseScore + (total.t || 0)));
+
+            // 4. Update Grades Table
+            const existing = await env.DB.prepare("SELECT id FROM grades WHERE student_id = ? AND period_id = ?").bind(student_id, period_id).first();
+            if (existing) {
+                await env.DB.prepare("UPDATE grades SET participation = ? WHERE id = ?").bind(newScore, existing.id).run();
+            } else {
+                await env.DB.prepare("INSERT INTO grades (student_id, period_id, participation) VALUES (?, ?, ?)").bind(student_id, period_id, newScore).run();
+            }
+
+            return jsonResponse({ message: "Riwayat dihapus", newScore });
+        }
+
         /*
                 // ========================================
                 // 2. SAVE PARTICIPATION (Simpan Nilai Manual) - DEPRECATED for Points System
