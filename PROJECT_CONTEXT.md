@@ -106,6 +106,8 @@ main ──────────────────────●──
     - [x] Sidebar Reordering ("Keaktifan" > "Nilai").
     - [x] Student Portal Grade Message Update.
     - [x] Quiz List UI Simplification (Dropdown Menu).
+    - [x] Footer Branding Update.
+
 
 
     - [x] **Deep Linking**: implemented `class_id` auto-selection for Attendance & Materials.

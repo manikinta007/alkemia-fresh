@@ -214,8 +214,9 @@ export default function Layout() {
                         <LogOut size={20} />
                         <span>LOGOUT</span>
                     </button>
-                    <div className="mt-4 px-4 text-[10px] text-zinc-600 text-center font-mono">
-                        v2.0.0 (React Migration)
+                    <div className="mt-4 px-4 text-[10px] text-zinc-600 text-center font-mono leading-relaxed">
+                        &copy; 2026 AlkeMia Learning System. All Rights Reserved.<br />
+                        In Rhythm With My Universe
                     </div>
                 </div>
             </aside>
