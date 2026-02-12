@@ -54,6 +54,7 @@ export default function GradeConfigModal({ isOpen, onClose, config, onSave }) {
             kkm: parseInt(kkm) || 75,
             show_grade_breakdown: showBreakdown ? 1 : 0,
             components: components.map(c => ({
+                id: c.id || null,
                 name: c.name.trim(),
                 weight: c.weight,
                 source_type: c.source_type
@@ -95,8 +96,8 @@ export default function GradeConfigModal({ isOpen, onClose, config, onSave }) {
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="text-sm font-bold text-zinc-700 uppercase tracking-wider">Komponen Penilaian</h3>
                             <span className={`text-sm font-bold px-3 py-1 rounded-full ${totalWeight === 100
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-red-100 text-red-700'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
                                 }`}>
                                 Total: {totalWeight}%
                             </span>

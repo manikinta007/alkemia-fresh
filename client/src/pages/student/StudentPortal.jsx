@@ -32,7 +32,7 @@ const getEmbedUrl = (url) => {
 };
 
 // Student Grade View Component
-function StudentGradeView({ student, gradesHidden }) {
+function StudentGradeView({ gradesHidden }) {
     const [gradeData, setGradeData] = useState(null);
     const [loadingGrade, setLoadingGrade] = useState(true);
     const [isHidden, setIsHidden] = useState(gradesHidden || false);
@@ -47,10 +47,9 @@ function StudentGradeView({ student, gradesHidden }) {
             try {
                 const token = localStorage.getItem('student_token');
                 const deviceId = localStorage.getItem('student_device_id');
-                const res = await fetch(
-                    `/api/student/grade-recap?student_id=${student.id}&class_id=${student.class_id}&period_id=${student.period_id}`,
-                    { headers: { 'Authorization': `Bearer ${token}`, 'X-Device-Id': deviceId } }
-                );
+                const res = await fetch('/api/student/grade-recap', {
+                    headers: { 'Authorization': `Bearer ${token}`, 'X-Device-Id': deviceId }
+                });
                 if (res.ok) {
                     const json = await res.json();
                     if (json.hidden) {
@@ -63,7 +62,7 @@ function StudentGradeView({ student, gradesHidden }) {
             setLoadingGrade(false);
         };
         fetchGrade();
-    }, [student, gradesHidden]);
+    }, [gradesHidden]);
 
     if (loadingGrade) {
         return (
@@ -132,7 +131,7 @@ function StudentGradeView({ student, gradesHidden }) {
                 {is_remedial ? '✅ Tuntas (Remedial)' : is_below_kkm ? `⚠️ Di Bawah KKM (${kkm})` : `✅ Tuntas (KKM: ${kkm})`}
             </div>
 
-            {/* Breakdown Table (if enabled by teacher) */}
+            {/* Breakdown Table (if enabled by teacher) — no percentages */}
             {breakdown && breakdown.length > 0 && (
                 <div className="w-full bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden">
                     <div className="px-4 py-3 border-b border-zinc-800">
@@ -141,10 +140,7 @@ function StudentGradeView({ student, gradesHidden }) {
                     <div className="divide-y divide-zinc-800">
                         {breakdown.map((item, i) => (
                             <div key={i} className="flex justify-between items-center px-4 py-3">
-                                <div>
-                                    <span className="text-sm text-white font-medium">{item.name}</span>
-                                    <span className="text-[10px] text-zinc-600 ml-2">({item.weight}%)</span>
-                                </div>
+                                <span className="text-sm text-white font-medium">{item.name}</span>
                                 <span className={`text-sm font-bold ${item.value !== null ? 'text-white' : 'text-zinc-600'}`}>
                                     {item.value !== null ? item.value.toFixed(1) : '-'}
                                 </span>
@@ -329,7 +325,7 @@ export default function StudentPortal() {
             </div>
         );
         if (activeTab === 'NILAI') {
-            return <StudentGradeView student={data.student} gradesHidden={data.gradesHidden} />;
+            return <StudentGradeView gradesHidden={data.gradesHidden} />;
         }
         if (activeTab === 'PROFIL') return (
             <div className="flex flex-col items-center justify-center pt-10 px-6 animate-in fade-in cursor-default">

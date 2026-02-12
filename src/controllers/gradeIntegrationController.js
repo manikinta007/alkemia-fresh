@@ -81,14 +81,36 @@ export async function handleGradeIntegrationRequest(request, env) {
                 "UPDATE academic_periods SET kkm = ?, show_grade_breakdown = ? WHERE id = ?"
             ).bind(kkm || 75, show_grade_breakdown || 0, period_id).run();
 
-            // Delete old components and re-insert
-            await env.DB.prepare("DELETE FROM grade_components WHERE period_id = ?").bind(period_id).run();
+            // Smart component sync: UPDATE existing, INSERT new, DELETE removed
+            // This preserves component IDs so grade_values stay linked
+            const { results: existingComps } = await env.DB.prepare(
+                "SELECT id FROM grade_components WHERE period_id = ?"
+            ).bind(period_id).all();
+            const existingIds = new Set(existingComps.map(c => c.id));
 
+            const incomingIds = new Set();
             for (let i = 0; i < components.length; i++) {
                 const c = components[i];
-                await env.DB.prepare(
-                    "INSERT INTO grade_components (period_id, name, weight, source_type, sort_order) VALUES (?, ?, ?, ?, ?)"
-                ).bind(period_id, c.name, c.weight, c.source_type, i + 1).run();
+                if (c.id && existingIds.has(c.id)) {
+                    // UPDATE existing component (preserve ID)
+                    await env.DB.prepare(
+                        "UPDATE grade_components SET name = ?, weight = ?, source_type = ?, sort_order = ? WHERE id = ?"
+                    ).bind(c.name, c.weight, c.source_type, i + 1, c.id).run();
+                    incomingIds.add(c.id);
+                } else {
+                    // INSERT new component
+                    await env.DB.prepare(
+                        "INSERT INTO grade_components (period_id, name, weight, source_type, sort_order) VALUES (?, ?, ?, ?, ?)"
+                    ).bind(period_id, c.name, c.weight, c.source_type, i + 1).run();
+                }
+            }
+
+            // DELETE components that were removed by the user
+            for (const oldId of existingIds) {
+                if (!incomingIds.has(oldId)) {
+                    await env.DB.prepare("DELETE FROM grade_values WHERE component_id = ?").bind(oldId).run();
+                    await env.DB.prepare("DELETE FROM grade_components WHERE id = ?").bind(oldId).run();
+                }
             }
 
             return jsonResponse({ message: "Konfigurasi nilai berhasil disimpan" });
@@ -858,72 +880,171 @@ export async function handleGradeIntegrationRequest(request, env) {
         }
 
         // ========================================
-        // 11. STUDENT ENDPOINT: Get own grades
+        // 11. STUDENT ENDPOINT: Get own grades (SECURED)
+        // student_id is derived from session token, NOT from URL params
         // ========================================
         if (pathname === "/api/student/grade-recap" && method === "GET") {
-            const studentId = url.searchParams.get("student_id");
-            const classId = url.searchParams.get("class_id");
-            const periodId = url.searchParams.get("period_id");
-
-            if (!studentId || !classId || !periodId) {
-                return jsonResponse({ error: "student_id, class_id, period_id diperlukan" }, 400);
+            // --- AUTHENTICATION: Get student from session token ---
+            const authHeader = request.headers.get("Authorization");
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                return jsonResponse({ error: "Unauthorized" }, 401);
             }
+            const token = authHeader.split(" ")[1];
+            const session = await env.DB.prepare(
+                "SELECT student_id FROM student_sessions WHERE device_token = ? AND is_active = 1"
+            ).bind(token).first();
+            if (!session) return jsonResponse({ error: "Sesi kadaluarsa" }, 401);
 
-            // Security: Check if teacher has enabled grade visibility for this class
-            const cls = await env.DB.prepare("SELECT show_grades FROM classes WHERE id = ?").bind(classId).first();
-            if (!cls || cls.show_grades !== 1) {
+            // Get student + class info (student_id from session, NOT from URL)
+            const student = await env.DB.prepare(
+                "SELECT s.id, s.class_id, s.period_id, c.show_grades, c.participation_base_score FROM students s JOIN classes c ON s.class_id = c.id WHERE s.id = ?"
+            ).bind(session.student_id).first();
+            if (!student) return jsonResponse({ error: "Siswa tidak ditemukan" }, 404);
+
+            // --- SECURITY: Check if grades are published ---
+            if (student.show_grades !== 1) {
                 return jsonResponse({ hidden: true, message: "Nilai belum ditampilkan oleh guru." });
             }
+
+            const classId = student.class_id;
+            const periodId = student.period_id;
+            const studentId = student.id;
 
             // Get period settings
             const period = await env.DB.prepare(
                 "SELECT kkm, show_grade_breakdown FROM academic_periods WHERE id = ?"
             ).bind(periodId).first();
-
             if (!period) return jsonResponse({ error: "Periode tidak ditemukan" }, 404);
+            const kkm = period.kkm || 75;
 
-            // Call the same recap logic but return only this student's data
-            // Simplified: just get pre-calculated values
+            // Get components
             const { results: components } = await env.DB.prepare(
                 "SELECT * FROM grade_components WHERE period_id = ? ORDER BY sort_order ASC"
             ).bind(periodId).all();
+            if (components.length === 0) {
+                return jsonResponse({ hidden: false, final_grade: 0, kkm, is_below_kkm: false, is_remedial: false });
+            }
 
-            const { results: values } = await env.DB.prepare(
+            // --- USE SAME CALCULATION LOGIC AS TEACHER ENDPOINT ---
+
+            // Get existing grade_values for this student
+            const { results: existingValues } = await env.DB.prepare(
                 "SELECT * FROM grade_values WHERE class_id = ? AND student_id = ?"
             ).bind(classId, studentId).all();
-
             const valuesMap = {};
-            values.forEach(v => { valuesMap[v.component_id] = v; });
+            existingValues.forEach(v => { valuesMap[v.component_id] = v; });
 
-            // Build response
-            let finalGrade = 0;
-            const breakdown = components.map(comp => {
-                const val = valuesMap[comp.id];
-                const effectiveValue = val ? (val.manual_override !== null ? val.manual_override : val.auto_value) : null;
-                if (effectiveValue !== null) {
-                    finalGrade += effectiveValue * (comp.weight / 100);
+            // Final grade override
+            const finalOvr = await env.DB.prepare(
+                "SELECT value FROM grade_overrides WHERE override_type = 'final' AND class_id = ? AND student_id = ?"
+            ).bind(classId, studentId).first();
+            const finalOverride = finalOvr?.value ?? null;
+
+            // Tasks (individual) - EXCLUDE remedial
+            const { results: tasks } = await env.DB.prepare(
+                "SELECT id FROM tasks WHERE class_id = ? AND is_active = 1 AND (target_type IS NULL OR target_type != 'specific')"
+            ).bind(classId).all();
+            let taskTotal = 0, taskCount = 0;
+            if (tasks.length > 0) {
+                const taskIds = tasks.map(t => t.id);
+                const ph = taskIds.map(() => '?').join(',');
+                const { results: subs } = await env.DB.prepare(
+                    `SELECT task_id, grade FROM task_submissions WHERE student_id = ? AND task_id IN (${ph}) AND is_graded = 1 AND is_published = 1`
+                ).bind(studentId, ...taskIds).all();
+                subs.forEach(s => { taskTotal += (s.grade || 0); taskCount++; });
+            }
+
+            // Tasks (group)
+            const { results: groupTasks } = await env.DB.prepare(
+                "SELECT id FROM group_tasks WHERE class_id = ? AND is_active = 1"
+            ).bind(classId).all();
+            let groupTotal = 0, groupCount = 0;
+            if (groupTasks.length > 0) {
+                const gtIds = groupTasks.map(t => t.id);
+                const ph2 = gtIds.map(() => '?').join(',');
+                const { results: gSubs } = await env.DB.prepare(
+                    `SELECT gt.id as task_id, gts.grade FROM group_task_submissions gts
+                     JOIN group_tasks gt ON gts.group_task_id = gt.id
+                     WHERE gts.student_id = ? AND gt.id IN (${ph2}) AND gts.is_graded = 1 AND gts.is_published = 1`
+                ).bind(studentId, ...gtIds).all();
+                gSubs.forEach(s => { groupTotal += (s.grade || 0); groupCount++; });
+            }
+
+            // Quizzes
+            const { results: quizzes } = await env.DB.prepare(
+                "SELECT id FROM quizzes WHERE class_id = ? AND is_active = 1"
+            ).bind(classId).all();
+            let quizTotal = 0, quizCount = 0;
+            if (quizzes.length > 0) {
+                const qIds = quizzes.map(q => q.id);
+                const ph3 = qIds.map(() => '?').join(',');
+                const { results: attempts } = await env.DB.prepare(
+                    `SELECT score FROM quiz_attempts WHERE student_id = ? AND quiz_id IN (${ph3}) AND finish_time IS NOT NULL`
+                ).bind(studentId, ...qIds).all();
+                attempts.forEach(a => { quizTotal += (a.score || 0); quizCount++; });
+            }
+
+            // Participation
+            const baseScore = student.participation_base_score || 60;
+            const partLog = await env.DB.prepare(
+                "SELECT SUM(points) as total_points FROM participation_logs WHERE class_id = ? AND period_id = ? AND student_id = ?"
+            ).bind(classId, periodId, studentId).first();
+            const participationValue = Math.min(100, Math.max(0, baseScore + (partLog?.total_points || 0)));
+
+            // --- BUILD COMPONENT VALUES (same logic as teacher) ---
+            const componentValues = components.map(comp => {
+                const existing = valuesMap[comp.id];
+                let autoValue = null;
+
+                if (comp.source_type === 'tasks') {
+                    const totalCount = taskCount + groupCount;
+                    autoValue = totalCount > 0 ? (taskTotal + groupTotal) / totalCount : null;
+                } else if (comp.source_type === 'quizzes') {
+                    autoValue = quizCount > 0 ? quizTotal / quizCount : null;
+                } else if (comp.source_type === 'participation') {
+                    autoValue = participationValue;
+                } else if (comp.source_type === 'manual') {
+                    autoValue = existing?.auto_value ?? null;
                 }
+
+                const manualOverride = existing?.manual_override ?? null;
+                const effectiveValue = manualOverride !== null ? manualOverride : autoValue;
+
                 return {
                     name: comp.name,
-                    weight: comp.weight,
-                    value: effectiveValue !== null ? Math.round(effectiveValue * 100) / 100 : null
+                    effective_value: effectiveValue !== null ? Math.round(effectiveValue * 100) / 100 : null,
+                    weight: comp.weight
                 };
             });
 
-            finalGrade = Math.round(finalGrade * 100) / 100;
-            const isRemedial = values.some(v => v.is_remedial === 1);
-            if (isRemedial) finalGrade = Math.max(finalGrade, period.kkm || 75);
+            // Calculate final grade (same as teacher)
+            let calculatedFinal = 0;
+            componentValues.forEach(cv => {
+                if (cv.effective_value !== null) {
+                    calculatedFinal += cv.effective_value * (cv.weight / 100);
+                }
+            });
+            calculatedFinal = Math.round(calculatedFinal * 100) / 100;
 
+            const isRemedial = existingValues.some(v => v.is_remedial === 1);
+            if (isRemedial) calculatedFinal = Math.max(calculatedFinal, kkm);
+
+            const finalGrade = finalOverride !== null ? finalOverride : calculatedFinal;
+
+            // --- BUILD RESPONSE ---
             const response = {
-                final_grade: finalGrade,
-                kkm: period.kkm || 75,
-                is_below_kkm: finalGrade < (period.kkm || 75) && !isRemedial,
+                final_grade: Math.round(finalGrade * 100) / 100,
+                kkm,
+                is_below_kkm: finalGrade < kkm && !isRemedial,
                 is_remedial: isRemedial
             };
 
-            // Only include breakdown if teacher enabled it
+            // Only include breakdown if teacher enabled it (without weight/percentage — just name + value)
             if (period.show_grade_breakdown === 1) {
-                response.breakdown = breakdown;
+                response.breakdown = componentValues.map(cv => ({
+                    name: cv.name,
+                    value: cv.effective_value
+                }));
             }
 
             return jsonResponse(response);
