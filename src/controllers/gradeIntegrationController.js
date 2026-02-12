@@ -869,6 +869,12 @@ export async function handleGradeIntegrationRequest(request, env) {
                 return jsonResponse({ error: "student_id, class_id, period_id diperlukan" }, 400);
             }
 
+            // Security: Check if teacher has enabled grade visibility for this class
+            const cls = await env.DB.prepare("SELECT show_grades FROM classes WHERE id = ?").bind(classId).first();
+            if (!cls || cls.show_grades !== 1) {
+                return jsonResponse({ hidden: true, message: "Nilai belum ditampilkan oleh guru." });
+            }
+
             // Get period settings
             const period = await env.DB.prepare(
                 "SELECT kkm, show_grade_breakdown FROM academic_periods WHERE id = ?"

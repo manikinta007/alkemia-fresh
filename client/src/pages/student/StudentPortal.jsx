@@ -32,11 +32,17 @@ const getEmbedUrl = (url) => {
 };
 
 // Student Grade View Component
-function StudentGradeView({ student }) {
+function StudentGradeView({ student, gradesHidden }) {
     const [gradeData, setGradeData] = useState(null);
     const [loadingGrade, setLoadingGrade] = useState(true);
+    const [isHidden, setIsHidden] = useState(gradesHidden || false);
 
     useEffect(() => {
+        if (gradesHidden) {
+            setIsHidden(true);
+            setLoadingGrade(false);
+            return;
+        }
         const fetchGrade = async () => {
             try {
                 const token = localStorage.getItem('student_token');
@@ -45,18 +51,37 @@ function StudentGradeView({ student }) {
                     `/api/student/grade-recap?student_id=${student.id}&class_id=${student.class_id}&period_id=${student.period_id}`,
                     { headers: { 'Authorization': `Bearer ${token}`, 'X-Device-Id': deviceId } }
                 );
-                if (res.ok) setGradeData(await res.json());
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.hidden) {
+                        setIsHidden(true);
+                    } else {
+                        setGradeData(json);
+                    }
+                }
             } catch (e) { console.error(e); }
             setLoadingGrade(false);
         };
         fetchGrade();
-    }, [student]);
+    }, [student, gradesHidden]);
 
     if (loadingGrade) {
         return (
             <div className="flex flex-col items-center justify-center pt-16 pb-24">
                 <div className="w-32 h-32 bg-zinc-900 rounded-full animate-pulse mb-4" />
                 <div className="w-24 h-4 bg-zinc-900 rounded animate-pulse" />
+            </div>
+        );
+    }
+
+    if (isHidden) {
+        return (
+            <div className="flex flex-col items-center justify-center pt-16 pb-24 text-center px-6">
+                <div className="w-20 h-20 bg-zinc-900 rounded-2xl flex items-center justify-center mb-6 border border-zinc-800">
+                    <span className="text-4xl">🔒</span>
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Nilai Belum Ditampilkan</h3>
+                <p className="text-sm text-zinc-500 max-w-xs">Guru belum membuka akses nilai untuk kelas ini. Silakan hubungi guru Anda.</p>
             </div>
         );
     }
@@ -304,7 +329,7 @@ export default function StudentPortal() {
             </div>
         );
         if (activeTab === 'NILAI') {
-            return <StudentGradeView student={data.student} />;
+            return <StudentGradeView student={data.student} gradesHidden={data.gradesHidden} />;
         }
         if (activeTab === 'PROFIL') return (
             <div className="flex flex-col items-center justify-center pt-10 px-6 animate-in fade-in cursor-default">
