@@ -420,6 +420,169 @@ export async function handleGradeIntegrationRequest(request, env) {
         }
 
         // ========================================
+        // 4b. GET STUDENTS BELOW KKM (for auto-populating remedial targets)
+        // ========================================
+        if (pathname === "/api/grade-recap/below-kkm" && method === "GET") {
+            const classId = url.searchParams.get("class_id");
+            const periodId = url.searchParams.get("period_id");
+            if (!classId || !periodId) return jsonResponse({ error: "class_id dan period_id diperlukan" }, 400);
+
+            const period = await env.DB.prepare(
+                "SELECT id, kkm FROM academic_periods WHERE id = ?"
+            ).bind(periodId).first();
+            const kkm = period?.kkm || 75;
+
+            const { results: components } = await env.DB.prepare(
+                "SELECT * FROM grade_components WHERE period_id = ? ORDER BY sort_order ASC"
+            ).bind(periodId).all();
+
+            if (components.length === 0) {
+                return jsonResponse({ kkm, students: [] });
+            }
+
+            const { results: students } = await env.DB.prepare(
+                "SELECT id, name FROM students WHERE class_id = ? ORDER BY name ASC"
+            ).bind(classId).all();
+
+            // Get existing grade_values
+            const { results: existingValues } = await env.DB.prepare(
+                "SELECT * FROM grade_values WHERE class_id = ? AND student_id IN (SELECT id FROM students WHERE class_id = ?)"
+            ).bind(classId, classId).all();
+
+            const valuesMap = {};
+            existingValues.forEach(v => {
+                valuesMap[`${v.component_id}_${v.student_id}`] = v;
+            });
+
+            // Get final overrides
+            const { results: finalOvrRows } = await env.DB.prepare(
+                "SELECT student_id, value FROM grade_overrides WHERE override_type = 'final' AND class_id = ?"
+            ).bind(classId).all();
+            const finalOverrides = {};
+            finalOvrRows.forEach(r => { finalOverrides[r.student_id] = r.value; });
+
+            // Tasks (exclude remedial)
+            const { results: tasks } = await env.DB.prepare(
+                "SELECT id FROM tasks WHERE class_id = ? AND is_active = 1 AND (target_type IS NULL OR target_type != 'specific')"
+            ).bind(classId).all();
+            const taskIds = tasks.map(t => t.id);
+
+            const taskGrades = {};
+            if (taskIds.length > 0) {
+                const ph = taskIds.map(() => '?').join(',');
+                const { results: taskSubs } = await env.DB.prepare(
+                    `SELECT student_id, grade FROM task_submissions WHERE task_id IN (${ph}) AND is_graded = 1 AND is_published = 1`
+                ).bind(...taskIds).all();
+                students.forEach(s => { taskGrades[s.id] = { total: 0, count: taskIds.length }; });
+                taskSubs.forEach(sub => {
+                    if (taskGrades[sub.student_id]) taskGrades[sub.student_id].total += (sub.grade || 0);
+                });
+            }
+
+            // Group tasks
+            const { results: groupTasks } = await env.DB.prepare(
+                "SELECT id, group_set_id FROM group_tasks WHERE class_id = ? AND is_active = 1"
+            ).bind(classId).all();
+
+            const groupTaskGrades = {};
+            if (groupTasks.length > 0) {
+                for (const gt of groupTasks) {
+                    const { results: gtSubs } = await env.DB.prepare(
+                        `SELECT gs.group_id, gs.grade FROM group_task_submissions gs WHERE gs.group_task_id = ? AND gs.is_graded = 1 AND gs.is_published = 1`
+                    ).bind(gt.id).all();
+                    const groupGradeMap = {};
+                    gtSubs.forEach(s => { groupGradeMap[s.group_id] = s.grade || 0; });
+
+                    const { results: members } = await env.DB.prepare(
+                        `SELECT gm.student_id, gm.group_id FROM group_members gm JOIN groups g ON gm.group_id = g.id WHERE g.set_id = ?`
+                    ).bind(gt.group_set_id).all();
+                    members.forEach(m => {
+                        if (!groupTaskGrades[m.student_id]) groupTaskGrades[m.student_id] = { total: 0, count: 0 };
+                        groupTaskGrades[m.student_id].count++;
+                        if (groupGradeMap[m.group_id] !== undefined) groupTaskGrades[m.student_id].total += groupGradeMap[m.group_id];
+                    });
+                }
+            }
+
+            // Quizzes
+            const { results: quizzes } = await env.DB.prepare(
+                "SELECT id FROM quizzes WHERE class_id = ? AND is_active = 1"
+            ).bind(classId).all();
+            const quizIds = quizzes.map(q => q.id);
+            const quizGrades = {};
+            if (quizIds.length > 0) {
+                const ph = quizIds.map(() => '?').join(',');
+                const { results: quizAttempts } = await env.DB.prepare(
+                    `SELECT student_id, quiz_id, score FROM quiz_attempts WHERE quiz_id IN (${ph})`
+                ).bind(...quizIds).all();
+                students.forEach(s => { quizGrades[s.id] = { total: 0, count: quizIds.length }; });
+                quizAttempts.forEach(a => {
+                    if (quizGrades[a.student_id]) quizGrades[a.student_id].total += (a.score || 0);
+                });
+            }
+
+            // Participation
+            const classInfo = await env.DB.prepare(
+                "SELECT participation_base_score FROM classes WHERE id = ?"
+            ).bind(classId).first();
+            const baseScore = classInfo?.participation_base_score || 60;
+            const { results: partLogs } = await env.DB.prepare(
+                `SELECT student_id, SUM(points) as total_points FROM participation_logs WHERE class_id = ? AND period_id = ? GROUP BY student_id`
+            ).bind(classId, periodId).all();
+            const partMap = {};
+            partLogs.forEach(p => { partMap[p.student_id] = p.total_points || 0; });
+            const participationGrades = {};
+            students.forEach(s => {
+                participationGrades[s.id] = Math.min(100, Math.max(0, baseScore + (partMap[s.id] || 0)));
+            });
+
+            // Calculate final grades and filter below KKM
+            const belowKkm = [];
+            for (const s of students) {
+                let calculatedFinal = 0;
+                const isRemedial = existingValues.some(v => v.student_id === s.id && v.is_remedial === 1);
+
+                components.forEach(comp => {
+                    const key = `${comp.id}_${s.id}`;
+                    const existing = valuesMap[key];
+                    let autoValue = null;
+
+                    if (comp.source_type === 'tasks') {
+                        const indiv = taskGrades[s.id] || { total: 0, count: 0 };
+                        const grp = groupTaskGrades[s.id] || { total: 0, count: 0 };
+                        const totalCount = indiv.count + grp.count;
+                        autoValue = totalCount > 0 ? (indiv.total + grp.total) / totalCount : null;
+                    } else if (comp.source_type === 'quizzes') {
+                        const q = quizGrades[s.id] || { total: 0, count: 0 };
+                        autoValue = q.count > 0 ? q.total / q.count : null;
+                    } else if (comp.source_type === 'participation') {
+                        autoValue = participationGrades[s.id] ?? null;
+                    } else if (comp.source_type === 'manual') {
+                        autoValue = existing?.auto_value ?? null;
+                    }
+
+                    const manualOverride = existing?.manual_override ?? null;
+                    const effectiveValue = manualOverride !== null ? manualOverride : autoValue;
+                    if (effectiveValue !== null) {
+                        calculatedFinal += effectiveValue * (comp.weight / 100);
+                    }
+                });
+
+                calculatedFinal = Math.round(calculatedFinal * 100) / 100;
+                if (isRemedial) calculatedFinal = Math.max(calculatedFinal, kkm);
+
+                const finalOverride = finalOverrides[s.id] ?? null;
+                const finalGrade = finalOverride !== null ? finalOverride : calculatedFinal;
+
+                if (finalGrade < kkm && !isRemedial) {
+                    belowKkm.push({ student_id: s.id, student_name: s.name, final_grade: Math.round(finalGrade * 100) / 100 });
+                }
+            }
+
+            return jsonResponse({ kkm, students: belowKkm });
+        }
+
+        // ========================================
         // 5. SAVE GRADE VALUE (Manual input or override)
         // ========================================
         if (pathname === "/api/grade-recap/save" && method === "POST") {

@@ -365,6 +365,8 @@ export default function Tasks() {
                 students={students}
                 onCreate={handleCreateHeader}
                 saving={saving}
+                classId={selectedClass?.id}
+                periodId={activePeriod?.id}
             />
 
             <DiscussionModal
@@ -433,6 +435,8 @@ export default function Tasks() {
                     students={students}
                     selectedIds={headerForm.allowedStudents}
                     onChange={(newIds) => setHeaderForm({ ...headerForm, allowedStudents: newIds })}
+                    classId={selectedClass?.id}
+                    periodId={activePeriod?.id}
                 />
 
                 <ImagePickerModal

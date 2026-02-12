@@ -1,8 +1,26 @@
-import React, { useEffect } from 'react';
-import { X, Search, Check, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Search, Check, AlertTriangle, RefreshCw } from 'lucide-react';
+import { fetchApi } from '../../utils/api';
 
 // --- 1. MODAL BUAT TUGAS BARU (CREATE) ---
-export const CreateTaskModal = ({ isOpen, onClose, form, setForm, students, onCreate, saving }) => {
+export const CreateTaskModal = ({ isOpen, onClose, form, setForm, students, onCreate, saving, classId, periodId }) => {
+    const [loadingBelowKkm, setLoadingBelowKkm] = useState(false);
+    const [belowKkmCount, setBelowKkmCount] = useState(null);
+
+    const fetchBelowKkm = async () => {
+        if (!classId || !periodId) return;
+        setLoadingBelowKkm(true);
+        try {
+            const res = await fetchApi(`/api/grade-recap/below-kkm?class_id=${classId}&period_id=${periodId}`);
+            if (res.ok) {
+                const data = await res.json();
+                const ids = data.students.map(s => s.student_id);
+                setForm(prev => ({ ...prev, allowedStudents: ids }));
+                setBelowKkmCount(ids.length);
+            }
+        } catch (e) { console.error(e); }
+        setLoadingBelowKkm(false);
+    };
     if (!isOpen) return null;
 
     return (
@@ -58,27 +76,47 @@ export const CreateTaskModal = ({ isOpen, onClose, form, setForm, students, onCr
                                     type="radio"
                                     name="target"
                                     checked={form.targetType === 'specific'}
-                                    onChange={() => setForm({ ...form, targetType: 'specific' })}
+                                    onChange={() => {
+                                        setForm({ ...form, targetType: 'specific' });
+                                        fetchBelowKkm();
+                                    }}
                                 />
                                 <span className="text-xs font-bold text-orange-600">Remedial / Khusus</span>
                             </label>
                         </div>
                         {form.targetType === 'specific' && (
-                            <div className="h-32 overflow-y-auto border border-zinc-200 bg-white p-2 rounded text-xs grid grid-cols-2 gap-1 mt-2">
-                                {students.map(s => (
-                                    <label key={s.id} className="flex items-center gap-2 cursor-pointer hover:bg-zinc-50 p-1 rounded">
-                                        <input
-                                            type="checkbox"
-                                            checked={form.allowedStudents.includes(s.id)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) setForm({ ...form, allowedStudents: [...form.allowedStudents, s.id] });
-                                                else setForm({ ...form, allowedStudents: form.allowedStudents.filter(id => id !== s.id) });
-                                            }}
-                                        />
-                                        <span className="truncate">{s.name}</span>
-                                    </label>
-                                ))}
-                            </div>
+                            <>
+                                <div className="flex items-center justify-between mt-2 mb-1">
+                                    <span className="text-[10px] text-zinc-500">
+                                        {loadingBelowKkm ? '⏳ Mengambil data nilai...' :
+                                            belowKkmCount !== null ? `📊 ${belowKkmCount} siswa di bawah KKM (auto-selected)` :
+                                                'Pilih siswa manual atau sinkron dari nilai'}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={fetchBelowKkm}
+                                        disabled={loadingBelowKkm}
+                                        className="text-[10px] text-orange-600 hover:text-orange-800 font-bold flex items-center gap-1 disabled:opacity-50"
+                                    >
+                                        <RefreshCw size={10} className={loadingBelowKkm ? 'animate-spin' : ''} /> Sinkron Nilai
+                                    </button>
+                                </div>
+                                <div className="h-32 overflow-y-auto border border-zinc-200 bg-white p-2 rounded text-xs grid grid-cols-2 gap-1">
+                                    {students.map(s => (
+                                        <label key={s.id} className="flex items-center gap-2 cursor-pointer hover:bg-zinc-50 p-1 rounded">
+                                            <input
+                                                type="checkbox"
+                                                checked={form.allowedStudents.includes(s.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setForm({ ...form, allowedStudents: [...form.allowedStudents, s.id] });
+                                                    else setForm({ ...form, allowedStudents: form.allowedStudents.filter(id => id !== s.id) });
+                                                }}
+                                            />
+                                            <span className="truncate">{s.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </>
                         )}
                         {form.targetType === 'specific' && form.allowedStudents.length === 0 && (
                             <p className="text-[10px] text-red-500 mt-1 font-bold flex items-center gap-1">
@@ -103,8 +141,23 @@ export const CreateTaskModal = ({ isOpen, onClose, form, setForm, students, onCr
 };
 
 // --- 2. MODAL EDIT SISWA REMEDIAL (DI EDITOR) ---
-export const StudentModal = ({ isOpen, onClose, students, selectedIds, onChange }) => {
+export const StudentModal = ({ isOpen, onClose, students, selectedIds, onChange, classId, periodId }) => {
     if (!isOpen) return null;
+
+    const [loadingSync, setLoadingSync] = React.useState(false);
+
+    const handleSync = async () => {
+        if (!classId || !periodId) return;
+        setLoadingSync(true);
+        try {
+            const res = await fetchApi(`/api/grade-recap/below-kkm?class_id=${classId}&period_id=${periodId}`);
+            if (res.ok) {
+                const data = await res.json();
+                onChange(data.students.map(s => s.student_id));
+            }
+        } catch (e) { console.error(e); }
+        setLoadingSync(false);
+    };
 
     const [search, setSearch] = React.useState('');
 
@@ -152,7 +205,16 @@ export const StudentModal = ({ isOpen, onClose, students, selectedIds, onChange 
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-zinc-100 flex justify-between items-center">
-                    <span className="text-xs font-bold text-zinc-500">{selectedIds.length} Siswa Terpilih</span>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-zinc-500">{selectedIds.length} Siswa Terpilih</span>
+                        <button
+                            onClick={handleSync}
+                            disabled={loadingSync}
+                            className="text-[10px] text-orange-600 hover:text-orange-800 font-bold flex items-center gap-1 px-2 py-1 bg-orange-50 rounded-lg border border-orange-200 disabled:opacity-50 transition"
+                        >
+                            <RefreshCw size={10} className={loadingSync ? 'animate-spin' : ''} /> Sinkron dari Nilai
+                        </button>
+                    </div>
                     <button onClick={onClose} className="px-6 py-2 bg-black text-white rounded-lg font-bold hover:bg-zinc-800 transition">
                         SELESAI
                     </button>
