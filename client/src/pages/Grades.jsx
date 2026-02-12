@@ -347,7 +347,7 @@ export default function Grades() {
                                                                     </button>
                                                                 )}
                                                             </div>
-                                                        ) : (
+                                                        ) : (s.is_below_kkm || s.is_remedial) ? (
                                                             <button
                                                                 onClick={() => startRemedialEdit(rc.task_id, s.student_id, null)}
                                                                 className="text-xs text-zinc-300 hover:text-zinc-500 cursor-pointer"
@@ -355,6 +355,8 @@ export default function Grades() {
                                                             >
                                                                 -
                                                             </button>
+                                                        ) : (
+                                                            <span className="text-xs text-zinc-200">-</span>
                                                         )}
                                                     </td>
                                                 );

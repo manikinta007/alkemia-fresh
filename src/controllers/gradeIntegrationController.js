@@ -19,6 +19,21 @@ export async function handleGradeIntegrationRequest(request, env) {
     const method = request.method;
 
     try {
+        // Auto-create grade_overrides table if it doesn't exist
+        // This table stores final grade overrides and remedial evidence overrides
+        // Separate from grade_values to avoid FK constraint issues
+        await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS grade_overrides (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                override_type TEXT NOT NULL,
+                reference_id INTEGER DEFAULT 0,
+                class_id INTEGER NOT NULL,
+                student_id INTEGER NOT NULL,
+                value REAL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(override_type, reference_id, class_id, student_id)
+            )
+        `).run();
         // ========================================
         // 1. GET GRADE CONFIG (Components + KKM for period)
         // ========================================
@@ -140,15 +155,16 @@ export async function handleGradeIntegrationRequest(request, env) {
 
             // Build lookup: { `${component_id}_${student_id}`: gradeValue }
             const valuesMap = {};
-            const finalOverrides = {}; // studentId -> override value
             existingValues.forEach(v => {
-                if (v.component_id === 0) {
-                    // Final grade override (component_id = 0 convention)
-                    finalOverrides[v.student_id] = v.manual_override;
-                } else {
-                    valuesMap[`${v.component_id}_${v.student_id}`] = v;
-                }
+                valuesMap[`${v.component_id}_${v.student_id}`] = v;
             });
+
+            // Get final grade overrides from grade_overrides table
+            const { results: finalOvrRows } = await env.DB.prepare(
+                "SELECT student_id, value FROM grade_overrides WHERE override_type = 'final' AND class_id = ?"
+            ).bind(classId).all();
+            const finalOverrides = {};
+            finalOvrRows.forEach(r => { finalOverrides[r.student_id] = r.value; });
 
             // ---- AUTO-CALCULATION ----
 
@@ -283,18 +299,18 @@ export async function handleGradeIntegrationRequest(request, env) {
                 });
             }
 
-            // Get remedial evidence overrides from grade_values (component_id = -task_id convention)
+            // Get remedial evidence overrides from grade_overrides table
             const remedialOverrides = {}; // `${taskId}_${studentId}` -> override value
             if (remedialTasks.length > 0) {
-                const negIds = remedialTasks.map(rt => -rt.id);
-                const phNeg = negIds.map(() => '?').join(',');
+                const taskIdList = remedialTasks.map(rt => rt.id);
+                const phTask = taskIdList.map(() => '?').join(',');
                 const { results: remOvr } = await env.DB.prepare(
-                    `SELECT component_id, student_id, manual_override FROM grade_values 
-                     WHERE class_id = ? AND component_id IN (${phNeg})`
-                ).bind(classId, ...negIds).all();
+                    `SELECT reference_id, student_id, value FROM grade_overrides 
+                     WHERE override_type = 'remedial' AND class_id = ? AND reference_id IN (${phTask})`
+                ).bind(classId, ...taskIdList).all();
                 remOvr.forEach(v => {
-                    if (v.manual_override !== null) {
-                        remedialOverrides[`${-v.component_id}_${v.student_id}`] = v.manual_override;
+                    if (v.value !== null) {
+                        remedialOverrides[`${v.reference_id}_${v.student_id}`] = v.value;
                     }
                 });
             }
@@ -598,24 +614,19 @@ export async function handleGradeIntegrationRequest(request, env) {
 
             const parsedValue = value !== null && value !== '' ? parseFloat(value) : null;
 
-            // component_id = 0 convention for final grade override
+            // Use grade_overrides table (no FK constraint)
             const existing = await env.DB.prepare(
-                "SELECT id FROM grade_values WHERE component_id = 0 AND class_id = ? AND student_id = ?"
+                "SELECT id FROM grade_overrides WHERE override_type = 'final' AND reference_id = 0 AND class_id = ? AND student_id = ?"
             ).bind(class_id, student_id).first();
 
             if (existing) {
                 await env.DB.prepare(
-                    "UPDATE grade_values SET manual_override = ? WHERE id = ?"
+                    "UPDATE grade_overrides SET value = ? WHERE id = ?"
                 ).bind(parsedValue, existing.id).run();
             } else {
-                // Use batch with PRAGMA to bypass FK constraint (component_id=0 has no parent row)
-                await env.DB.batch([
-                    env.DB.prepare("PRAGMA foreign_keys = OFF"),
-                    env.DB.prepare(
-                        "INSERT INTO grade_values (component_id, class_id, student_id, manual_override) VALUES (0, ?, ?, ?)"
-                    ).bind(class_id, student_id, parsedValue),
-                    env.DB.prepare("PRAGMA foreign_keys = ON")
-                ]);
+                await env.DB.prepare(
+                    "INSERT INTO grade_overrides (override_type, reference_id, class_id, student_id, value) VALUES ('final', 0, ?, ?, ?)"
+                ).bind(class_id, student_id, parsedValue).run();
             }
 
             return jsonResponse({ message: "Nilai akhir override disimpan" });
@@ -630,7 +641,7 @@ export async function handleGradeIntegrationRequest(request, env) {
             if (!class_id || !student_id) return jsonResponse({ error: "class_id, student_id diperlukan" }, 400);
 
             await env.DB.prepare(
-                "DELETE FROM grade_values WHERE component_id = 0 AND class_id = ? AND student_id = ?"
+                "DELETE FROM grade_overrides WHERE override_type = 'final' AND reference_id = 0 AND class_id = ? AND student_id = ?"
             ).bind(class_id, student_id).run();
 
             return jsonResponse({ message: "Override nilai akhir direset" });
@@ -647,26 +658,20 @@ export async function handleGradeIntegrationRequest(request, env) {
             }
 
             const parsedValue = value !== null && value !== '' ? parseFloat(value) : null;
-            // Convention: component_id = -task_id for remedial evidence
-            const negTaskId = -task_id;
 
+            // Use grade_overrides table (no FK constraint)
             const existing = await env.DB.prepare(
-                "SELECT id FROM grade_values WHERE component_id = ? AND class_id = ? AND student_id = ?"
-            ).bind(negTaskId, class_id, student_id).first();
+                "SELECT id FROM grade_overrides WHERE override_type = 'remedial' AND reference_id = ? AND class_id = ? AND student_id = ?"
+            ).bind(task_id, class_id, student_id).first();
 
             if (existing) {
                 await env.DB.prepare(
-                    "UPDATE grade_values SET manual_override = ? WHERE id = ?"
+                    "UPDATE grade_overrides SET value = ? WHERE id = ?"
                 ).bind(parsedValue, existing.id).run();
             } else {
-                // Use batch with PRAGMA to bypass FK constraint (negative component_id has no parent row)
-                await env.DB.batch([
-                    env.DB.prepare("PRAGMA foreign_keys = OFF"),
-                    env.DB.prepare(
-                        "INSERT INTO grade_values (component_id, class_id, student_id, manual_override) VALUES (?, ?, ?, ?)"
-                    ).bind(negTaskId, class_id, student_id, parsedValue),
-                    env.DB.prepare("PRAGMA foreign_keys = ON")
-                ]);
+                await env.DB.prepare(
+                    "INSERT INTO grade_overrides (override_type, reference_id, class_id, student_id, value) VALUES ('remedial', ?, ?, ?, ?)"
+                ).bind(task_id, class_id, student_id, parsedValue).run();
             }
 
             return jsonResponse({ message: "Nilai remedial evidence disimpan" });
@@ -682,10 +687,9 @@ export async function handleGradeIntegrationRequest(request, env) {
                 return jsonResponse({ error: "task_id, class_id, student_id diperlukan" }, 400);
             }
 
-            const negTaskId = -task_id;
             await env.DB.prepare(
-                "DELETE FROM grade_values WHERE component_id = ? AND class_id = ? AND student_id = ?"
-            ).bind(negTaskId, class_id, student_id).run();
+                "DELETE FROM grade_overrides WHERE override_type = 'remedial' AND reference_id = ? AND class_id = ? AND student_id = ?"
+            ).bind(task_id, class_id, student_id).run();
 
             return jsonResponse({ message: "Override nilai remedial direset" });
         }

@@ -590,3 +590,57 @@ ALTER TABLE academic_periods ADD COLUMN show_grade_breakdown INTEGER DEFAULT 0;
 4. **Phase 4**: Override manual (blue indicator) + Remedial flow
 5. **Phase 5**: Student-side display (final grade + optional breakdown)
 6. **Future**: Export/Print rekap nilai (PDF)
+
+## 12. 📊 Future Feature: Item Analysis & Question Bank (Analisis Butir Soal)
+
+### **Status**: CONCEPTUAL DESIGN (Feb 12, 2026)
+
+### **Objective**
+Implement sophisticated psychometric analysis for exam questions (Item Analysis) to evaluate question quality (Difficulty, Discrimination, Distractor Effectiveness).
+
+### **Core Problem**
+Current system stores questions locally within each Quiz (`quiz_questions`).
+- **Challenge**: Randomized questions (Bank 30 -> Show 10) fragment the sample size, making per-quiz analysis statistically weak for small classes (<30 students).
+- **Challenge**: Copied quizzes (`Copy Quiz`) create new question IDs, preventing aggregated analysis across classes/semesters.
+
+### **Planned Solution: Hybrid Question Bank**
+
+#### **1. Database Schema Enhancements**
+```sql
+-- Link copied quizzes to their parent (for aggregation)
+ALTER TABLE quizzes ADD COLUMN parent_quiz_id INTEGER;
+
+-- Link copied questions to their origin (for aggregation)
+ALTER TABLE quiz_questions ADD COLUMN parent_question_id INTEGER;
+
+-- [Future] Centralized Question Bank Table
+CREATE TABLE question_bank (
+  id INTEGER PRIMARY KEY,
+  folder_id INTEGER,   -- Organized by Topic/Chapter
+  type TEXT,           -- PG/Essay
+  question_text TEXT,
+  -- ...options,
+  created_at TEXT
+);
+```
+
+#### **2. Analysis Metrics (The "Holy Trinity")**
+- **Tingkat Kesukaran ($P$)**: `Correct Answers / Total Attempts`. (Mudah > 0.7, Sukar < 0.3)
+- **Daya Beda ($D$)**: `(Upper Group Correct - Lower Group Correct) / (0.5 * N)`.
+  - Determines if the question correctly differentiates high-performing vs low-performing students.
+  - Requires sorting students by total score first.
+- **Distractor Effectiveness**: Percentage of students choosing each wrong option (A, B, C, D, E).
+  - 0% selection = Bad distractor.
+
+#### **3. Editor Workflow Changes**
+- **New Feature**: "Import from Question Bank" in Quiz Editor.
+- **UI**:
+  - Tab 1: **Manual Input** (Local Question)
+  - Tab 2: **Question Bank** (Search, Filter by Topic, Select & Import)
+- **Logic**: Importing links the local `quiz_question` to the `question_bank` ID, enabling cross-exam analytics.
+
+#### **4. Visualization (Analytics Dashboard)**
+- **Placement**: Inside Quiz Detail -> New Tab "Analisis Butir Soal".
+- **Views**:
+  - **Per-Quiz**: Analysis based only on students in that specific class/quiz.
+  - **Aggregated (Smart)**: Uses `parent_quiz_id` or `question_bank_id` to pool data from ALL classes that used this question.
