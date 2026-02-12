@@ -389,6 +389,7 @@ export default function Participation() {
                         loading={loadingHistory}
                         onClose={() => setShowHistory(false)}
                         onDelete={handleDeleteLog}
+                        showConfirm={showConfirm}
                     />
                 )
             }
@@ -844,7 +845,7 @@ function SettingsModal({ currentConfig, onClose, onSave }) {
     );
 }
 
-function HistoryModal({ student, logs, loading, onClose, onDelete }) {
+function HistoryModal({ student, logs, loading, onClose, onDelete, showConfirm }) {
     if (!student) return null;
 
     return (
@@ -883,8 +884,9 @@ function HistoryModal({ student, logs, loading, onClose, onDelete }) {
                                             {log.points > 0 ? '+' : ''}{log.points}
                                         </span>
                                         <button
-                                            onClick={() => {
-                                                if (confirm('Hapus riwayat ini? Poin akan ditarik kembali.')) {
+                                            onClick={async () => {
+                                                const confirmed = await showConfirm('Hapus riwayat ini? Poin akan ditarik kembali.');
+                                                if (confirmed) {
                                                     onDelete(log.id);
                                                 }
                                             }}

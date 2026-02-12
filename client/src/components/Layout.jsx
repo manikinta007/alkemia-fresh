@@ -196,8 +196,8 @@ export default function Layout() {
                         <SidebarItem to="/tasks" icon={ListTodo} label="Tugas" />
                         <SidebarItem to="/group-tasks" icon={Users} label="Tugas Kelompok" />
                         <SidebarItem to="/quizzes" icon={Award} label="Kuis & Ujian" />
-                        <SidebarItem to="/grades" icon={Award} label="Nilai" />
                         <SidebarItem to="/participation" icon={MessageSquare} label="Keaktifan" />
+                        <SidebarItem to="/grades" icon={Award} label="Nilai" />
                     </SidebarGroup>
 
                     {/* LAINNYA */}
